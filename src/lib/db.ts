@@ -370,6 +370,13 @@ function initializeDb(db: Database.Database) {
     db.exec("ALTER TABLE payee_matches ADD COLUMN max_amount REAL DEFAULT 0");
   }
 
+  // Add target_account_id column to income_sources if missing
+  const incomeCols = db.prepare("PRAGMA table_info(income_sources)").all() as { name: string }[];
+  if (incomeCols.length > 0 && !incomeCols.some((c) => c.name === "target_account_id")) {
+    console.info("[db] Adding target_account_id column to income_sources");
+    db.exec("ALTER TABLE income_sources ADD COLUMN target_account_id TEXT DEFAULT ''");
+  }
+
   // Add discretionary_target column to daily_budget_history if missing
   const dbhCols = db.prepare("PRAGMA table_info(daily_budget_history)").all() as { name: string }[];
   if (dbhCols.length > 0 && !dbhCols.some((c) => c.name === "discretionary_target")) {

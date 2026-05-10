@@ -1,3 +1,7 @@
+### 2.7.0: 2026-04-29
+
+* Add per-income target account override so Synci routes income to the chosen YNAB account regardless of which bank account the deposit lands in
+
 ### 2.6.2: 2026-04-29
 
 * Fix month status projection to use spent-so-far plus remaining instead of double counting bills and full month discretionary average

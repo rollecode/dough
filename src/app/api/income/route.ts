@@ -10,8 +10,8 @@ export async function GET() {
 
     const db = getDb();
     const incomes = db
-      .prepare("SELECT id, name, amount, expected_day, is_recurring, is_active FROM income_sources ORDER BY expected_day ASC")
-      .all() as { id: number; name: string; amount: number; expected_day: number; is_recurring: number; is_active: number }[];
+      .prepare("SELECT id, name, amount, expected_day, is_recurring, is_active, target_account_id FROM income_sources ORDER BY expected_day ASC")
+      .all() as { id: number; name: string; amount: number; expected_day: number; is_recurring: number; is_active: number; target_account_id: string }[];
 
     // Get averages from history
     const averages = db
@@ -101,6 +101,7 @@ export async function PUT(request: Request) {
     if (body.expected_day !== undefined) { updates.push("expected_day = ?"); values.push(body.expected_day); }
     if (body.is_recurring !== undefined) { updates.push("is_recurring = ?"); values.push(body.is_recurring ? 1 : 0); }
     if (body.is_active !== undefined) { updates.push("is_active = ?"); values.push(body.is_active ? 1 : 0); }
+    if (body.target_account_id !== undefined) { updates.push("target_account_id = ?"); values.push(body.target_account_id || ""); }
 
     if (updates.length > 0) {
       updates.push("updated_at = datetime('now')");

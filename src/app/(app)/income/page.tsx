@@ -27,6 +27,12 @@ interface Income {
   is_active: number;
   average_amount: number | null;
   history_count: number;
+  target_account_id: string;
+}
+
+interface AccountOption {
+  id: string;
+  name: string;
 }
 
 export default function IncomePage() {
@@ -41,6 +47,8 @@ export default function IncomePage() {
   const [newPattern, setNewPattern] = useState("");
   const [patternMinAmount, setPatternMinAmount] = useState("");
   const [patternMaxAmount, setPatternMaxAmount] = useState("");
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
+  const [editTargetAccount, setEditTargetAccount] = useState<string>("");
   const addFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
 
@@ -49,9 +57,13 @@ export default function IncomePage() {
     Promise.all([
       fetch("/api/income").then((r) => r.json()),
       fetch("/api/matches").then((r) => r.json()),
+      fetch("/api/ynab/accounts").then((r) => r.json()),
     ])
-      .then(([incomeData, matchData]) => {
+      .then(([incomeData, matchData, accountsData]) => {
         if (incomeData.incomes) setIncomes(incomeData.incomes);
+        if (accountsData.accounts) {
+          setAccounts(accountsData.accounts.filter((a: { type: string; closed: number }) => (a.type === "checking" || a.type === "savings") && !a.closed).map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
+        }
         if (matchData.patterns) {
           const grouped: Record<number, { id: number; payee_pattern: string }[]> = {};
           for (const p of matchData.patterns) {
@@ -90,7 +102,7 @@ export default function IncomePage() {
       const res = await fetch("/api/income", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.id) {
-        setIncomes((prev) => [...prev, { id: data.id, ...body, is_recurring: 1, is_active: 1, average_amount: null, history_count: 0 }]);
+        setIncomes((prev) => [...prev, { id: data.id, ...body, is_recurring: 1, is_active: 1, average_amount: null, history_count: 0, target_account_id: "" }]);
         setAddOpen(false);
         form.reset();
       }
@@ -106,11 +118,12 @@ export default function IncomePage() {
       name: fd.get("name") as string,
       amount: parseFloat((fd.get("amount") as string).replace(",", ".")),
       expected_day: parseInt(fd.get("expected_day") as string, 10),
+      target_account_id: editTargetAccount,
     };
     console.info("[income] Editing:", body.id);
     try {
       await fetch("/api/income", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      setIncomes((prev) => prev.map((i) => i.id === body.id ? { ...i, name: body.name, amount: body.amount, expected_day: body.expected_day } : i));
+      setIncomes((prev) => prev.map((i) => i.id === body.id ? { ...i, name: body.name, amount: body.amount, expected_day: body.expected_day, target_account_id: body.target_account_id } : i));
       setEditOpen(false);
       setEditTarget(null);
     } catch (err) { console.error("[income] Edit error:", err); }
@@ -242,7 +255,7 @@ export default function IncomePage() {
             <div
               key={income.id}
               className="list-item"
-              onClick={() => { setEditTarget(income); setEditOpen(true); }}
+              onClick={() => { setEditTarget(income); setEditTargetAccount(income.target_account_id || ""); setEditOpen(true); }}
             >
               <div className="list-item-body">
                 <div className="list-item-name-row">
@@ -292,6 +305,24 @@ export default function IncomePage() {
                   <Label>{t.income.expectedDay}</Label>
                   <Input name="expected_day" type="number" min="0" max="31" defaultValue={editTarget.expected_day} required />
                 </div>
+              </div>
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Tulotili" : "Target account"}</Label>
+                <select
+                  className="input"
+                  value={editTargetAccount}
+                  onChange={(e) => setEditTargetAccount(e.target.value)}
+                >
+                  <option value="">{locale === "fi" ? "Käytä Synci-mappausta" : "Use Synci mapping"}</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+                <p className="settings-help">
+                  {locale === "fi"
+                    ? "Valitse tili, jolle tämä tulo kirjataan YNABissa. Käytä jos pankki maksaa eri tilille kuin haluat seurata."
+                    : "Pick the YNAB account this income should be posted to. Use when the deposit lands on a different account than you want to track."}
+                </p>
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Yhdistä maksajaan" : "Match payee"}</Label>

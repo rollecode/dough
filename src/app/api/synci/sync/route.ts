@@ -110,7 +110,11 @@ export async function POST(request: Request) {
           if (pattern.max_amount > 0 && amount > pattern.max_amount) continue;
 
           try {
-            const ynabAccountId = accountMapping[synciAccountId] || "";
+            // Income source may override the target account when the institution
+            // deposits into a different bank account than the one the household
+            // wants to track it under in YNAB
+            const overrideAccount = db.prepare("SELECT target_account_id FROM income_sources WHERE id = ?").get(pattern.source_id) as { target_account_id: string } | undefined;
+            const ynabAccountId = (overrideAccount?.target_account_id || accountMapping[synciAccountId] || "");
             const ynabToken = getHouseholdSetting("ynab_access_token");
             const ynabBudgetId = getHouseholdSetting("ynab_budget_id");
             let realYnabId = synciTxId;
