@@ -1,7 +1,7 @@
 /**
  * Normalize payee name to title case.
- * "S-MARKET VAAJALA" → "S-Market Vaajala"
- * "k-market jyväskylä" → "K-Market Jyväskylä"
+ * "STORE NAME" → "Store Name"
+ * "store-name location" → "Store-Name Location"
  * Preserves known abbreviations and short words.
  */
 export function titleCasePayee(name: string): string {

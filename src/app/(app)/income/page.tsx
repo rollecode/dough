@@ -330,7 +330,7 @@ export default function IncomePage() {
                   <Input
                     value={newPattern}
                     onChange={(e) => setNewPattern(e.target.value)}
-                    placeholder={locale === "fi" ? "esim. *Kela*" : "e.g. *Employer*"}
+                    placeholder={locale === "fi" ? "esim. *Maksaja*" : "e.g. *Payer*"}
                     className="match-pattern-input"
                     autoComplete="off"
                   />

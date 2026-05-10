@@ -10,7 +10,7 @@
 ### Installation
 
 ```bash
-git clone git@github.com:ronilaukkarinen/dough.git
+git clone git@github.com:rollecode/dough.git
 cd dough
 npm install
 ```
