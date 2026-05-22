@@ -281,3 +281,33 @@
     grid-column: span 2;
   }
 }
+
+.budget-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, var(--negative) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--negative) 20%, transparent);
+}
+
+.budget-notice-text {
+  flex: 1 1 12rem;
+  font-size: 0.75rem;
+  line-height: 1.1rem;
+  color: var(--foreground);
+}
+
+.budget-notice-btn {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  background-color: var(--foreground);
+  color: var(--background);
+  white-space: nowrap;
+}

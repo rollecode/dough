@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const [bills, setBills] = useState<{ id: number; name: string; amount: number; due_day: number; is_active: number; is_paid: boolean }[]>([]);
   const [investmentMonthly, setInvestmentMonthly] = useState(0);
   const [debtMonthly, setDebtMonthly] = useState(0);
-  const [debtItems, setDebtItems] = useState<{ amount: number; dueDay: number }[]>([]);
+  const [debtItems, setDebtItems] = useState<{ amount: number; dueDay: number; isPriority?: boolean; name?: string }[]>([]);
   const [linkedAccountIds, setLinkedAccountIds] = useState<string[]>([]);
   const [excludedAccountIds, setExcludedAccountIds] = useState<string[]>([]);
   const [budgetIncludeBills, setBudgetIncludeBills] = useState<boolean | "auto">("auto");
@@ -107,10 +107,11 @@ export default function DashboardPage() {
         const totalDebtPayments = debtData.debts
           .reduce((s: number, d: { minimumPayment: number; monthlyTarget: number }) => s + (d.minimumPayment || d.monthlyTarget || 0), 0);
         setDebtMonthly(totalDebtPayments);
-        setDebtItems(debtData.debts.map((d: { minimumPayment: number; monthlyTarget: number; dueDay: number; isPriority: number }) => ({
+        setDebtItems(debtData.debts.map((d: { name: string; minimumPayment: number; monthlyTarget: number; dueDay: number; isPriority: number }) => ({
           amount: d.minimumPayment || d.monthlyTarget || 0,
           dueDay: d.dueDay || 0,
           isPriority: !!d.isPriority,
+          name: d.name,
         })));
       }
       if (matchData.monthlyMatches) {
@@ -318,6 +319,48 @@ export default function DashboardPage() {
   const dailyBudget = budgetResult.dailyBudget;
   const billsDelayNeeded = !useBills && budgetWithBills.dailyBudget < budgetWithoutBills.dailyBudget;
 
+  // Tomorrow's budget: re-run the engine on the money actually left (today's spend
+  // already reduced the balance) as of tomorrow. No spreading of today's costs.
+  const tomorrowParams = { ...budgetParams, balance: availableBalance, today: today + 1 };
+  const tomorrowWithBills = calculateDailyBudget(tomorrowParams);
+  const tomorrowWithoutBills = calculateDailyBudget({ ...tomorrowParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });
+  const tomorrowBudget = (useBills ? tomorrowWithBills : tomorrowWithoutBills).dailyBudget;
+
+  // Budget-too-low notice: when the daily budget falls under the tight threshold,
+  // surface the dominant reason and link to the page where the user can fix it.
+  const budgetNotice = (() => {
+    if (dailyBudget >= thresholds.tight) return null;
+    const nextIncomeDay = (() => {
+      const next = incomes
+        .filter((i) => i.is_active && resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
+        .sort((a, b) => resolveDay(a.expected_day) - resolveDay(b.expected_day))[0];
+      return next ? resolveDay(next.expected_day) : daysInMonth;
+    })();
+    // Obligations reserved from current balance because they fall before the next income
+    const preIncome: { name: string; amount: number; type: "bill" | "debt" }[] = [];
+    for (const b of bills.filter((b) => b.is_active && !b.is_paid)) {
+      if (b.due_day > today && b.due_day < nextIncomeDay) preIncome.push({ name: b.name, amount: b.amount, type: "bill" });
+    }
+    for (const d of debtItems) {
+      if (d.dueDay > today && d.dueDay < nextIncomeDay && d.amount > 0) preIncome.push({ name: d.name || "", amount: d.amount, type: "debt" });
+    }
+    const biggest = preIncome.sort((a, b) => b.amount - a.amount)[0];
+    const savingReserve = budgetResult.tightestSegment?.savingGoalDeducted ?? 0;
+    // Pick dominant cause: a large obligation before payday, otherwise the saving goal
+    if (biggest && biggest.amount >= savingReserve) {
+      return {
+        cause: "obligation" as const,
+        name: biggest.name,
+        amount: Math.round(biggest.amount),
+        href: biggest.type === "debt" ? "/debts" : "/bills",
+      };
+    }
+    if (savingReserve > 0) {
+      return { cause: "saving" as const, name: "", amount: Math.round(savingReserve), href: "/settings" };
+    }
+    return { cause: "generic" as const, name: "", amount: 0, href: "/settings" };
+  })();
+
   // Persist today's daily budget for streak tracking (fire once on load)
 
   const todayRemaining = dailyBudget - todaySpentAll;
@@ -511,6 +554,8 @@ export default function DashboardPage() {
 
       <DailyAllowance
         dailyBudget={dailyBudget}
+        tomorrowBudget={tomorrowBudget}
+        budgetNotice={budgetNotice}
         availableBalance={availableBalance}
         billsDelayNeeded={billsDelayNeeded}
         budgetWithBills={budgetWithBills.dailyBudget}

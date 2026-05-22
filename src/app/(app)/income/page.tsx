@@ -137,6 +137,14 @@ export default function IncomePage() {
     } catch (err) { console.error("[income] Toggle error:", err); }
   };
 
+  const markReceived = async (id: number, received: boolean) => {
+    setMonthlyMatches((prev) => ({ ...prev, [id]: received }));
+    console.info("[income] Marking", id, received ? "received" : "not received");
+    try {
+      await fetch("/api/income", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, mark_received: received }) });
+    } catch (err) { console.error("[income] Mark received error:", err); }
+  };
+
   const addPattern = async (incomeId: number) => {
     if (!newPattern.trim()) return;
     console.info("[income] Adding pattern:", newPattern, "for income", incomeId);
@@ -260,7 +268,17 @@ export default function IncomePage() {
               <div className="list-item-body">
                 <div className="list-item-name-row">
                   <p className={`list-item-name ${!income.is_active ? "is-inactive" : ""}`}>{income.name}</p>
-                  {monthlyMatches[income.id] && <Badge className="badge-matched"><Check className="icon-xs" />{locale === "fi" ? "Saatu" : "Received"}</Badge>}
+                  <span onClick={(e) => e.stopPropagation()}>
+                    {monthlyMatches[income.id] ? (
+                      <button type="button" className="badge-toggle" onClick={() => markReceived(income.id, false)} title={locale === "fi" ? "Merkitse ei-saaduksi" : "Mark not received"}>
+                        <Badge className="badge-matched"><Check className="icon-xs" />{locale === "fi" ? "Saatu" : "Received"}</Badge>
+                      </button>
+                    ) : (
+                      <button type="button" className="badge-toggle badge-toggle-muted" onClick={() => markReceived(income.id, true)} title={locale === "fi" ? "Merkitse saaduksi" : "Mark received"}>
+                        {locale === "fi" ? "Ei saatu" : "Not received"}
+                      </button>
+                    )}
+                  </span>
                 </div>
                 <p className="list-item-meta">
                   {t.income.expectedAround} {formatDay(income.expected_day)}

@@ -82,6 +82,18 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // Manual received/not-received override for the current month
+    if (body.mark_received !== undefined) {
+      const month = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+      db.prepare(`
+        INSERT INTO income_manual_status (income_id, month, is_received) VALUES (?, ?, ?)
+        ON CONFLICT(income_id, month) DO UPDATE SET is_received = excluded.is_received
+      `).run(id, month, body.mark_received ? 1 : 0);
+      console.info("[income] Manually marked income", id, body.mark_received ? "received" : "not received", "for", month);
+      eventBus.emit("data:updated", { source: "income-received-changed" });
+      return NextResponse.json({ success: true });
+    }
+
     // Full edit
     const updates: string[] = [];
     const values: (string | number)[] = [];

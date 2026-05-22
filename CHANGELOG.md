@@ -1,3 +1,9 @@
+### 2.8.0: 2026-05-22
+
+* Add manual received and not-received toggle for income that overrides auto-match
+* Recompute tomorrow budget from money actually left instead of spreading today's spend
+* Show notice when daily budget falls below tight threshold with a button to the relevant settings
+
 ### 2.7.0: 2026-04-29
 
 * Add per-income target account override so Synci routes income to the chosen YNAB account regardless of which bank account the deposit lands in

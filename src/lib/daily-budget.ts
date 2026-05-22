@@ -7,6 +7,9 @@
  * to prevent short-sighted budgeting around small income events.
  */
 
+// Rolling window length used by the budget engine.
+export const BUDGET_WINDOW_DAYS = 14;
+
 interface BudgetIncome {
   amount: number;
   expectedDay: number;
@@ -56,7 +59,7 @@ export function calculateDailyBudget(params: {
 
   // Build a 14-day minimum window, extending to cover at least one significant income
   // This prevents spending everything before a small income and starving the next period
-  const minWindowDays = 14;
+  const minWindowDays = BUDGET_WINDOW_DAYS;
 
   // Clamp day to last day of month so e.g. expected_day=31 in April resolves to 30
   const clampToMonth = (day: number) => Math.min(resolveDay(day), daysInMonth);

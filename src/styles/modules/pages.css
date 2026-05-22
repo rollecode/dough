@@ -262,6 +262,23 @@
   border: none;
 }
 
+.badge-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.badge-toggle-muted {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.0625rem 0.5rem;
+  background-color: transparent;
+}
+
 .list-item-end {
   display: flex;
   flex-direction: column;

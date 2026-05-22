@@ -14,11 +14,26 @@ export async function GET() {
 
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const monthlyMatches = db.prepare("SELECT * FROM monthly_matches WHERE month = ?").all(month);
+    const monthlyMatches = db.prepare("SELECT * FROM monthly_matches WHERE month = ?").all(month) as any[];
 
-    console.debug("[matches] Loaded", (patterns as any[]).length, "patterns,", (monthlyMatches as any[]).length, "monthly matches");
+    // Manual income received/not-received overrides win over auto-match
+    const manualIncome = db.prepare("SELECT income_id, is_received FROM income_manual_status WHERE month = ?").all(month) as { income_id: number; is_received: number }[];
+    const manualMap = new Map(manualIncome.map((m) => [m.income_id, !!m.is_received]));
 
-    return NextResponse.json({ patterns, monthlyMatches, month });
+    // Effective income received set: manual override wins, otherwise auto-match presence
+    const autoIncomeIds = new Set(monthlyMatches.filter((m) => m.source_type === "income").map((m) => m.source_id));
+    const incomeReceived: { source_id: number; source_type: string }[] = [];
+    const allIncomeIds = new Set<number>([...autoIncomeIds, ...manualMap.keys()]);
+    for (const id of allIncomeIds) {
+      const received = manualMap.has(id) ? manualMap.get(id)! : autoIncomeIds.has(id);
+      if (received) incomeReceived.push({ source_id: id, source_type: "income" });
+    }
+    // Keep non-income matches as-is, replace income matches with effective set
+    const effectiveMatches = [...monthlyMatches.filter((m) => m.source_type !== "income"), ...incomeReceived];
+
+    console.debug("[matches] Loaded", (patterns as any[]).length, "patterns,", monthlyMatches.length, "monthly matches,", manualIncome.length, "manual income overrides");
+
+    return NextResponse.json({ patterns, monthlyMatches: effectiveMatches, month, manualIncome });
   } catch (error) {
     console.error("[matches] GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, CalendarClock, Wallet, Info } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
@@ -9,6 +10,8 @@ import { SavingsStreak } from "./savings-streak";
 
 interface DailyAllowanceProps {
   dailyBudget: number;
+  tomorrowBudget?: number;
+  budgetNotice?: { cause: "obligation" | "saving" | "generic"; name: string; amount: number; href: string } | null;
   availableBalance: number;
   upcomingBills: number;
   nextIncomeAmount: number;
@@ -47,6 +50,8 @@ interface DailyAllowanceProps {
 
 export function DailyAllowance({
   dailyBudget,
+  tomorrowBudget = 0,
+  budgetNotice = null,
   availableBalance,
   upcomingBills,
   nextIncomeAmount,
@@ -77,9 +82,8 @@ export function DailyAllowance({
   const status =
     effectiveBudget > thresholds.good ? "good" : effectiveBudget > thresholds.tight ? "tight" : "danger";
 
-  // Tomorrow's budget if we stop spending now
-  const daysAfterToday = Math.max(1, daysUntilIncome - 1);
-  const tomorrowBudget = Math.max(0, Math.round((dailyBudget * daysUntilIncome - todaySpentAll) / daysAfterToday));
+  // tomorrowBudget is recomputed by the engine on the money actually left,
+  // passed in as a prop. Today's spend already reduced the balance.
   const tomorrowStatus = tomorrowBudget > thresholds.good ? "text-positive" : tomorrowBudget > thresholds.tight ? "text-chart-3" : "text-negative";
   const incomeCountdown = daysUntilIncome === 1
     ? (locale === "fi" ? "Huomenna tulee rahaa" : "Income arrives tomorrow")
@@ -183,6 +187,30 @@ export function DailyAllowance({
               <> {locale === "fi" ? "Tulossa " : "Upcoming "}<span className="text-negative"><F v={upcomingBills} s={` ${currency}`} /></span>{locale === "fi" ? " laskuja ja velkoja." : " in bills and debts."}</>
             )}
           </p>
+          {budgetNotice && (
+            <div className="budget-notice">
+              <span className="budget-notice-text">
+                {budgetNotice.cause === "obligation"
+                  ? (locale === "fi"
+                      ? `Budjetti on pieni, koska ${budgetNotice.name} (${fmt(budgetNotice.amount)} €) erääntyy ennen seuraavaa rahapäivää ja varataan saldosta.`
+                      : `Budget is low because ${budgetNotice.name} (${fmt(budgetNotice.amount)} €) is due before your next payday and is reserved from your balance.`)
+                  : budgetNotice.cause === "saving"
+                  ? (locale === "fi"
+                      ? `Budjetti on pieni, koska säästötavoite (${fmt(budgetNotice.amount)} €) varataan ennen muuta käyttöä.`
+                      : `Budget is low because your saving goal (${fmt(budgetNotice.amount)} €) is reserved before spending.`)
+                  : (locale === "fi"
+                      ? "Budjetti on pieni suhteessa tuleviin velvoitteisiin."
+                      : "Budget is low relative to upcoming obligations.")}
+              </span>
+              <Link href={budgetNotice.href} className="budget-notice-btn">
+                {budgetNotice.cause === "obligation"
+                  ? (locale === "fi" ? "Tarkista erääntymispäivä" : "Check due date")
+                  : budgetNotice.cause === "saving"
+                  ? (locale === "fi" ? "Säädä säästötavoitetta" : "Adjust saving goal")
+                  : (locale === "fi" ? "Avaa asetukset" : "Open settings")}
+              </Link>
+            </div>
+          )}
         </div>
         <div className="daily-allowance-hero-bg">
           <Wallet />

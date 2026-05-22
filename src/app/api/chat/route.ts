@@ -192,11 +192,21 @@ export async function POST(request: Request) {
           const debtPaymentsTotal = debts.reduce((s: number, d: any) => s + (d.minimumPayment || 0), 0);
           const investmentContributions = investmentAccounts.reduce((s: number, i: any) => s + (i.monthlyContribution || 0), 0);
 
-          // Load income matches and sources for daily budget simulation
+          // Load income matches and sources for daily budget simulation.
+          // Manual received/not-received overrides win over auto-match.
           const chatIncomeMatches = chatDb
             .prepare("SELECT source_id FROM monthly_matches WHERE source_type = 'income' AND month = ?")
             .all(chatMonth) as { source_id: number }[];
-          const matchedIncomeIds = new Set(chatIncomeMatches.map((m) => m.source_id));
+          const chatManualIncome = chatDb
+            .prepare("SELECT income_id, is_received FROM income_manual_status WHERE month = ?")
+            .all(chatMonth) as { income_id: number; is_received: number }[];
+          const chatManualMap = new Map(chatManualIncome.map((m) => [m.income_id, !!m.is_received]));
+          const autoIncomeIds = new Set(chatIncomeMatches.map((m) => m.source_id));
+          const matchedIncomeIds = new Set<number>();
+          for (const id of new Set<number>([...autoIncomeIds, ...chatManualMap.keys()])) {
+            const received = chatManualMap.has(id) ? chatManualMap.get(id)! : autoIncomeIds.has(id);
+            if (received) matchedIncomeIds.add(id);
+          }
 
           const incomeWithIds = chatDb
             .prepare("SELECT id, name, amount, expected_day FROM income_sources WHERE is_active = 1 ORDER BY expected_day ASC")
@@ -303,8 +313,21 @@ export async function POST(request: Request) {
             const allDays = incomeWithIds.map((i) => resolveDay(i.expected_day)).sort((a, b) => a - b);
             return allDays.length > 0 ? (daysInMonth - today) + allDays[0] : Math.max(1, daysLeft);
           })();
-          const daysAfterToday = Math.max(1, daysToNextIncome - 1);
-          const tomorrowBudget = Math.max(0, Math.round((dailyBudget * daysToNextIncome - todaySpent) / daysAfterToday));
+          // Tomorrow's budget: re-run the engine as of tomorrow on the money
+          // actually left. Today's spend already reduced the balance; no spreading.
+          const tomorrowParams = { ...budgetParams, today: today + 1 };
+          const tomorrowWithBills = calculateDailyBudget(tomorrowParams);
+          const tomorrowWithoutBills = calculateDailyBudget({ ...tomorrowParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });
+          let tomorrowBudget: number;
+          if (billsSetting === "auto") {
+            const totalUnpaidT = budgetParams.unpaidBills.reduce((s: number, b: { amount: number }) => s + b.amount, 0) + budgetParams.debts.reduce((s: number, d: { amount: number }) => s + d.amount, 0);
+            const thresholdNormalT = parseInt(getHouseholdSetting("budget_threshold_normal") || "30", 10);
+            tomorrowBudget = (checkingSavings > totalUnpaidT && tomorrowWithBills.dailyBudget >= thresholdNormalT) ? tomorrowWithBills.dailyBudget : tomorrowWithoutBills.dailyBudget;
+          } else if (billsSetting === "1") {
+            tomorrowBudget = tomorrowWithBills.dailyBudget;
+          } else {
+            tomorrowBudget = tomorrowWithoutBills.dailyBudget;
+          }
 
           context = {
             totalBalance: Math.round(checkingSavings * 100) / 100,
