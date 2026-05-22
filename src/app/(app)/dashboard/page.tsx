@@ -345,20 +345,16 @@ export default function DashboardPage() {
       if (d.dueDay > today && d.dueDay < nextIncomeDay && d.amount > 0) preIncome.push({ name: d.name || "", amount: d.amount, type: "debt" });
     }
     const biggest = preIncome.sort((a, b) => b.amount - a.amount)[0];
-    const savingReserve = budgetResult.tightestSegment?.savingGoalDeducted ?? 0;
-    // Pick dominant cause: a large obligation before payday, otherwise the saving goal
-    if (biggest && biggest.amount >= savingReserve) {
-      return {
-        cause: "obligation" as const,
-        name: biggest.name,
-        amount: Math.round(biggest.amount),
-        href: biggest.type === "debt" ? "/debts" : "/bills",
-      };
-    }
-    if (savingReserve > 0) {
-      return { cause: "saving" as const, name: "", amount: Math.round(savingReserve), href: "/settings" };
-    }
-    return { cause: "generic" as const, name: "", amount: 0, href: "/settings" };
+    const savingReserve = Math.round(budgetResult.tightestSegment?.savingGoalDeducted ?? 0);
+    // Report all contributing factors; link to the dominant one's settings page
+    const obligationDominant = biggest && biggest.amount >= savingReserve;
+    return {
+      obligationName: biggest?.name ?? "",
+      obligationAmount: biggest ? Math.round(biggest.amount) : 0,
+      savingReserve,
+      href: obligationDominant ? (biggest!.type === "debt" ? "/debts" : "/bills") : (savingReserve > 0 ? "/settings" : "/settings"),
+      linkTo: obligationDominant ? (biggest!.type === "debt" ? "debt" : "bill") : "saving" as "debt" | "bill" | "saving",
+    };
   })();
 
   // Persist today's daily budget for streak tracking (fire once on load)

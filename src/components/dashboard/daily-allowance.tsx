@@ -11,7 +11,7 @@ import { SavingsStreak } from "./savings-streak";
 interface DailyAllowanceProps {
   dailyBudget: number;
   tomorrowBudget?: number;
-  budgetNotice?: { cause: "obligation" | "saving" | "generic"; name: string; amount: number; href: string } | null;
+  budgetNotice?: { obligationName: string; obligationAmount: number; savingReserve: number; href: string; linkTo: "debt" | "bill" | "saving" } | null;
   availableBalance: number;
   upcomingBills: number;
   nextIncomeAmount: number;
@@ -190,24 +190,28 @@ export function DailyAllowance({
           {budgetNotice && (
             <div className="budget-notice">
               <span className="budget-notice-text">
-                {budgetNotice.cause === "obligation"
-                  ? (locale === "fi"
-                      ? `Budjetti on pieni, koska ${budgetNotice.name} (${fmt(budgetNotice.amount)} €) erääntyy ennen seuraavaa rahapäivää ja varataan saldosta.`
-                      : `Budget is low because ${budgetNotice.name} (${fmt(budgetNotice.amount)} €) is due before your next payday and is reserved from your balance.`)
-                  : budgetNotice.cause === "saving"
-                  ? (locale === "fi"
-                      ? `Budjetti on pieni, koska säästötavoite (${fmt(budgetNotice.amount)} €) varataan ennen muuta käyttöä.`
-                      : `Budget is low because your saving goal (${fmt(budgetNotice.amount)} €) is reserved before spending.`)
-                  : (locale === "fi"
-                      ? "Budjetti on pieni suhteessa tuleviin velvoitteisiin."
-                      : "Budget is low relative to upcoming obligations.")}
+                {(() => {
+                  const reasons: string[] = [];
+                  if (budgetNotice.obligationAmount > 0) {
+                    reasons.push(locale === "fi"
+                      ? `${budgetNotice.obligationName} (${fmt(budgetNotice.obligationAmount)} €) erääntyy ennen seuraavaa rahapäivää`
+                      : `${budgetNotice.obligationName} (${fmt(budgetNotice.obligationAmount)} €) is due before your next payday`);
+                  }
+                  if (budgetNotice.savingReserve > 0) {
+                    reasons.push(locale === "fi"
+                      ? `säästötavoite (${fmt(budgetNotice.savingReserve)} €) varataan jaksolle`
+                      : `your saving goal (${fmt(budgetNotice.savingReserve)} €) is reserved for the period`);
+                  }
+                  const joined = reasons.join(locale === "fi" ? " ja " : " and ");
+                  return locale === "fi"
+                    ? `Budjetti on pieni, koska ${joined}. Nämä varataan saldosta ennen päivittäistä käyttöä.`
+                    : `Budget is low because ${joined}. These are reserved from your balance before daily spending.`;
+                })()}
               </span>
               <Link href={budgetNotice.href} className="budget-notice-btn">
-                {budgetNotice.cause === "obligation"
-                  ? (locale === "fi" ? "Tarkista erääntymispäivä" : "Check due date")
-                  : budgetNotice.cause === "saving"
+                {budgetNotice.linkTo === "saving"
                   ? (locale === "fi" ? "Säädä säästötavoitetta" : "Adjust saving goal")
-                  : (locale === "fi" ? "Avaa asetukset" : "Open settings")}
+                  : (locale === "fi" ? "Tarkista erääntymispäivä" : "Check due date")}
               </Link>
             </div>
           )}
