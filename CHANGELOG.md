@@ -1,3 +1,7 @@
+### 2.9.0: 2026-05-27
+
+* Add hide button on AI summary cards to mark individual summaries hidden in the shared database
+
 ### 2.8.0: 2026-05-22
 
 * Add manual received and not-received toggle for income that overrides auto-match

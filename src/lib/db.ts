@@ -388,6 +388,17 @@ function initializeDb(db: Database.Database) {
   }
 
   // Add discretionary_target column to daily_budget_history if missing
+  // Add is_hidden column to ai_summaries if missing
+  try {
+    const aiCols = db.prepare("PRAGMA table_info(ai_summaries)").all() as { name: string }[];
+    if (aiCols.length > 0 && !aiCols.some((c) => c.name === "is_hidden")) {
+      console.info("[db] Adding is_hidden column to ai_summaries");
+      db.exec("ALTER TABLE ai_summaries ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0");
+    }
+  } catch (err) {
+    console.warn("[db] ai_summaries migration:", err);
+  }
+
   const dbhCols = db.prepare("PRAGMA table_info(daily_budget_history)").all() as { name: string }[];
   if (dbhCols.length > 0 && !dbhCols.some((c) => c.name === "discretionary_target")) {
     console.info("[db] Adding discretionary_target column to daily_budget_history");

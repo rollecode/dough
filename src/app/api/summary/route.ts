@@ -32,15 +32,15 @@ export async function GET(request: Request) {
 
     const requestLocale = url.searchParams.get("locale") || "en";
 
-    // Check for cached summary — shared across all users
+    // Check for cached summary — shared across all users, excluding hidden ones
     if (!forceRefresh) {
       const cached = db
-        .prepare("SELECT content, created_at FROM ai_summaries WHERE locale = ? ORDER BY created_at DESC LIMIT 1")
-        .get(requestLocale) as { content: string; created_at: string } | undefined;
+        .prepare("SELECT id, content, created_at FROM ai_summaries WHERE locale = ? AND is_hidden = 0 ORDER BY created_at DESC LIMIT 1")
+        .get(requestLocale) as { id: number; content: string; created_at: string } | undefined;
 
       if (cached) {
         console.debug("[summary] Returning cached", requestLocale, "summary from", cached.created_at);
-        return NextResponse.json({ summary: cached.content, cached: true, created_at: cached.created_at });
+        return NextResponse.json({ id: cached.id, summary: cached.content, cached: true, created_at: cached.created_at });
       }
     }
 
@@ -350,16 +350,37 @@ ${(() => { const goals = db.prepare("SELECT name, target_amount, saved_amount, t
       proc.stdin.end();
     });
 
+    let newId: number | undefined;
     if (summaryText) {
-      db.prepare("INSERT INTO ai_summaries (user_id, locale, content) VALUES (?, ?, ?)")
+      const result = db.prepare("INSERT INTO ai_summaries (user_id, locale, content) VALUES (?, ?, ?)")
         .run(user.id, requestLocale, summaryText);
-
-      console.info("[summary] Summary generated and cached, length:", summaryText.length);
+      newId = Number(result.lastInsertRowid);
+      console.info("[summary] Summary generated and cached, length:", summaryText.length, "id:", newId);
     }
 
-    return NextResponse.json({ summary: summaryText, cached: false, created_at: new Date().toISOString() });
+    return NextResponse.json({ id: newId, summary: summaryText, cached: false, created_at: new Date().toISOString() });
   } catch (error) {
     console.error("[summary] Error:", error);
     return NextResponse.json({ summary: null, error: "Failed to generate summary" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await getSession();
+    if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+    const body = await request.json();
+    const { id, is_hidden } = body;
+    if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+    const db = getDb();
+    db.prepare("UPDATE ai_summaries SET is_hidden = ? WHERE id = ?").run(is_hidden ? 1 : 0, id);
+    console.info("[summary] Set is_hidden=", is_hidden ? 1 : 0, "on summary id", id, "by user", user.id);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[summary] PATCH error:", error);
+    return NextResponse.json({ error: "Failed to update summary" }, { status: 500 });
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { RefreshCw, Sparkles, Copy, Check } from "lucide-react";
+import { RefreshCw, Sparkles, Copy, Check, EyeOff } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -26,6 +26,7 @@ function relativeTime(dateStr: string, locale: string): string {
 
 export function AiSummary() {
   const [summary, setSummary] = useState<string | null>(null);
+  const [summaryId, setSummaryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -48,9 +49,13 @@ export function AiSummary() {
       .then((r) => r.json())
       .then((data) => {
         if (data.summary) {
-          console.info("[ai-summary] Got summary, cached:", data.cached);
+          console.info("[ai-summary] Got summary, cached:", data.cached, "id:", data.id);
           setSummary(data.summary);
+          setSummaryId(data.id ?? null);
           if (data.created_at) setCreatedAt(data.created_at);
+        } else {
+          setSummary(null);
+          setSummaryId(null);
         }
       })
       .catch((err) => console.error("[ai-summary] Failed:", err))
@@ -81,6 +86,22 @@ export function AiSummary() {
     setTimeout(() => fetchSummary(true), 300);
   };
 
+  const handleHide = async () => {
+    if (!summaryId) return;
+    console.info("[ai-summary] Hiding summary id", summaryId);
+    try {
+      await fetch("/api/summary", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: summaryId, is_hidden: 1 }),
+      });
+      // Refresh to show next non-hidden summary or none
+      fetchSummary();
+    } catch (err) {
+      console.error("[ai-summary] Hide failed:", err);
+    }
+  };
+
   if (!loading && !summary && !refreshing) return null;
 
   return (
@@ -98,6 +119,16 @@ export function AiSummary() {
               onClick={handleCopy}
             >
               {copied ? <Check /> : <Copy />}
+            </button>
+          )}
+          {summary && summaryId !== null && (
+            <button
+              type="button"
+              className="ai-summary-refresh"
+              onClick={handleHide}
+              title={locale === "fi" ? "Piilota tämä yhteenveto" : "Hide this summary"}
+            >
+              <EyeOff />
             </button>
           )}
           <button
