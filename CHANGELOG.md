@@ -1,3 +1,7 @@
+### 2.10.0: 2026-05-29
+
+* Add automatic daily YNAB sync via cron with a configurable hour setting, default 6
+
 ### 2.9.0: 2026-05-27
 
 * Add hide button on AI summary cards to mark individual summaries hidden in the shared database

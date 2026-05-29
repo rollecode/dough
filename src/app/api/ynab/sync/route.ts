@@ -62,15 +62,43 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const user = await getSession();
+    const { getHouseholdSetting } = await import("@/lib/household");
+    // Allow cron calls with X-Cron-Secret header matching household setting
+    const cronSecret = request.headers.get("x-cron-secret");
+    const expectedSecret = getHouseholdSetting("cron_secret");
+    const isCron = !!(cronSecret && expectedSecret && cronSecret === expectedSecret);
+
+    let user = await getSession();
+    if (!user && isCron) {
+      const { getDb } = await import("@/lib/db");
+      const firstUser = getDb().prepare("SELECT id FROM users ORDER BY id LIMIT 1").get() as { id: number } | undefined;
+      if (firstUser) user = { id: firstUser.id } as Awaited<ReturnType<typeof getSession>>;
+    }
     if (!user) {
       console.warn("[api/ynab/sync] Unauthorized sync attempt");
       return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
     }
 
-    console.info("[api/ynab/sync] Starting sync for user", user.id);
+    // Cron runs hourly; only perform the full sync at the configured hour (default 6),
+    // and at most once per day. Manual (session) syncs are never gated.
+    if (isCron) {
+      const syncHour = parseInt(getHouseholdSetting("ynab_sync_hour") || "6", 10);
+      const nowH = new Date();
+      const todayStr = `${nowH.getFullYear()}-${String(nowH.getMonth() + 1).padStart(2, "0")}-${String(nowH.getDate()).padStart(2, "0")}`;
+      if (nowH.getHours() !== syncHour) {
+        console.debug("[api/ynab/sync] Cron skip: hour", nowH.getHours(), "!= scheduled", syncHour);
+        return NextResponse.json({ success: true, skipped: "not scheduled hour" });
+      }
+      if (getHouseholdSetting("last_ynab_cron_date") === todayStr) {
+        console.debug("[api/ynab/sync] Cron skip: already synced today", todayStr);
+        return NextResponse.json({ success: true, skipped: "already synced today" });
+      }
+      setHouseholdSetting("last_ynab_cron_date", todayStr);
+    }
+
+    console.info("[api/ynab/sync] Starting sync for user", user.id, isCron ? "(cron)" : "");
 
     const token = getYnabToken();
     const budgetId = getYnabBudgetId();

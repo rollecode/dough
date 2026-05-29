@@ -58,6 +58,8 @@ export default function SettingsPage() {
   const [budgetBillsMode, setBudgetBillsMode] = useState("auto");
   const [reserveNextMonthSaving, setReserveNextMonthSaving] = useState(false);
   const [reserveSaved, setReserveSaved] = useState(false);
+  const [ynabSyncHour, setYnabSyncHour] = useState("6");
+  const [syncHourSaved, setSyncHourSaved] = useState(false);
   const [billsModeSaved, setBillsModeSaved] = useState(false);
   const [thresholds, setThresholds] = useState({ tight: "20", normal: "30", good: "50" });
   const [thresholdsSaved, setThresholdsSaved] = useState(false);
@@ -127,6 +129,9 @@ export default function SettingsPage() {
           }
           if (householdData.settings?.reserve_next_month_saving !== undefined) {
             setReserveNextMonthSaving(householdData.settings.reserve_next_month_saving === "1");
+          }
+          if (householdData.settings?.ynab_sync_hour !== undefined) {
+            setYnabSyncHour(String(householdData.settings.ynab_sync_hour));
           }
           if (householdData.settings?.budget_threshold_tight) setThresholds((p) => ({ ...p, tight: householdData.settings.budget_threshold_tight }));
           if (householdData.settings?.budget_threshold_normal) setThresholds((p) => ({ ...p, normal: householdData.settings.budget_threshold_normal }));
@@ -775,6 +780,36 @@ export default function SettingsPage() {
                 {locale === "fi"
                   ? "Käytä jos suurin palkka tulee kuun viimeisinä päivinä. Varaa palkkapäivänä koko ensi kuun säästötavoitteen, jolloin päiväbudjetti ei näytä liian runsaalta. Ensi kuussa säästötavoite vähennetään automaattisesti, koska se on jo varattu."
                   : "Use if your largest paycheck arrives in the last days of the month. Reserves next month's full saving goal on payday so the daily budget doesn't look overly generous. Next month skips the proportional saving deduction since it's already reserved."}
+              </p>
+            </div>
+            <div className="form-field">
+              <Label>{locale === "fi" ? "YNAB-synkronoinnin tunti" : "YNAB sync hour"}</Label>
+              <div className="settings-row">
+                <Input
+                  type="number"
+                  min="0"
+                  max="23"
+                  value={ynabSyncHour}
+                  onChange={(e) => setYnabSyncHour(e.target.value)}
+                  className="settings-input"
+                />
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const h = String(Math.min(23, Math.max(0, parseInt(ynabSyncHour, 10) || 6)));
+                  setYnabSyncHour(h);
+                  await fetch("/api/household", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ynab_sync_hour: h }),
+                  });
+                  setSyncHourSaved(true);
+                  setTimeout(() => setSyncHourSaved(false), 2000);
+                }}>{t.common.save}</Button>
+                {syncHourSaved && <span className="settings-saved">{t.common.saved}</span>}
+              </div>
+              <p className="settings-help">
+                {locale === "fi"
+                  ? "Tunti (0–23, Helsingin aika), jolloin YNAB synkronoidaan automaattisesti kerran päivässä."
+                  : "Hour (0–23, Helsinki time) when YNAB is synced automatically once a day."}
               </p>
             </div>
             <div className="form-field">

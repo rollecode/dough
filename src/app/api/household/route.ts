@@ -28,6 +28,7 @@ export async function GET() {
         budget_include_bills: settings.budget_include_bills || "1",
         reserve_next_month_saving: settings.reserve_next_month_saving || "0",
         last_reservation_month: settings.last_reservation_month || "",
+        ynab_sync_hour: settings.ynab_sync_hour || "6",
         budget_threshold_tight: settings.budget_threshold_tight || "20",
         budget_threshold_normal: settings.budget_threshold_normal || "30",
         budget_threshold_good: settings.budget_threshold_good || "50",
