@@ -1,3 +1,7 @@
+### 2.11.0: 2026-05-29
+
+* Add household setting to hide AI summaries and debt suggestion everywhere via settings toggle
+
 ### 2.10.0: 2026-05-29
 
 * Add automatic daily YNAB sync via cron with a configurable hour setting, default 6

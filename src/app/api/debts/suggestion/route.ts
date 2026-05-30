@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { getHouseholdSetting } from "@/lib/household";
 import { spawn } from "child_process";
 
 export async function GET(request: Request) {
@@ -12,6 +13,11 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const cacheOnly = url.searchParams.get("cache_only") === "1";
     const refresh = url.searchParams.get("refresh") === "1";
+
+    // Household-wide off switch for AI summaries
+    if (getHouseholdSetting("ai_summaries_disabled") === "1") {
+      return NextResponse.json({ suggestion: null, disabled: true });
+    }
 
     const db = getDb();
 
@@ -55,7 +61,6 @@ export async function GET(request: Request) {
       return `${a.name}: ${balance.toFixed(0)} euros${rate > 0 ? ` (${rate}% APR)` : ""}${payment > 0 ? `, ${payment} euros/month` : ""}${dueDay > 0 ? ` (due ${dueDay}th)` : ""}`;
     });
 
-    const { getHouseholdSetting } = await import("@/lib/household");
     const householdProfile = getHouseholdSetting("household_profile") || "";
     const { DEFAULT_DEBT_INSTRUCTIONS } = await import("@/lib/ai/default-prompts");
     const debtInstructions = getHouseholdSetting("prompt_debt_instructions") || DEFAULT_DEBT_INSTRUCTIONS;

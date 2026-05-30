@@ -89,6 +89,7 @@ export default function DebtsPage() {
   const [extraPayment, setExtraPayment] = useState(50);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiHidden, setAiHidden] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
@@ -105,14 +106,23 @@ export default function DebtsPage() {
       .catch((err) => console.error("[debts] Load error:", err))
       .finally(() => setLoading(false));
 
-    // Load cached suggestion separately (don't block page, cache only)
-    fetch("/api/debts/suggestion?cache_only=1")
+    // Honor household AI-summaries off-switch and load cached suggestion if not disabled
+    fetch("/api/household")
       .then((r) => r.json())
-      .then((data) => {
-        if (data.suggestion) {
-          console.info("[debts] Loaded cached AI suggestion");
-          setAiSuggestion(data.suggestion);
+      .then((h) => {
+        if (h.settings?.ai_summaries_disabled === "1") {
+          setAiHidden(true);
+          return;
         }
+        return fetch("/api/debts/suggestion?cache_only=1")
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.disabled) { setAiHidden(true); return; }
+            if (data.suggestion) {
+              console.info("[debts] Loaded cached AI suggestion");
+              setAiSuggestion(data.suggestion);
+            }
+          });
       })
       .catch(() => {});
   }, []);
@@ -233,6 +243,7 @@ export default function DebtsPage() {
       </div>
 
       {/* AI suggestion */}
+      {!aiHidden && (
       <Card className="ai-summary-card">
         <div className="ai-summary-header">
           <div className="ai-summary-icon"><Sparkles /></div>
@@ -252,6 +263,7 @@ export default function DebtsPage() {
           </p>
         )}
       </Card>
+      )}
 
       {/* Debt list with editable fields */}
       {debts.length > 0 && (

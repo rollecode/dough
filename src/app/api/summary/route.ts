@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { getYnabToken, getYnabBudgetId } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, getHouseholdSetting } from "@/lib/household";
 import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { spawn } from "child_process";
 
@@ -16,6 +16,11 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const forceRefresh = url.searchParams.get("refresh") === "1";
+
+    // Household-wide off switch for AI summaries
+    if (getHouseholdSetting("ai_summaries_disabled") === "1") {
+      return NextResponse.json({ summary: null, disabled: true });
+    }
 
     const db = getDb();
 
@@ -112,7 +117,6 @@ export async function GET(request: Request) {
       ? "Respond in Finnish."
       : "Respond in English.";
 
-    const { getHouseholdSetting } = await import("@/lib/household");
     const householdProfile = getHouseholdSetting("household_profile") || "";
 
     const daysPassed = now.getDate();

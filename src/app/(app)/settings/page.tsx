@@ -60,6 +60,8 @@ export default function SettingsPage() {
   const [reserveSaved, setReserveSaved] = useState(false);
   const [ynabSyncHour, setYnabSyncHour] = useState("6");
   const [syncHourSaved, setSyncHourSaved] = useState(false);
+  const [aiSummariesDisabled, setAiSummariesDisabled] = useState(false);
+  const [aiSummariesSaved, setAiSummariesSaved] = useState(false);
   const [billsModeSaved, setBillsModeSaved] = useState(false);
   const [thresholds, setThresholds] = useState({ tight: "20", normal: "30", good: "50" });
   const [thresholdsSaved, setThresholdsSaved] = useState(false);
@@ -132,6 +134,9 @@ export default function SettingsPage() {
           }
           if (householdData.settings?.ynab_sync_hour !== undefined) {
             setYnabSyncHour(String(householdData.settings.ynab_sync_hour));
+          }
+          if (householdData.settings?.ai_summaries_disabled !== undefined) {
+            setAiSummariesDisabled(householdData.settings.ai_summaries_disabled === "1");
           }
           if (householdData.settings?.budget_threshold_tight) setThresholds((p) => ({ ...p, tight: householdData.settings.budget_threshold_tight }));
           if (householdData.settings?.budget_threshold_normal) setThresholds((p) => ({ ...p, normal: householdData.settings.budget_threshold_normal }));
@@ -1088,6 +1093,30 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="form-stack">
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Piilota AI-yhteenvedot" : "Hide AI summaries"}</Label>
+              <div className="settings-row">
+                <Switch
+                  checked={aiSummariesDisabled}
+                  onCheckedChange={async (v) => {
+                    setAiSummariesDisabled(v);
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ai_summaries_disabled: v ? "1" : "0" }),
+                    });
+                    setAiSummariesSaved(true);
+                    setTimeout(() => setAiSummariesSaved(false), 2000);
+                  }}
+                />
+                {aiSummariesSaved && <span className="settings-saved">{t.common.saved}</span>}
+              </div>
+              <p className="settings-help">
+                {locale === "fi"
+                  ? "Piilottaa AI-yhteenvedot ja velkasuosituksen kaikkialta sovelluksessa. Asetus on jaettu kotitalouden kaikille käyttäjille."
+                  : "Hides AI summaries and the debt suggestion across the app. Setting is shared with all household users."}
+              </p>
+            </div>
             {([
               { key: "chat" as const, dbKey: "prompt_chat_guidelines", label: locale === "fi" ? "Keskustelun ohjeet" : "Chat guidelines" },
               { key: "summary" as const, dbKey: "prompt_summary_instructions", label: locale === "fi" ? "Yhteenvedon ohjeet" : "Summary instructions" },
