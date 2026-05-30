@@ -5,6 +5,12 @@
   gap: 0.75rem;
 }
 
+/* When the AI summary is hidden, SpendingFlow becomes the immediate previous
+   sibling. Add a bit of breathing room so the layout doesn't feel tight. */
+.spending-flow + .daily-allowance-grid {
+  margin-top: 0.5rem;
+}
+
 @media (min-width: 768px) {
   .daily-allowance-grid {
     grid-template-columns: repeat(4, 1fr);
