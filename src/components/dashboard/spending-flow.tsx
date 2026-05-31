@@ -107,7 +107,8 @@ export function SpendingFlow({
   for (let d = 1; d <= daysInMonth; d++) {
     if (d <= daysPassed) {
       cumulative = spendingByDay[d] || cumulative;
-      // Discretionary = total spending minus paid bills
+      // Actual = discretionary spending (cumulative minus already-paid bills) so
+      // the line reflects daily decisions, not lumpy bill payments
       const discretionary = Math.max(0, cumulative - paidBillsAmount);
       data.push({
         day: d,
@@ -116,7 +117,6 @@ export function SpendingFlow({
         target: cumulativeTargetByDay[d] > 0 ? Math.round(cumulativeTargetByDay[d]) : undefined,
       });
     } else {
-      // Projection based on discretionary daily rate (already excludes bills)
       const prev = data.length > 0 ? data[data.length - 1] : null;
       const lastVal = prev ? (prev.actual ?? prev.projected ?? 0) : 0;
       const projected = lastVal + dailyDiscretionary;
@@ -233,8 +233,8 @@ export function SpendingFlow({
                   <div className="chart-tooltip">
                     <p className="chart-tooltip-label">{label}</p>
                     {targetVal > 0 && <p className="chart-tooltip-value" style={{ color: diffColor }}>{diffLabel}</p>}
-                    {actual && <p className="chart-tooltip-value" style={{ color: "var(--foreground)" }}>{locale === "fi" ? "Kulut" : "Spent"}: {fmt(spentVal)} €</p>}
-                    {targetEntry && <p className="chart-tooltip-value" style={{ color: "#4ade80" }}>{locale === "fi" ? "Vakaa talous" : "Target"}: {fmt(targetVal)} €</p>}
+                    {actual && <p className="chart-tooltip-value" style={{ color: "var(--foreground)" }}>{locale === "fi" ? "Kulut tähän mennessä" : "Spent so far"}: {fmt(spentVal)} €</p>}
+                    {targetEntry && <p className="chart-tooltip-value" style={{ color: "#4ade80" }}>{locale === "fi" ? "Vakaa kulutus olisi" : "Stable spending would be"}: {fmt(targetVal)} €</p>}
                   </div>
                 );
               }}

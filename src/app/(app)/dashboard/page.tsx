@@ -20,7 +20,7 @@ import { SavingsStreak } from "@/components/dashboard/savings-streak";
 import { SpendingHeatmap } from "@/components/dashboard/spending-heatmap";
 import { SpendingTrends } from "@/components/dashboard/spending-trends";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Info } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fi as fiFns, enUS } from "date-fns/locale";
 
@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const { data, loading, connected, error: ynabError, sync, savingRate, refresh } = useYnab();
   const [incomes, setIncomes] = useState<IncomeSource[]>([]);
   const [matchedIncomeIds, setMatchedIncomeIds] = useState<Set<number>>(new Set());
+  const [dashInfoOpen, setDashInfoOpen] = useState(false);
   const [matchedBillIds, setMatchedBillIds] = useState<Set<number>>(new Set());
   const [bills, setBills] = useState<{ id: number; name: string; amount: number; due_day: number; is_active: number; is_paid: boolean }[]>([]);
   const [investmentMonthly, setInvestmentMonthly] = useState(0);
@@ -510,7 +511,21 @@ export default function DashboardPage() {
   return (
     <div className="page-stack">
       <div className="page-header-row">
-        <h1 className="page-heading">{t.dashboard.title}</h1>
+        <div>
+        <h1 className="page-heading">
+          {t.dashboard.title}
+          <span className={`metric-info-wrap ${dashInfoOpen ? "is-open" : ""}`}>
+            <button type="button" className="metric-info-trigger" onClick={() => setDashInfoOpen((v) => !v)}>
+              <Info />
+            </button>
+            <span className="metric-info-popup">
+              {locale === "fi"
+                ? "Mittari voi näyttää '€ yli' vaikka tilillä on rahaa. Yli-summa muodostuu kahdesta osasta: 1) kuukauden meno ylittää tulot ja saldoa puretaan, ja 2) suunniteltuja laskuja jää maksamatta ja se raha menee päivittäiseen elämään. Tilillä on puskuria jota nakerretaan kuukausittain. Jos kuvio jatkuu, puskuri loppuu joskus. Mittari varoittaa tästä, ei siitä että rahat olisivat juuri nyt loppu."
+                : "The chart can show 'over' even when there is money in the account. The over-amount is two things combined: 1) monthly spending exceeds income and the balance is being drawn down, and 2) some planned bills go unpaid and that money goes to daily life. The buffer in the account shrinks each month. If the pattern continues, the buffer eventually runs out. The chart warns about that, not about being broke today."}
+            </span>
+          </span>
+        </h1>
+        </div>
         <div className="sync-row">
           {lastYnabSync && (
             <span className="sync-time">

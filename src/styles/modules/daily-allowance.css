@@ -205,8 +205,9 @@
 }
 
 .metric-info-wrap {
-  position: static;
+  position: relative;
   display: inline-flex;
+  margin-left: 0.5rem;
 }
 
 .metric-info-popup {
@@ -214,13 +215,15 @@
   top: calc(100% + 0.5rem);
   left: 0;
   font-size: 0.6875rem;
+  font-weight: 400;
   line-height: 1.4;
+  letter-spacing: 0;
   color: #fafafa;
   background: #000;
   padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
   width: max-content;
-  max-width: 15rem;
+  max-width: min(15rem, calc(100vw - 2rem));
   z-index: 50;
   pointer-events: none;
   white-space: normal;
