@@ -39,7 +39,7 @@ const navKeys = [
   { href: "/investments", icon: TrendingUp, key: "investments" },
   { href: "/subscriptions", icon: CreditCard, key: "subscriptions" },
   { href: "/savings-goals", icon: Crosshair, key: "savingsGoals" },
-  { href: "/categories", icon: Tags, key: "budget" },
+  { href: "/budget", icon: Tags, key: "budget" },
 ] as const;
 
 interface SidebarProps {

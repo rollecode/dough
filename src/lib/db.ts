@@ -292,6 +292,26 @@ function initializeDb(db: Database.Database) {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
 
+    CREATE TABLE IF NOT EXISTS monthly_category_budgets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      month TEXT NOT NULL,
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      budgeted REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_category_budgets ON monthly_category_budgets(month, category_id);
+
+    CREATE TABLE IF NOT EXISTS category_targets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category_id INTEGER NOT NULL UNIQUE REFERENCES categories(id) ON DELETE CASCADE,
+      monthly_amount REAL NOT NULL DEFAULT 0,
+      snooze_until_month TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS ticker_cache (
       symbol TEXT PRIMARY KEY,
       name TEXT DEFAULT '',
