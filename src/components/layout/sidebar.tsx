@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Crosshair,
   CreditCard,
+  Tags,
   LineChart,
   Settings,
   LogOut,
@@ -37,6 +38,7 @@ const navKeys = [
   { href: "/debts", icon: TrendingDown, key: "debts" },
   { href: "/investments", icon: TrendingUp, key: "investments" },
   { href: "/subscriptions", icon: CreditCard, key: "subscriptions" },
+  { href: "/categories", icon: Tags, key: "categories" },
   { href: "/savings-goals", icon: Crosshair, key: "savingsGoals" },
 ] as const;
 

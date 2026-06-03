@@ -45,6 +45,7 @@ export const fi = {
     netWorth: "Varallisuus",
     investments: "Sijoitukset",
     subscriptions: "Kausitilaukset",
+    categories: "Kategoriat",
     savingsGoals: "Säästökohteet",
     settings: "Asetukset",
   },

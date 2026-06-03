@@ -279,6 +279,19 @@ function initializeDb(db: Database.Database) {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_ynab_categories_month_name ON ynab_categories(month, name);
 
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      group_name TEXT DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      color TEXT DEFAULT '',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
+
     CREATE TABLE IF NOT EXISTS ticker_cache (
       symbol TEXT PRIMARY KEY,
       name TEXT DEFAULT '',
@@ -517,6 +530,25 @@ function initializeDb(db: Database.Database) {
         db.prepare("INSERT OR IGNORE INTO household_settings (key, value) VALUES (?, ?)").run("ynab_budget_id", existingYnab.ynab_budget_id);
       }
     }
+  }
+
+  // One-time seed: copy distinct categories from ynab_categories into local categories
+  // table if the local table is empty and the YNAB mirror has data. Idempotent (no-op once seeded).
+  try {
+    const localCount = (db.prepare("SELECT COUNT(*) AS c FROM categories").get() as { c: number }).c;
+    if (localCount === 0) {
+      const ynabCatRows = db.prepare(
+        "SELECT name, group_name FROM ynab_categories WHERE name NOT LIKE 'Inflow%' AND name != 'Uncategorized' GROUP BY name ORDER BY group_name, name"
+      ).all() as { name: string; group_name: string }[];
+      if (ynabCatRows.length > 0) {
+        console.info("[db] Seeding local categories from ynab_categories,", ynabCatRows.length, "rows");
+        const ins = db.prepare("INSERT OR IGNORE INTO categories (name, group_name, sort_order) VALUES (?, ?, ?)");
+        let order = 0;
+        for (const r of ynabCatRows) ins.run(r.name, r.group_name || "", order++);
+      }
+    }
+  } catch (err) {
+    console.warn("[db] categories seed:", err);
   }
 
   console.info("[db] Schema initialized");
