@@ -339,8 +339,6 @@ export default function BudgetPage() {
                 saving={savingId === c.id}
                 onSave={(v) => saveBudgeted(c.id, v)}
                 onOpenTarget={() => { setTargetCat(c); setTargetDraft(c.target_monthly ? fmt(c.target_monthly) : ""); }}
-                onSnooze={() => snoozeTarget(c.id)}
-                onUnsnooze={() => unsnoozeTarget(c.id)}
                 fmt={fmt}
                 month={month}
                 locale={locale}
@@ -429,6 +427,20 @@ export default function BudgetPage() {
                     : "E.g. 200 means 200 € is assigned to this category every month."}
                 </p>
               </div>
+              {targetCat.target_monthly > 0 && (
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Tämä kuukausi" : "This month"}</Label>
+                  {targetCat.snooze_until_month >= month ? (
+                    <Button type="button" variant="outline" size="sm" onClick={() => { unsnoozeTarget(targetCat.id); setTargetCat(null); }}>
+                      {locale === "fi" ? "Jatka tavoitetta" : "Resume target"}
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" onClick={() => { snoozeTarget(targetCat.id); setTargetCat(null); }}>
+                      {locale === "fi" ? "Tauota tämä kuukausi" : "Snooze this month"}
+                    </Button>
+                  )}
+                </div>
+              )}
               <div className="form-grid-2">
                 {targetCat.target_monthly > 0 && (
                   <Button type="button" variant="destructive" onClick={() => clearTarget(targetCat.id)}>
@@ -465,13 +477,11 @@ export default function BudgetPage() {
   );
 }
 
-function BudgetRow({ cat, saving, onSave, onOpenTarget, onSnooze, onUnsnooze, fmt, month, locale }: {
+function BudgetRow({ cat, saving, onSave, onOpenTarget, fmt, month, locale }: {
   cat: BudgetCategory;
   saving: boolean;
   onSave: (value: number) => void;
   onOpenTarget: () => void;
-  onSnooze: () => void;
-  onUnsnooze: () => void;
   fmt: (v: number) => string;
   month: string;
   locale: string;
@@ -506,33 +516,23 @@ function BudgetRow({ cat, saving, onSave, onOpenTarget, onSnooze, onUnsnooze, fm
 
   return (
     <div className="budget-grid budget-row">
-      <div className="budget-row-main">
-        <div className="budget-row-name">{cat.name}</div>
-        {hasTarget ? (
-          <div className="budget-row-target">
-            <div className="budget-target-progress">
-              <div className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
-            </div>
+      <button type="button" className="budget-row-main" onClick={onOpenTarget}>
+        <span className="budget-row-name">{cat.name}</span>
+        {hasTarget && (
+          <span className="budget-row-target">
+            <span className="budget-target-progress">
+              <span className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
+            </span>
             <span className={`budget-target-text ${isSnoozedThisMonth ? "is-snoozed" : underfunded ? "is-underfunded" : ""}`}>
               {isSnoozedThisMonth
-                ? (locale === "fi" ? "Tavoite tauolla" : "Target paused")
+                ? (locale === "fi" ? "tauolla" : "paused")
                 : underfunded
-                ? <><F v={stillNeeded} /> € {locale === "fi" ? "lisää tarvitaan" : "more needed"}</>
-                : <>{locale === "fi" ? "Tavoite täynnä" : "Target funded"}</>}
+                ? <><F v={stillNeeded} /> € {locale === "fi" ? "lisää" : "to go"}</>
+                : (locale === "fi" ? "valmis" : "funded")}
             </span>
-            <button type="button" className="budget-target-action" onClick={isSnoozedThisMonth ? onUnsnooze : onSnooze}>
-              {isSnoozedThisMonth ? (locale === "fi" ? "Jatka" : "Resume") : (locale === "fi" ? "Tauota" : "Snooze")}
-            </button>
-            <button type="button" className="budget-target-action" onClick={onOpenTarget}>
-              {locale === "fi" ? "Muokkaa" : "Edit"}
-            </button>
-          </div>
-        ) : (
-          <button type="button" className="budget-target-add" onClick={onOpenTarget}>
-            {locale === "fi" ? "Aseta tavoite" : "Set target"}
-          </button>
+          </span>
         )}
-      </div>
+      </button>
       <span className="budget-num">
         <Input
           className={`budget-budgeted-input ${invalid ? "is-invalid" : ""}`}
