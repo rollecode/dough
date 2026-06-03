@@ -45,8 +45,8 @@ export const en = {
     netWorth: "Net worth",
     investments: "Investments",
     subscriptions: "Subscriptions",
-    categories: "Categories",
     savingsGoals: "Savings goals",
+    budget: "Budget",
     settings: "Settings",
   },
   dashboard: {
