@@ -40,11 +40,11 @@
 
 /* Dark mode — deep, layered, modern */
 .dark {
-  --background: #0a0a10;
+  --background: #0b0a12;
   --foreground: #fafafa;
-  --card: #111118;
+  --card: #12111e;
   --card-foreground: #fafafa;
-  --popover: #111118;
+  --popover: #12111e;
   --popover-foreground: #fafafa;
   --primary: #6366f1;
   --primary-foreground: #ffffff;

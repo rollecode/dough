@@ -24,8 +24,8 @@
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .net-worth-hero-value {
@@ -58,8 +58,8 @@
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .net-worth-grid {
@@ -160,8 +160,8 @@
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .net-worth-list-item {

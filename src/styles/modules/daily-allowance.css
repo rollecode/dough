@@ -49,7 +49,7 @@
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--muted-foreground);
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.02em;
   display: flex;
   align-items: center;

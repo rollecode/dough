@@ -10,8 +10,8 @@
 .spending-trends-title {
   font-size: 0.7rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--muted-foreground);
   margin-bottom: 0.75rem;
 }
