@@ -89,6 +89,31 @@ export async function PUT(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const user = await getSession();
+    if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+    const body = await request.json();
+    const order: number[] = body.order;
+    if (!Array.isArray(order)) return NextResponse.json({ error: "order array required" }, { status: 400 });
+
+    const db = getDb();
+    const stmt = db.prepare("UPDATE categories SET sort_order = ?, updated_at = datetime('now') WHERE id = ?");
+    const tx = db.transaction(() => {
+      order.forEach((id, idx) => stmt.run(idx, id));
+    });
+    tx();
+
+    console.info("[categories] Reordered", order.length, "categories");
+    eventBus.emit("data:updated", { source: "categories-reordered" });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[categories] PATCH error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const user = await getSession();

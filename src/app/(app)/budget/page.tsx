@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Loader2, Plus, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Plus, Settings, GripVertical } from "lucide-react";
 import { F } from "@/components/ui/f";
 
 interface BudgetCategory {
@@ -81,6 +81,8 @@ export default function BudgetPage() {
   const [targetCat, setTargetCat] = useState<BudgetCategory | null>(null);
   const [targetDraft, setTargetDraft] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [manageOrder, setManageOrder] = useState<BudgetCategory[]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
   const addCatRef = useRef<HTMLFormElement>(null);
   const editCatRef = useRef<HTMLFormElement>(null);
 
@@ -95,6 +97,32 @@ export default function BudgetPage() {
   }, []);
 
   useEffect(() => { load(month); }, [load, month]);
+
+  // Keep the manage-dialog ordering in sync with loaded categories
+  useEffect(() => {
+    if (data?.categories) setManageOrder(data.categories);
+  }, [data]);
+
+  const handleDragStart = (idx: number) => setDragIdx(idx);
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    const reordered = [...manageOrder];
+    const [moved] = reordered.splice(dragIdx, 1);
+    reordered.splice(idx, 0, moved);
+    setManageOrder(reordered);
+    setDragIdx(idx);
+  };
+  const handleDragEnd = () => {
+    setDragIdx(null);
+    const order = manageOrder.map((c) => c.id);
+    fetch("/api/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    }).then(() => load(month)).catch(() => {});
+    console.info("[budget] Saved category order");
+  };
 
   const saveBudgeted = async (catId: number, value: number) => {
     setSavingId(catId);
@@ -258,24 +286,35 @@ export default function BudgetPage() {
         </Button>
         {month !== thisMonth() && (
           <Button variant="outline" size="sm" onClick={() => setMonth(thisMonth())}>
-            {locale === "fi" ? "Tämä kuukausi" : "This month"}
+            {locale === "fi" ? "Tänään" : "Today"}
           </Button>
         )}
       </div>
 
-      <Card className={`budget-ready-card ${data && data.readyToAssign >= 0 ? "is-positive" : "is-negative"}`}>
-        <p className="budget-ready-label">
-          {locale === "fi" ? "Budjetoimatonta rahaa" : "Unallocated money"}
-        </p>
-        <p className="budget-ready-value">
-          <F v={data?.readyToAssign || 0} s=" €" />
-        </p>
-        <p className="budget-ready-note">
-          {locale === "fi" ? "Tulot" : "Income"} <F v={data?.income || 0} s=" €" />
-          {" − "}
-          {locale === "fi" ? "Budjetoitu" : "Budgeted"} <F v={data?.totalBudgeted || 0} s=" €" />
-        </p>
-      </Card>
+      {(() => {
+        const rta = data?.readyToAssign || 0;
+        const state = rta > 0.005 ? "is-positive" : rta < -0.005 ? "is-negative" : "is-zero";
+        const label = state === "is-zero"
+          ? (locale === "fi" ? "Kaikki rahat jaettu" : "All money assigned")
+          : state === "is-negative"
+          ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
+          : (locale === "fi" ? "Budjetoimatonta rahaa" : "Ready to assign");
+        return (
+          <div className="budget-ready-wrap">
+            <div className={`budget-ready-box ${state}`}>
+              <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+              <span className="budget-ready-label">{label}</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="budget-grid budget-table-header">
+        <span>{locale === "fi" ? "Kategoria" : "Category"}</span>
+        <span>{locale === "fi" ? "Budjetoitu" : "Assigned"}</span>
+        <span>{locale === "fi" ? "Toteuma" : "Activity"}</span>
+        <span>{locale === "fi" ? "Käytettävissä" : "Available"}</span>
+      </div>
 
       {[...groups.entries()].map(([groupName, items]) => {
         const groupBudgeted = items.reduce((s, c) => s + c.budgeted, 0);
@@ -283,13 +322,15 @@ export default function BudgetPage() {
         const groupAvailable = items.reduce((s, c) => s + c.available, 0);
         return (
           <Card key={groupName} className="list-card list-card-divider">
-            <div className="budget-group-header">
+            <div className="budget-grid budget-group-header">
               <span className="budget-group-name">{groupName}</span>
-              <div className="budget-group-totals">
-                <span><F v={groupBudgeted} /></span>
-                <span className="text-negative"><F v={groupActivity} /></span>
-                <span className={groupAvailable >= 0 ? "text-positive" : "text-negative"}><F v={groupAvailable} /></span>
-              </div>
+              <span className="budget-num"><F v={groupBudgeted} /></span>
+              <span className="budget-num text-muted"><F v={groupActivity} /></span>
+              <span className="budget-num">
+                <span className={`budget-pill ${groupAvailable > 0 ? "is-positive" : groupAvailable < 0 ? "is-negative" : "is-zero"}`}>
+                  <F v={groupAvailable} />
+                </span>
+              </span>
             </div>
             {items.map((c) => (
               <BudgetRow
@@ -314,23 +355,29 @@ export default function BudgetPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>{locale === "fi" ? "Hallinnoi kategorioita" : "Manage categories"}</DialogTitle></DialogHeader>
           <div className="form-stack">
-            <Button onClick={() => { setManageOpen(false); setAddCatOpen(true); }}>
+            <Button variant="outline" size="sm" onClick={() => { setManageOpen(false); setAddCatOpen(true); }}>
               <Plus className="icon-sm" />
               {locale === "fi" ? "Lisää kategoria" : "Add category"}
             </Button>
-            <div className="match-pattern-list">
-              {(data?.categories || []).map((c) => (
-                <div key={c.id} className="list-item">
-                  <div className="list-item-body">
-                    <p className={`list-item-name ${!c.is_active ? "is-inactive" : ""}`}>{c.name}</p>
-                    <p className="list-item-meta">{c.group_name}</p>
-                  </div>
-                  <div className="list-item-end">
+            <p className="settings-help">{locale === "fi" ? "Vedä järjestääksesi. Napauta muokataksesi." : "Drag to reorder. Tap to edit."}</p>
+            <div className="manage-cat-list">
+              {manageOrder.map((c, idx) => (
+                <div
+                  key={c.id}
+                  className={`manage-cat-row ${dragIdx === idx ? "is-dragging" : ""}`}
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <GripVertical className="manage-cat-grip" />
+                  <button type="button" className="manage-cat-main" onClick={() => { setManageOpen(false); setEditCat(c); }}>
+                    <span className={`manage-cat-name ${!c.is_active ? "is-inactive" : ""}`}>{c.name}</span>
+                    {c.group_name && <span className="manage-cat-group">{c.group_name}</span>}
+                  </button>
+                  <span onClick={(e) => e.stopPropagation()}>
                     <Switch checked={!!c.is_active} onCheckedChange={() => toggleActive(c)} />
-                    <Button variant="outline" size="sm" onClick={() => { setManageOpen(false); setEditCat(c); }}>
-                      {locale === "fi" ? "Muokkaa" : "Edit"}
-                    </Button>
-                  </div>
+                  </span>
                 </div>
               ))}
             </div>
@@ -447,35 +494,46 @@ function BudgetRow({ cat, saving, onSave, onOpenTarget, onSnooze, onUnsnooze, fm
   const hasTarget = cat.target_monthly > 0;
   const isSnoozedThisMonth = hasTarget && cat.snooze_until_month >= month;
   const progress = hasTarget ? Math.min(1, cat.budgeted / cat.target_monthly) : 0;
+  const underfunded = cat.target_active && cat.budgeted < cat.target_monthly - 0.005;
+  const stillNeeded = underfunded ? Math.round((cat.target_monthly - cat.budgeted) * 100) / 100 : 0;
+  const pillClass = cat.available < -0.005
+    ? "is-negative"
+    : underfunded
+    ? "is-underfunded"
+    : cat.available > 0.005
+    ? "is-positive"
+    : "is-zero";
 
   return (
-    <div className="budget-row">
+    <div className="budget-grid budget-row">
       <div className="budget-row-main">
         <div className="budget-row-name">{cat.name}</div>
-        {hasTarget && (
+        {hasTarget ? (
           <div className="budget-row-target">
             <div className="budget-target-progress">
               <div className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
-            <span className={`budget-target-text ${isSnoozedThisMonth ? "is-snoozed" : ""}`}>
-              {locale === "fi" ? "Tavoite" : "Target"} <F v={cat.target_monthly} />€/{locale === "fi" ? "kk" : "mo"}
-              {isSnoozedThisMonth && ` · ${locale === "fi" ? "snoozattu" : "snoozed"}`}
+            <span className={`budget-target-text ${isSnoozedThisMonth ? "is-snoozed" : underfunded ? "is-underfunded" : ""}`}>
+              {isSnoozedThisMonth
+                ? (locale === "fi" ? "Tavoite tauolla" : "Target paused")
+                : underfunded
+                ? <><F v={stillNeeded} /> € {locale === "fi" ? "lisää tarvitaan" : "more needed"}</>
+                : <>{locale === "fi" ? "Tavoite täynnä" : "Target funded"}</>}
             </span>
             <button type="button" className="budget-target-action" onClick={isSnoozedThisMonth ? onUnsnooze : onSnooze}>
-              {isSnoozedThisMonth ? (locale === "fi" ? "Palauta" : "Resume") : (locale === "fi" ? "Snoozaa" : "Snooze")}
+              {isSnoozedThisMonth ? (locale === "fi" ? "Jatka" : "Resume") : (locale === "fi" ? "Tauota" : "Snooze")}
             </button>
             <button type="button" className="budget-target-action" onClick={onOpenTarget}>
               {locale === "fi" ? "Muokkaa" : "Edit"}
             </button>
           </div>
-        )}
-        {!hasTarget && (
+        ) : (
           <button type="button" className="budget-target-add" onClick={onOpenTarget}>
-            {locale === "fi" ? "+ Aseta tavoite" : "+ Set target"}
+            {locale === "fi" ? "Aseta tavoite" : "Set target"}
           </button>
         )}
       </div>
-      <div className="budget-row-inputs">
+      <span className="budget-num">
         <Input
           className={`budget-budgeted-input ${invalid ? "is-invalid" : ""}`}
           value={draft}
@@ -487,11 +545,11 @@ function BudgetRow({ cat, saving, onSave, onOpenTarget, onSnooze, onUnsnooze, fm
           placeholder="0"
           disabled={saving}
         />
-        <span className="budget-row-activity">−<F v={cat.activity} /></span>
-        <span className={`budget-row-available ${cat.available >= 0 ? "text-positive" : "text-negative"}`}>
-          <F v={cat.available} />
-        </span>
-      </div>
+      </span>
+      <span className="budget-num text-muted">{cat.activity > 0 ? <>−<F v={cat.activity} /></> : <F v={0} />}</span>
+      <span className="budget-num">
+        <span className={`budget-pill ${pillClass}`}><F v={cat.available} /></span>
+      </span>
     </div>
   );
 }
