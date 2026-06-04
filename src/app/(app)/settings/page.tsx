@@ -1013,9 +1013,13 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="form-stack">
             <p className="page-subtitle">
-              {locale === "fi"
-                ? "Synci hakee pankkitulot automaattisesti ja siirtää ne YNAB:iin. Ei tarvitse syöttää tuloja manuaalisesti."
-                : "Synci fetches bank income automatically and syncs it to YNAB. No need to enter income manually."}
+              {profile?.ynab_connected
+                ? (locale === "fi"
+                  ? "Synci hakee pankkitulot automaattisesti ja siirtää ne YNAB:iin. Ei tarvitse syöttää tuloja manuaalisesti."
+                  : "Synci fetches bank income automatically and syncs it to YNAB. No need to enter income manually.")
+                : (locale === "fi"
+                  ? "Synci hakee pankkitapahtumat automaattisesti Doughiin. Tilisiirrot tunnistetaan ja kaikki tapahtumat tuodaan, ei vain tulot."
+                  : "Synci imports bank transactions automatically into Dough. Transfers are detected and all transactions are imported, not just income.")}
             </p>
             <div className="form-field">
               <Label>{locale === "fi" ? "API-avain" : "API token"}</Label>
@@ -1089,9 +1093,13 @@ export default function SettingsPage() {
               <div className="form-field">
                 <Label>{locale === "fi" ? "Tilien mäppäys" : "Account mapping"}</Label>
                 <p className="settings-help">
-                  {locale === "fi"
-                    ? "Yhdistä Synci-pankkitilit YNAB-tileihin. Vain yhdistettyjen tilien tulot siirretään."
-                    : "Map Synci bank accounts to YNAB accounts. Only mapped accounts sync income."}
+                  {profile?.ynab_connected
+                    ? (locale === "fi"
+                      ? "Yhdistä Synci-pankkitilit YNAB-tileihin. Vain yhdistettyjen tilien tulot siirretään."
+                      : "Map Synci bank accounts to YNAB accounts. Only mapped accounts sync income.")
+                    : (locale === "fi"
+                      ? "Yhdistä Synci-pankkitilit Dough-tileihin. Vain yhdistettyjen tilien tapahtumat tuodaan."
+                      : "Map Synci bank accounts to your Dough accounts. Only mapped accounts are imported.")}
                 </p>
                 {synciAccounts.map((acc) => (
                   <div key={acc.id} className="form-field">
@@ -1112,7 +1120,7 @@ export default function SettingsPage() {
                       }}
                     >
                       <SelectTrigger className="settings-input">
-                        <SelectValue placeholder={locale === "fi" ? "Valitse YNAB-tili" : "Select YNAB account"} />
+                        <SelectValue placeholder={profile?.ynab_connected ? (locale === "fi" ? "Valitse YNAB-tili" : "Select YNAB account") : (locale === "fi" ? "Valitse tili" : "Select account")} />
                       </SelectTrigger>
                       <SelectContent>
                         {allAccounts.map((a) => (
