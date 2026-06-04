@@ -351,50 +351,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="settings-grid">
-        {/* Data mode explainer — how Dough sources data */}
-        <Card className="settings-card">
-          <CardHeader>
-            <CardTitle className="settings-card-title">
-              {profile?.ynab_connected ? <CheckCircle2 /> : <Wallet />}
-              {locale === "fi" ? "Tietolähde" : "Data source"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="form-stack">
-            {profile?.ynab_connected ? (
-              <p className="settings-help">
-                {locale === "fi"
-                  ? "YNAB on yhdistetty. Dough peilaa YNAB-budjettiasi: tilit, tapahtumat ja saldot haetaan YNABista. Voit katkaista yhteyden alta, jolloin Dough toimii itsenäisesti."
-                  : "YNAB is connected. Dough mirrors your YNAB budget: accounts, transactions and balances come from YNAB. Disconnect below to run Dough on its own."}
-              </p>
-            ) : (
-              <>
-                <p className="settings-help">
-                  {locale === "fi"
-                    ? "Dough toimii ilman YNABia ja tallentaa kaiken itse. Saat tapahtumat sisään kahdella tavalla:"
-                    : "Dough runs without YNAB and stores everything itself. Get transactions in two ways:"}
-                </p>
-                <ol className="settings-steps">
-                  <li>
-                    {locale === "fi"
-                      ? "Yhdistä Synci alta ja kartoita pankkitilisi, niin tapahtumat tuodaan automaattisesti (myös tilisiirrot tunnistetaan)."
-                      : "Connect Synci below and map your bank accounts to import transactions automatically (transfers are auto-detected too)."}
-                  </li>
-                  <li>
-                    {locale === "fi"
-                      ? "Tai lisää tapahtumat käsin Tapahtumat-sivulta."
-                      : "Or add transactions manually from the Transactions page."}
-                  </li>
-                </ol>
-                <p className="settings-help">
-                  {locale === "fi"
-                    ? "Synci: luo tili osoitteessa synci.io, hae API-avain, liitä se alle ja valitse mitkä pankkitilit yhdistetään."
-                    : "Synci: create an account at synci.io, get an API token, paste it below and choose which bank accounts to connect."}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Profile */}
         <Card className="settings-card">
           <CardHeader>
@@ -926,9 +882,25 @@ export default function SettingsPage() {
 
             {!profile?.ynab_connected ? (
               <div className="form-stack">
-                <p className="page-subtitle">
-                  {t.settings.ynabDescription}
+                <p className="settings-help">
+                  {locale === "fi"
+                    ? "Vapaaehtoinen. Ilman YNABia Dough toimii itsenäisesti (käytä Synciä tai lisää tapahtumat käsin). Yhdistä YNAB näin:"
+                    : "Optional. Without YNAB, Dough runs on its own (use Synci or add transactions manually). To connect YNAB:"}
                 </p>
+                <ol className="setup-steps">
+                  <li>
+                    <span className="setup-step-num">1</span>
+                    <span>{locale === "fi" ? "Avaa YNAB: Account Settings → Developer Settings → New Token." : "In YNAB: Account Settings → Developer Settings → New Token."}</span>
+                  </li>
+                  <li>
+                    <span className="setup-step-num">2</span>
+                    <span>{locale === "fi" ? "Liitä avain alle ja paina Yhdistä." : "Paste the token below and press Connect."}</span>
+                  </li>
+                  <li>
+                    <span className="setup-step-num">3</span>
+                    <span>{locale === "fi" ? "Valitse budjetti listalta." : "Pick your budget from the list."}</span>
+                  </li>
+                </ol>
                 <div className="form-field">
                   <Label>{t.settings.ynabToken}</Label>
                   <Input
@@ -1012,15 +984,31 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="form-stack">
-            <p className="page-subtitle">
+            <p className="settings-help">
               {profile?.ynab_connected
                 ? (locale === "fi"
                   ? "Synci hakee pankkitulot automaattisesti ja siirtää ne YNAB:iin. Ei tarvitse syöttää tuloja manuaalisesti."
                   : "Synci fetches bank income automatically and syncs it to YNAB. No need to enter income manually.")
                 : (locale === "fi"
-                  ? "Synci hakee pankkitapahtumat automaattisesti Doughiin. Tilisiirrot tunnistetaan ja kaikki tapahtumat tuodaan, ei vain tulot."
+                  ? "Synci tuo pankkitapahtumat automaattisesti Doughiin. Tilisiirrot tunnistetaan ja kaikki tapahtumat tuodaan, ei vain tulot."
                   : "Synci imports bank transactions automatically into Dough. Transfers are detected and all transactions are imported, not just income.")}
             </p>
+            {!synciConnected && (
+              <ol className="setup-steps">
+                <li>
+                  <span className="setup-step-num">1</span>
+                  <span>{locale === "fi" ? "Luo tili osoitteessa synci.io ja yhdistä pankkisi." : "Create an account at synci.io and connect your bank."}</span>
+                </li>
+                <li>
+                  <span className="setup-step-num">2</span>
+                  <span>{locale === "fi" ? "Synci dashboard: Developers → Tokens, luo API-avain ja liitä se alle." : "In the Synci dashboard: Developers → Tokens, create a token and paste it below."}</span>
+                </li>
+                <li>
+                  <span className="setup-step-num">3</span>
+                  <span>{locale === "fi" ? "Yhdistä, ja kartoita pankkitilit Dough-tileihin alla." : "Connect, then map your bank accounts to Dough accounts below."}</span>
+                </li>
+              </ol>
+            )}
             <div className="form-field">
               <Label>{locale === "fi" ? "API-avain" : "API token"}</Label>
               <Input
