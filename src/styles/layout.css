@@ -4,6 +4,9 @@
 .l-app-shell {
   min-height: 100vh;
   background-color: var(--background);
+  background-image: var(--app-gradient, none);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 /* Mobile top bar */

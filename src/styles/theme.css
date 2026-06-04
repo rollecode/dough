@@ -75,8 +75,14 @@
   --sidebar-border: rgba(255, 255, 255, 0.04);
   --sidebar-ring: #818cf8;
 
-  /* Glass effect tokens */
-  --glass-bg: rgba(255, 255, 255, 0.03);
+  /* Large, very soft deep-blue radial glow behind everything */
+  --app-gradient:
+    radial-gradient(120% 90% at 15% -10%, rgba(49, 46, 129, 0.28) 0%, rgba(49, 46, 129, 0) 55%),
+    radial-gradient(120% 80% at 100% 0%, rgba(30, 58, 138, 0.20) 0%, rgba(30, 58, 138, 0) 50%);
+
+  /* Glass effect tokens — tinted to the indigo card hue for consistency across pages */
+  --glass-bg: color-mix(in srgb, var(--card) 70%, transparent);
+  --glass-hover: color-mix(in srgb, var(--card) 90%, transparent);
   --glass-border: rgba(255, 255, 255, 0.06);
   --glass-hover: rgba(255, 255, 255, 0.05);
 }

@@ -123,7 +123,7 @@
 /* List cards (transactions, bills, income) */
 .card.list-card {
   border-color: color-mix(in srgb, var(--border) 30%, transparent);
-  background-color: color-mix(in srgb, var(--card) 80%, transparent);
+  background-color: var(--glass-bg, color-mix(in srgb, var(--card) 80%, transparent));
   padding: 0;
   gap: 0;
 }
@@ -142,17 +142,97 @@
 }
 
 /* Budget page */
-.budget-month-bar {
+.budget-topbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
 }
 
-.budget-month-label {
-  flex: 1;
-  font-weight: 600;
-  text-transform: capitalize;
+.budget-monthnav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.budget-monthnav-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 9999px;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.budget-monthnav-arrow:hover {
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  color: var(--foreground);
+}
+
+.budget-monthnav-arrow svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.budget-monthnav-label {
+  min-width: 8.5rem;
   text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.budget-monthnav-today {
+  margin-left: 0.25rem;
+  padding: 0.1875rem 0.625rem;
+  border: none;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: opacity 150ms, background-color 150ms, color 150ms;
+}
+
+.budget-monthnav-today:hover {
+  color: var(--foreground);
+}
+
+/* keep its layout space so arrows never jump when it toggles */
+.budget-monthnav-today.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.budget-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 9999px;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.budget-manage-btn:hover {
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  color: var(--foreground);
+}
+
+.budget-manage-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 /* Compact centered "ready to assign" box — like YNAB's top pill */

@@ -265,30 +265,27 @@ export default function BudgetPage() {
 
   return (
     <div className="page-stack">
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-heading">{locale === "fi" ? "Budjetti" : "Budget"}</h1>
-          <p className="page-subtitle">{locale === "fi" ? "Jaa rahat kuukauden kategorioille" : "Allocate money to monthly categories"}</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setManageOpen(true)}>
-          <Settings className="icon-sm" />
-          {locale === "fi" ? "Hallinnoi" : "Manage"}
-        </Button>
-      </div>
-
-      <div className="budget-month-bar">
-        <Button variant="outline" size="sm" onClick={() => setMonth(shiftMonth(month, -1))}>
-          <ChevronLeft className="icon-sm" />
-        </Button>
-        <span className="budget-month-label">{formatMonth(month, locale)}</span>
-        <Button variant="outline" size="sm" onClick={() => setMonth(shiftMonth(month, 1))}>
-          <ChevronRight className="icon-sm" />
-        </Button>
-        {month !== thisMonth() && (
-          <Button variant="outline" size="sm" onClick={() => setMonth(thisMonth())}>
+      <div className="budget-topbar">
+        <div className="budget-monthnav">
+          <button type="button" className="budget-monthnav-arrow" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Previous month">
+            <ChevronLeft />
+          </button>
+          <span className="budget-monthnav-label">{formatMonth(month, locale)}</span>
+          <button type="button" className="budget-monthnav-arrow" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="Next month">
+            <ChevronRight />
+          </button>
+          <button
+            type="button"
+            className={`budget-monthnav-today ${month === thisMonth() ? "is-hidden" : ""}`}
+            onClick={() => setMonth(thisMonth())}
+            tabIndex={month === thisMonth() ? -1 : 0}
+          >
             {locale === "fi" ? "Tänään" : "Today"}
-          </Button>
-        )}
+          </button>
+        </div>
+        <button type="button" className="budget-manage-btn" onClick={() => setManageOpen(true)} aria-label={locale === "fi" ? "Hallinnoi" : "Manage"}>
+          <Settings />
+        </button>
       </div>
 
       {(() => {
