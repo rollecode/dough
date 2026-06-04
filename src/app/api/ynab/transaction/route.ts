@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
-import { getYnabToken, getYnabBudgetId, setHouseholdSetting } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { spawn } from "child_process";
 
@@ -43,17 +44,49 @@ export async function POST(request: Request) {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-    const token = getYnabToken();
-    const budgetId = getYnabBudgetId();
-    if (!token || !budgetId) {
-      return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
-    }
-
     const body = await request.json();
     const { account_id, amount, payee_name, memo, category_id, date } = body;
 
     if (!account_id || !amount || !payee_name) {
       return NextResponse.json({ error: "Account, amount and payee required" }, { status: 400 });
+    }
+
+    // LOCAL MODE: write straight to Dough, no YNAB. Dormant while YNAB connected.
+    if (getBudgetMode() === "local") {
+      const { getDb } = await import("@/lib/db");
+      const db = getDb();
+      const signed = parseFloat(amount) * -1; // expense stored negative
+      const txDate = date || new Date().toISOString().slice(0, 10);
+      const id = `local_${randomUUID()}`;
+
+      // Auto-categorize against local categories if none given
+      let categoryName = "";
+      if (category_id) {
+        const c = db.prepare("SELECT name FROM categories WHERE id = ?").get(category_id) as { name: string } | undefined;
+        categoryName = c?.name || "";
+      } else {
+        try {
+          const names = (db.prepare("SELECT name FROM categories WHERE is_active = 1").all() as { name: string }[]).map((c) => c.name);
+          if (names.length > 0) categoryName = (await aiCategorize(payee_name, names)) || "";
+        } catch (err) { console.warn("[ynab/transaction] local categorize failed:", err); }
+      }
+
+      db.prepare(`
+        INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'cleared')
+      `).run(user.id, id, txDate, signed, payee_name, categoryName, memo || "", account_id);
+      db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(signed, account_id);
+
+      setHouseholdSetting("last_transaction_added", new Date().toISOString());
+      eventBus.emit("data:updated", { source: "transaction-added", userId: user.id });
+      console.info("[ynab/transaction] Local transaction created:", payee_name, signed, "cat:", categoryName || "uncategorized");
+      return NextResponse.json({ success: true, id, category: categoryName ? "auto" : "uncategorized" });
+    }
+
+    const token = getYnabToken();
+    const budgetId = getYnabBudgetId();
+    if (!token || !budgetId) {
+      return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
     }
 
     console.info("[ynab/transaction] Creating transaction:", payee_name, amount);
@@ -152,13 +185,31 @@ export async function PUT(request: Request) {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-    const token = getYnabToken();
-    const budgetId = getYnabBudgetId();
-    if (!token || !budgetId) return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
-
     const body = await request.json();
     const { transaction_id, amount, payee_name, memo, account_id, date } = body;
     if (!transaction_id) return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
+
+    // LOCAL MODE: update local row, adjust account balance by the delta
+    if (getBudgetMode() === "local") {
+      const { getDb } = await import("@/lib/db");
+      const db = getDb();
+      const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string } | undefined;
+      const signed = parseFloat(amount) * -1;
+      db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ? WHERE ynab_id = ?")
+        .run(signed, payee_name || "", memo || "", account_id || (prev?.account_id ?? ""), date || "", transaction_id);
+      if (prev) {
+        // remove old amount from old account, add new to new account
+        db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
+        db.prepare("UPDATE ynab_accounts SET balance = balance + ? WHERE id = ?").run(signed, account_id || prev.account_id);
+      }
+      eventBus.emit("data:updated", { source: "transaction-updated", userId: user.id });
+      console.info("[ynab/transaction] Local transaction updated:", transaction_id);
+      return NextResponse.json({ success: true });
+    }
+
+    const token = getYnabToken();
+    const budgetId = getYnabBudgetId();
+    if (!token || !budgetId) return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
 
     console.info("[ynab/transaction] Updating transaction:", transaction_id);
 
@@ -197,6 +248,55 @@ export async function PUT(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[ynab/transaction] PUT error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const user = await getSession();
+    if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+    const body = await request.json();
+    const transaction_id = body.transaction_id;
+    if (!transaction_id) return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
+
+    // LOCAL MODE: delete the row and reverse its balance effect
+    if (getBudgetMode() === "local") {
+      const { getDb } = await import("@/lib/db");
+      const db = getDb();
+      const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string } | undefined;
+      db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transaction_id);
+      if (prev) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
+      eventBus.emit("data:updated", { source: "transaction-deleted", userId: user.id });
+      console.info("[ynab/transaction] Local transaction deleted:", transaction_id);
+      return NextResponse.json({ success: true });
+    }
+
+    const token = getYnabToken();
+    const budgetId = getYnabBudgetId();
+    if (!token || !budgetId) return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
+
+    const res = await fetch(`https://api.ynab.com/v1/budgets/${budgetId}/transactions/${transaction_id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("[ynab/transaction] YNAB delete error:", res.status, text);
+      return NextResponse.json({ error: "Failed to delete transaction" }, { status: 500 });
+    }
+    try {
+      const { getDb } = await import("@/lib/db");
+      getDb().prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transaction_id);
+    } catch (err) {
+      console.warn("[ynab/transaction] Local delete failed:", err);
+    }
+    eventBus.emit("data:updated", { source: "transaction-deleted", userId: user.id });
+    console.info("[ynab/transaction] Transaction deleted:", transaction_id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[ynab/transaction] DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
