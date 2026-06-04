@@ -405,6 +405,21 @@ function initializeDb(db: Database.Database) {
     db.exec("ALTER TABLE transactions ADD COLUMN cleared TEXT NOT NULL DEFAULT 'cleared'");
   }
 
+  // Add account independence columns to ynab_accounts (also serves locally-managed accounts)
+  const acctCols = db.prepare("PRAGMA table_info(ynab_accounts)").all() as { name: string }[];
+  if (acctCols.length > 0 && !acctCols.some((c) => c.name === "source")) {
+    console.info("[db] Adding source column to ynab_accounts");
+    db.exec("ALTER TABLE ynab_accounts ADD COLUMN source TEXT NOT NULL DEFAULT 'ynab'");
+  }
+  if (acctCols.length > 0 && !acctCols.some((c) => c.name === "synci_account_id")) {
+    console.info("[db] Adding synci_account_id column to ynab_accounts");
+    db.exec("ALTER TABLE ynab_accounts ADD COLUMN synci_account_id TEXT DEFAULT ''");
+  }
+  if (acctCols.length > 0 && !acctCols.some((c) => c.name === "sort_order")) {
+    console.info("[db] Adding sort_order column to ynab_accounts");
+    db.exec("ALTER TABLE ynab_accounts ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
+  }
+
   // Add min_amount/max_amount columns to payee_matches if missing
   const payeeCols = db.prepare("PRAGMA table_info(payee_matches)").all() as { name: string }[];
   if (!payeeCols.some((c) => c.name === "min_amount")) {
