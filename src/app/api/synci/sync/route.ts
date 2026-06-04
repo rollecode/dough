@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { getHouseholdSetting, setHouseholdSetting } from "@/lib/household";
+import { getHouseholdSetting, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { getAllPatterns } from "@/lib/matching";
 import { eventBus } from "@/lib/event-bus";
 
@@ -61,14 +61,17 @@ export async function POST(request: Request) {
     }
 
     const db = getDb();
+    const mode = getBudgetMode();
     const patterns = getAllPatterns().filter((p) => p.source_type === "income");
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const firstUser = db.prepare("SELECT id FROM users ORDER BY id LIMIT 1").get() as { id: number } | undefined;
 
     let totalMatched = 0;
+    let totalImported = 0;
 
     for (const synciAccountId of mappedAccountIds) {
-      console.info("[synci/sync] Polling account", synciAccountId);
+      console.info("[synci/sync] Polling account", synciAccountId, "mode:", mode);
 
       const res = await fetch(`https://api.synci.io/api/v1/banks/transactions?bank_account_id=${synciAccountId}`, {
         headers: { Authorization: `Bearer ${synciToken}` },
@@ -84,9 +87,8 @@ export async function POST(request: Request) {
 
       for (const tx of transactions) {
         const amount = parseFloat(tx.amount) || 0;
-        if (amount <= 0) continue; // Only income
 
-        const payee = tx.mapped_fields?.payee || tx.creditor?.name || tx.remittance_information?.unstructured || tx.mapped_fields?.description || "";
+        const payee = tx.mapped_fields?.payee || tx.creditor?.name || tx.debtor?.name || tx.remittance_information?.unstructured || tx.mapped_fields?.description || "Unknown";
         const txId = tx.id ? String(tx.id) : "";
         const txDate = tx.booking_date || tx.mapped_fields?.date || "";
 
@@ -98,6 +100,42 @@ export async function POST(request: Request) {
         if (alreadyProcessed) continue;
 
         const matchMonth = txDate ? `${txDate.split("-")[0]}-${txDate.split("-")[1]}` : currentMonth;
+
+        // LOCAL MODE: import every transaction (income and expense) straight into Dough,
+        // no YNAB round trip. Dormant while YNAB is connected.
+        if (mode === "local") {
+          const localAccountId = accountMapping[synciAccountId] || "";
+          if (localAccountId && firstUser) {
+            db.prepare(`
+              INSERT OR IGNORE INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
+              VALUES (?, ?, ?, ?, ?, '', 'Synci', ?, 1, 'cleared')
+            `).run(firstUser.id, synciTxId, txDate || now.toISOString().slice(0, 10), amount, payee, localAccountId);
+            db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?")
+              .run(amount, localAccountId);
+            totalImported++;
+            console.info("[synci/sync] Imported", payee, amount, "to account", localAccountId);
+          }
+          // Income-pattern matching for inflows so income sources get marked received
+          if (amount > 0) {
+            for (const pattern of patterns) {
+              const matcher = patternToMatcher(pattern.payee_pattern);
+              if (!matcher(payee)) continue;
+              if (pattern.min_amount > 0 && amount < pattern.min_amount) continue;
+              if (pattern.max_amount > 0 && amount > pattern.max_amount) continue;
+              db.prepare(`INSERT OR IGNORE INTO monthly_matches (source_type, source_id, month, ynab_transaction_id, amount) VALUES (?, ?, ?, ?, ?)`)
+                .run("income", pattern.source_id, matchMonth, synciTxId, amount);
+              db.prepare(`INSERT INTO income_amount_history (income_id, amount, month) VALUES (?, ?, ?) ON CONFLICT(income_id, month) DO UPDATE SET amount = excluded.amount`)
+                .run(pattern.source_id, amount, matchMonth);
+              totalMatched++;
+              break;
+            }
+          }
+          db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
+          continue;
+        }
+
+        // YNAB MODE (unchanged): income only, created in YNAB then mirrored
+        if (amount <= 0) { db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId); continue; }
 
         console.info("[synci/sync] Income found:", payee, amount, "EUR on", txDate);
 
@@ -181,15 +219,51 @@ export async function POST(request: Request) {
       }
     }
 
+    // LOCAL MODE: auto-pair transfers between household accounts.
+    // Opposite-sign Synci transactions of equal magnitude within 2 days, on
+    // different accounts, get relabelled "Transfer : <other account>" so they
+    // are excluded from spending/income stats by isTransfer().
+    let transfersPaired = 0;
+    if (mode === "local") {
+      const acctNames = new Map(
+        (db.prepare("SELECT id, name FROM ynab_accounts").all() as { id: string; name: string }[]).map((a) => [a.id, a.name])
+      );
+      const candidates = db.prepare(
+        "SELECT ynab_id, date, amount, account_id FROM transactions " +
+          "WHERE ynab_id LIKE 'synci_%' AND payee NOT LIKE 'Transfer%' AND date >= date('now', '-45 days') ORDER BY date"
+      ).all() as { ynab_id: string; date: string; amount: number; account_id: string }[];
+      const paired = new Set<string>();
+      for (let i = 0; i < candidates.length; i++) {
+        const a = candidates[i];
+        if (paired.has(a.ynab_id)) continue;
+        for (let j = i + 1; j < candidates.length; j++) {
+          const b = candidates[j];
+          if (paired.has(b.ynab_id)) continue;
+          if (a.account_id === b.account_id) continue;
+          if (Math.abs(a.amount + b.amount) > 0.001) continue; // must be exact opposites
+          const days = Math.abs((new Date(a.date).getTime() - new Date(b.date).getTime()) / 86400000);
+          if (days > 2) continue;
+          const aName = acctNames.get(a.account_id) || "";
+          const bName = acctNames.get(b.account_id) || "";
+          db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${bName}`, a.ynab_id);
+          db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${aName}`, b.ynab_id);
+          paired.add(a.ynab_id); paired.add(b.ynab_id);
+          transfersPaired++;
+          break;
+        }
+      }
+      if (transfersPaired > 0) console.info("[synci/sync] Auto-paired", transfersPaired, "transfers");
+    }
+
     // Update last sync time
     setHouseholdSetting("synci_last_sync", new Date().toISOString());
 
-    if (totalMatched > 0) {
-      eventBus.emit("data:updated", { source: "synci-income" });
+    if (totalMatched > 0 || totalImported > 0 || transfersPaired > 0) {
+      eventBus.emit("data:updated", { source: "synci-sync" });
     }
 
-    console.info("[synci/sync] Done: matched", totalMatched, "income(s)");
-    return NextResponse.json({ ok: true, matched: totalMatched });
+    console.info("[synci/sync] Done. mode:", mode, "matched:", totalMatched, "imported:", totalImported, "transfers:", transfersPaired);
+    return NextResponse.json({ ok: true, mode, matched: totalMatched, imported: totalImported, transfers: transfersPaired });
   } catch (error) {
     console.error("[synci/sync] Error:", error);
     return NextResponse.json({ error: "Sync failed" }, { status: 500 });

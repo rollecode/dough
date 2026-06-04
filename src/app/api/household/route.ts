@@ -14,6 +14,8 @@ export async function GET() {
     return NextResponse.json({
       settings: {
         ynab_connected: !!settings.ynab_access_token,
+        data_mode: settings.ynab_access_token && settings.ynab_budget_id ? "ynab" : "local",
+        synci_connected: !!settings.synci_api_token,
         ynab_budget_id: settings.ynab_budget_id || null,
         saving_rate: settings.saving_rate ? parseFloat(settings.saving_rate) : 0,
         saving_rate_type: settings.saving_rate_type || "fixed",

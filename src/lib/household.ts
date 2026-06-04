@@ -34,6 +34,20 @@ export function getYnabBudgetId(): string | null {
   return getHouseholdSetting("ynab_budget_id");
 }
 
+// Data source mode: "ynab" when a YNAB token and budget are configured,
+// otherwise "local" (Dough owns the data, Synci or manual entry feeds it).
+export type BudgetMode = "ynab" | "local";
+
+export function getBudgetMode(): BudgetMode {
+  const token = getHouseholdSetting("ynab_access_token");
+  const budgetId = getHouseholdSetting("ynab_budget_id");
+  return token && budgetId ? "ynab" : "local";
+}
+
+export function isYnabConnected(): boolean {
+  return getBudgetMode() === "ynab";
+}
+
 export function getSavingRate(): number {
   const val = getHouseholdSetting("saving_rate");
   return val ? parseFloat(val) : 0;
