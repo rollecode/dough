@@ -1151,6 +1151,51 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Accounts page */
+.account-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+}
+
+.account-badge.is-muted {
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  color: var(--muted-foreground);
+}
+
+.account-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.account-toggle-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.settings-link-btn {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  transition: background-color 150ms;
+}
+
+.settings-link-btn:hover {
+  background: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
 .settings-card-title {
   display: flex;
   align-items: center;

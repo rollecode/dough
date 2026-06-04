@@ -390,108 +390,15 @@ export default function SettingsPage() {
                 {locale === "fi" ? "Näytetään tervehdyksessä ja chatissa" : "Shown in greeting and chat"}
               </p>
             </div>
-            {allAccounts.length > 0 && (
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Oma käyttötili" : "My spending account"}</Label>
-                <p className="settings-help settings-help-mb">
-                  {locale === "fi" ? "Valitse tili jolta maksat ostoksia (korttimaksut)" : "Select the account you make payments from (card transactions)"}
-                </p>
-                <div className="settings-account-list">
-                  {allAccounts.map((a) => (
-                    <div key={a.id} className="settings-account-row">
-                      <label className="settings-account-item">
-                        <input
-                          type="checkbox"
-                          checked={linkedAccountIds.includes(a.id)}
-                          onChange={(e) => {
-                            setLinkedAccountIds((prev) =>
-                              e.target.checked ? [...prev, a.id] : prev.filter((id) => id !== a.id)
-                            );
-                          }}
-                        />
-                        <span className="settings-account-name">{a.name}</span>
-                        <span className="settings-account-balance"><F v={a.balance} /></span>
-                      </label>
-                      <Input
-                        value={accountNotes[a.id] || ""}
-                        onChange={(e) => setAccountNotes((prev) => ({ ...prev, [a.id]: e.target.value }))}
-                        placeholder={locale === "fi" ? "Kuvaus AI:lle, esim. Puskuritili" : "Note for AI, e.g. Buffer account"}
-                        className="settings-account-note"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="settings-row">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      await fetch("/api/profile", {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ linked_account_ids: linkedAccountIds }),
-                      });
-                      // Save all account notes
-                      for (const account of allAccounts) {
-                        await fetch("/api/account-notes", {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ ynab_account_id: account.id, note: accountNotes[account.id] || "" }),
-                        });
-                      }
-                      setAccountsSaved(true);
-                      setTimeout(() => setAccountsSaved(false), 2000);
-                    }}
-                  >
-                    {t.common.save}
-                  </Button>
-                  {accountsSaved && <span className="settings-saved">{t.common.saved}</span>}
-                </div>
-              </div>
-            )}
-            {allAccounts.length > 0 && (
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Tilit pois päiväbudjetista" : "Accounts excluded from daily budget"}</Label>
-                <p className="settings-help settings-help-mb">
-                  {locale === "fi" ? "Valitut tilit eivät näy käytettävissä olevassa saldossa tai päiväbudjetissa, mutta lasketaan varallisuuteen." : "Selected accounts won't count toward available balance or daily budget, but are included in net worth."}
-                </p>
-                <div className="settings-account-list">
-                  {allAccounts.map((a) => (
-                    <label key={a.id} className="settings-account-item">
-                      <input
-                        type="checkbox"
-                        checked={excludedAccounts.includes(a.id)}
-                        onChange={(e) => {
-                          setExcludedAccounts((prev) =>
-                            e.target.checked ? [...prev, a.id] : prev.filter((id) => id !== a.id)
-                          );
-                        }}
-                      />
-                      <span className="settings-account-name">{a.name}</span>
-                      <span className="settings-account-balance"><F v={a.balance} /></span>
-                    </label>
-                  ))}
-                </div>
-                <div className="settings-row">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      await fetch("/api/household", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ budget_excluded_accounts: JSON.stringify(excludedAccounts) }),
-                      });
-                      setExcludedSaved(true);
-                      setTimeout(() => setExcludedSaved(false), 2000);
-                    }}
-                  >
-                    {t.common.save}
-                  </Button>
-                  {excludedSaved && <span className="settings-saved">{t.common.saved}</span>}
-                </div>
-              </div>
-            )}
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Tilit" : "Accounts"}</Label>
+              <p className="settings-help settings-help-mb">
+                {locale === "fi"
+                  ? "Hallinnoi tilejä, käyttötiliä, päiväbudjetista poissulkemista ja muistiinpanoja Tilit-sivulla."
+                  : "Manage accounts, your spending account, daily-budget exclusions and notes on the Accounts page."}
+              </p>
+              <a href="/accounts" className="settings-link-btn">{locale === "fi" ? "Avaa Tilit" : "Open Accounts"}</a>
+            </div>
             <div className="form-field">
               <Label>{locale === "fi" ? "Oma osuus päiväbudjetista (%)" : "Your share of daily budget (%)"}</Label>
               <div className="settings-row">

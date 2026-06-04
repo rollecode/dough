@@ -39,6 +39,7 @@ export const fi = {
     dashboard: "Yhteenveto",
     chat: "AI-neuvoja Dougie",
     transactions: "Tilitapahtumat",
+    accounts: "Tilit",
     bills: "Laskut",
     income: "Tulot",
     debts: "Velat",

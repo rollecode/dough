@@ -39,6 +39,7 @@ export const en = {
     dashboard: "Dashboard",
     chat: "AI advisor Dougie",
     transactions: "Transactions",
+    accounts: "Accounts",
     bills: "Bills",
     income: "Income",
     debts: "Debts",
