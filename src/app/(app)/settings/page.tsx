@@ -351,6 +351,50 @@ export default function SettingsPage() {
       </div>
 
       <div className="settings-grid">
+        {/* Data mode explainer — how Dough sources data */}
+        <Card className="settings-card">
+          <CardHeader>
+            <CardTitle className="settings-card-title">
+              {profile?.ynab_connected ? <CheckCircle2 /> : <Wallet />}
+              {locale === "fi" ? "Tietolähde" : "Data source"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="form-stack">
+            {profile?.ynab_connected ? (
+              <p className="settings-help">
+                {locale === "fi"
+                  ? "YNAB on yhdistetty. Dough peilaa YNAB-budjettiasi: tilit, tapahtumat ja saldot haetaan YNABista. Voit katkaista yhteyden alta, jolloin Dough toimii itsenäisesti."
+                  : "YNAB is connected. Dough mirrors your YNAB budget: accounts, transactions and balances come from YNAB. Disconnect below to run Dough on its own."}
+              </p>
+            ) : (
+              <>
+                <p className="settings-help">
+                  {locale === "fi"
+                    ? "Dough toimii ilman YNABia ja tallentaa kaiken itse. Saat tapahtumat sisään kahdella tavalla:"
+                    : "Dough runs without YNAB and stores everything itself. Get transactions in two ways:"}
+                </p>
+                <ol className="settings-steps">
+                  <li>
+                    {locale === "fi"
+                      ? "Yhdistä Synci alta ja kartoita pankkitilisi, niin tapahtumat tuodaan automaattisesti (myös tilisiirrot tunnistetaan)."
+                      : "Connect Synci below and map your bank accounts to import transactions automatically (transfers are auto-detected too)."}
+                  </li>
+                  <li>
+                    {locale === "fi"
+                      ? "Tai lisää tapahtumat käsin Tapahtumat-sivulta."
+                      : "Or add transactions manually from the Transactions page."}
+                  </li>
+                </ol>
+                <p className="settings-help">
+                  {locale === "fi"
+                    ? "Synci: luo tili osoitteessa synci.io, hae API-avain, liitä se alle ja valitse mitkä pankkitilit yhdistetään."
+                    : "Synci: create an account at synci.io, get an API token, paste it below and choose which bank accounts to connect."}
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Profile */}
         <Card className="settings-card">
           <CardHeader>
