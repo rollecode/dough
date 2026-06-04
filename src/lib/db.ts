@@ -554,17 +554,23 @@ function initializeDb(db: Database.Database) {
     `);
   }
 
-  // Migrate YNAB settings from users to household_settings
-  const existingYnab = db.prepare("SELECT ynab_access_token, ynab_budget_id FROM users WHERE ynab_access_token IS NOT NULL LIMIT 1").get() as { ynab_access_token: string; ynab_budget_id: string | null } | undefined;
-  if (existingYnab) {
+  // One-time migration of YNAB settings from users to household_settings.
+  // Guarded by a flag and clears the source columns afterwards, so a later
+  // disconnect (which removes the household_settings keys) is never resurrected.
+  const ynabMigrated = db.prepare("SELECT value FROM household_settings WHERE key = 'ynab_user_migrated'").get();
+  if (!ynabMigrated) {
+    const existingYnab = db.prepare("SELECT ynab_access_token, ynab_budget_id FROM users WHERE ynab_access_token IS NOT NULL LIMIT 1").get() as { ynab_access_token: string; ynab_budget_id: string | null } | undefined;
     const hasHousehold = db.prepare("SELECT value FROM household_settings WHERE key = 'ynab_access_token'").get();
-    if (!hasHousehold) {
-      console.info("[db] Migrating YNAB settings from users to household_settings");
+    if (existingYnab && !hasHousehold) {
+      console.info("[db] Migrating YNAB settings from users to household_settings (one-time)");
       db.prepare("INSERT OR IGNORE INTO household_settings (key, value) VALUES (?, ?)").run("ynab_access_token", existingYnab.ynab_access_token);
       if (existingYnab.ynab_budget_id) {
         db.prepare("INSERT OR IGNORE INTO household_settings (key, value) VALUES (?, ?)").run("ynab_budget_id", existingYnab.ynab_budget_id);
       }
     }
+    // Clear the stale source so disconnect sticks, and mark migration done
+    db.exec("UPDATE users SET ynab_access_token = NULL, ynab_budget_id = NULL WHERE ynab_access_token IS NOT NULL");
+    db.prepare("INSERT OR IGNORE INTO household_settings (key, value) VALUES ('ynab_user_migrated', '1')").run();
   }
 
   // One-time seed: copy distinct categories from ynab_categories into local categories
