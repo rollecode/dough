@@ -395,23 +395,25 @@
 
 .budget-assigned-cell {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+  display: block;
 }
 
+/* Calculator icon sits inside the input, only shown while focused */
 .button-calculator {
+  position: absolute;
+  left: 0.375rem;
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.25rem;
   height: 1.25rem;
-  flex-shrink: 0;
   border: none;
   background: none;
   color: var(--muted-foreground);
   cursor: pointer;
-  opacity: 0.5;
+  opacity: 0.6;
   transition: opacity 150ms, color 150ms;
 }
 
@@ -434,8 +436,9 @@
   caret-color: transparent;
 }
 
-.budget-budgeted-input:focus {
-  caret-color: transparent;
+/* room for the in-input calculator icon when focused */
+.budget-budgeted-input.is-focused {
+  padding-left: 1.625rem;
 }
 
 .budget-budgeted-input.is-invalid {
