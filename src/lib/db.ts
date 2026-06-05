@@ -588,9 +588,37 @@ function initializeDb(db: Database.Database) {
         for (const r of ynabCatRows) ins.run(r.name, r.group_name || "", order++);
       }
     }
+    // Self-heal groups for categories synced from an older DB where the YNAB mirror lacked groups
+    backfillCategoryGroups(db);
   } catch (err) {
     console.warn("[db] categories seed:", err);
   }
 
   console.info("[db] Schema initialized");
+}
+
+// Backfill empty category group_name values from the YNAB mirror (idempotent).
+// Runs on startup and after each YNAB sync so categories pick up their groups
+// once the ynab_categories mirror has them.
+export function backfillCategoryGroups(db: Database.Database): number {
+  try {
+    const res = db
+      .prepare(
+        `UPDATE categories SET group_name = (
+           SELECT yc.group_name FROM ynab_categories yc
+           WHERE yc.name = categories.name AND COALESCE(yc.group_name, '') <> ''
+           ORDER BY yc.month DESC LIMIT 1
+         )
+         WHERE COALESCE(group_name, '') = '' AND EXISTS (
+           SELECT 1 FROM ynab_categories yc
+           WHERE yc.name = categories.name AND COALESCE(yc.group_name, '') <> ''
+         )`
+      )
+      .run();
+    if (res.changes > 0) console.info("[db] Backfilled group_name for", res.changes, "categories");
+    return res.changes;
+  } catch (err) {
+    console.warn("[db] backfillCategoryGroups:", err);
+    return 0;
+  }
 }

@@ -114,6 +114,7 @@ export async function getMonthBudget(budgetId: string, month?: string, token?: s
       .map((c: any) => ({
         id: c.id,
         name: c.name,
+        group: c.category_group_name || "",
         budgeted: c.budgeted / 1000,
         activity: c.activity / 1000,
         balance: c.balance / 1000,
