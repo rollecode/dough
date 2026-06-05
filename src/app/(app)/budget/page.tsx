@@ -409,7 +409,7 @@ export default function BudgetPage() {
         ))}
       </div>
 
-      <div className="budget-table">
+      <div className={`budget-table ${bdrag ? "is-reordering" : ""}`}>
       <div className="budget-grid budget-table-header">
         <span>{locale === "fi" ? "Kategoria" : "Category"}</span>
         <span>{locale === "fi" ? "Budjetoitu" : "Assigned"}</span>
@@ -427,25 +427,24 @@ export default function BudgetPage() {
           ? items
           : items.filter((c) => (filter === "overspent" ? c.available < -0.005 : c.available > 0.005));
         if (!dragEnabled && visibleItems.length === 0) return null;
+        const draggingGroup = bdrag?.type === "group";
+        const draggingRow = bdrag?.type === "row";
+        // Collapse to header-only: all groups while dragging a group, other groups while dragging a row
+        const collapsed = dragEnabled && (draggingGroup || (draggingRow && bdrag!.groupKey !== group.key));
+        const isGroupSource = draggingGroup && bdrag!.index === gIdx;
         return (
           <Card
             key={group.key}
-            className={`list-card list-card-divider ${bdrag?.type === "group" && bdrag.index === gIdx ? "is-drag-active" : ""}`}
+            className={`list-card list-card-divider ${collapsed ? "is-collapsed" : ""} ${isGroupSource ? "is-drag-source" : ""}`}
             onDragOver={dragEnabled ? (e) => onGroupDragOver(e, gIdx) : undefined}
           >
-            <div className="budget-grid budget-group-header">
-              {dragEnabled && (
-                <button
-                  type="button"
-                  className="budget-grip budget-group-grip"
-                  draggable
-                  onDragStart={() => onGroupDragStart(gIdx)}
-                  onDragEnd={onBudgetDragEnd}
-                  aria-label={locale === "fi" ? "Siirrä ryhmää" : "Reorder group"}
-                >
-                  <GripVertical />
-                </button>
-              )}
+            <div
+              className="budget-grid budget-group-header"
+              draggable={dragEnabled}
+              onDragStart={dragEnabled ? () => onGroupDragStart(gIdx) : undefined}
+              onDragEnd={dragEnabled ? onBudgetDragEnd : undefined}
+            >
+              {dragEnabled && <span className="budget-grip budget-group-grip" aria-hidden="true"><GripVertical /></span>}
               <span className="budget-group-name">{group.label}</span>
               <span className="budget-num"><F v={groupBudgeted} /></span>
               <span className="budget-num text-muted"><F v={groupActivity} /></span>
@@ -455,38 +454,41 @@ export default function BudgetPage() {
                 </span>
               </span>
             </div>
-            {visibleItems.map((c, rIdx) => (
-              <div
-                key={c.id}
-                className={`budget-row-drag ${bdrag?.type === "row" && bdrag.groupKey === group.key && bdrag.index === rIdx ? "is-dragging" : ""}`}
-                onDragOver={dragEnabled ? (e) => onRowDragOver(e, group.key, rIdx) : undefined}
-              >
-                {dragEnabled && (
-                  <button
-                    type="button"
-                    className="budget-grip budget-row-grip"
-                    draggable
-                    onDragStart={() => onRowDragStart(group.key, rIdx)}
-                    onDragEnd={onBudgetDragEnd}
-                    aria-label={locale === "fi" ? "Siirrä" : "Reorder"}
-                  >
-                    <GripVertical />
-                  </button>
-                )}
-                <BudgetRow
-                  cat={c}
-                  saving={savingId === c.id}
-                  onSave={(v) => saveBudgeted(c.id, v)}
-                  onOpen={() => setInspectorId(c.id)}
-                  fmt={fmt}
-                  month={month}
-                  locale={locale}
-                  siblings={data?.categories || []}
-                  readyToAssign={data?.readyToAssign || 0}
-                  onCover={(source, amount) => coverOverspend(c, source, amount)}
-                />
-              </div>
-            ))}
+            {visibleItems.map((c, rIdx) => {
+              const isRowSource = draggingRow && bdrag!.groupKey === group.key && bdrag!.index === rIdx;
+              return (
+                <div
+                  key={c.id}
+                  className={`budget-row-drag ${isRowSource ? "is-drag-source" : ""}`}
+                  onDragOver={dragEnabled ? (e) => onRowDragOver(e, group.key, rIdx) : undefined}
+                >
+                  {dragEnabled && (
+                    <button
+                      type="button"
+                      className="budget-grip budget-row-grip"
+                      draggable
+                      onDragStart={() => onRowDragStart(group.key, rIdx)}
+                      onDragEnd={onBudgetDragEnd}
+                      aria-label={locale === "fi" ? "Siirrä" : "Reorder"}
+                    >
+                      <GripVertical />
+                    </button>
+                  )}
+                  <BudgetRow
+                    cat={c}
+                    saving={savingId === c.id}
+                    onSave={(v) => saveBudgeted(c.id, v)}
+                    onOpen={() => setInspectorId(c.id)}
+                    fmt={fmt}
+                    month={month}
+                    locale={locale}
+                    siblings={data?.categories || []}
+                    readyToAssign={data?.readyToAssign || 0}
+                    onCover={(source, amount) => coverOverspend(c, source, amount)}
+                  />
+                </div>
+              );
+            })}
           </Card>
         );
       })}
