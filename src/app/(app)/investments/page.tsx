@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   TrendingUp,
   Wallet,
@@ -14,6 +20,7 @@ import {
   Save,
   Check,
   GripVertical,
+  Plus,
 } from "lucide-react";
 import {
   AreaChart,
@@ -143,6 +150,44 @@ export default function InvestmentsPage() {
   const [tickerData, setTickerData] = useState<Record<string, TickerData>>({});
   const [chartRange, setChartRange] = useState<"1W" | "6M" | "MAX">("6M");
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const addFormRef = useRef<HTMLFormElement>(null);
+
+  const loadInvestments = () => {
+    fetch("/api/investments").then((r) => r.json()).then((data) => { if (data.investments) setInvestments(data.investments); }).catch(() => {});
+  };
+
+  const handleAddInvestment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = addFormRef.current;
+    if (!form) return;
+    const fd = new FormData(form);
+    const name = String(fd.get("name") || "").trim();
+    if (!name) return;
+    const balance = parseFloat(String(fd.get("balance") || "0").replace(",", ".")) || 0;
+    const monthly = parseFloat(String(fd.get("monthly") || "0").replace(",", ".")) || 0;
+    const ret = parseFloat(String(fd.get("ret") || "0").replace(",", ".")) || 0;
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, type: "otherAsset", balance }),
+      });
+      const j = await res.json();
+      if (res.ok && j.id && (monthly || ret)) {
+        await fetch("/api/investments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ynab_account_id: j.id, monthly_contribution: monthly, expected_return: ret }),
+        });
+      }
+      form.reset();
+      setAddOpen(false);
+      loadInvestments();
+    } catch (err) {
+      console.error("[investments] Add error:", err);
+    }
+  };
 
   useEffect(() => {
     console.debug("[investments] Loading investment accounts");
@@ -179,6 +224,12 @@ export default function InvestmentsPage() {
     setSaving(inv.id);
     console.info("[investments] Saving override for", inv.name);
     try {
+      // Persist the account value and the investment override
+      await fetch("/api/accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: inv.id, balance: inv.balance }),
+      });
       await fetch("/api/investments", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -236,7 +287,38 @@ export default function InvestmentsPage() {
           <h1 className="page-heading">{t.investments.title}</h1>
           <p className="page-subtitle">{t.investments.subtitle}</p>
         </div>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="icon-sm" />
+          {locale === "fi" ? "Lisää sijoitus" : "Add investment"}
+        </Button>
       </div>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{locale === "fi" ? "Uusi sijoitus" : "New investment"}</DialogTitle></DialogHeader>
+          <form ref={addFormRef} onSubmit={handleAddInvestment} className="form-stack">
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Nimi" : "Name"}</Label>
+              <Input name="name" required autoComplete="off" />
+            </div>
+            <div className="form-grid-2">
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Arvo (€)" : "Value (€)"}</Label>
+                <Input name="balance" type="text" inputMode="decimal" placeholder="0.00" autoComplete="off" />
+              </div>
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Tuotto %" : "Return %"}</Label>
+                <Input name="ret" type="text" inputMode="decimal" placeholder="0" autoComplete="off" />
+              </div>
+            </div>
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Kk-sijoitus (€)" : "Monthly contribution (€)"}</Label>
+              <Input name="monthly" type="text" inputMode="decimal" placeholder="0" autoComplete="off" />
+            </div>
+            <Button type="submit">{locale === "fi" ? "Lisää" : "Add"}</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Summary cards */}
       <div className="page-grid-3-sm">
@@ -392,6 +474,17 @@ export default function InvestmentsPage() {
                 );
               })()}
               <div className="list-edit-row">
+                <div className="list-edit-field">
+                  <Label className="list-edit-label">{locale === "fi" ? "Arvo €" : "Value €"}</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={inv.balance || ""}
+                    onChange={(e) => updateInvestment(inv.id, "balance", parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    className="list-edit-input"
+                  />
+                </div>
                 <div className="list-edit-field">
                   <Label className="list-edit-label">{locale === "fi" ? "Kk-sijoitus €" : "Monthly €"}</Label>
                   <Input

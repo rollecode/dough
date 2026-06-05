@@ -6,6 +6,7 @@
 * Add an accounts page to manage accounts without YNAB, with spending and exclude-from-budget toggles
 * Accounts page shows only spending accounts with drag-to-reorder and red/green balances; debts and investments live on their own pages
 * Editing an account balance records a reconciliation adjustment transaction so history stays consistent
+* Manage debts and investments on their own pages without YNAB: add them, edit balance, interest and contribution
 * Add a YNAB-style budget page with monthly allocations, carryover, targets and per-month snooze
 * Add a category inspector with inline rename, breakdown, target editing and hide
 * Add move money and cover overspending between categories
