@@ -628,7 +628,7 @@ export default function BudgetPage() {
                     const hasMoney = c.available > 0.005;
                     if ((!isOverspent && !hasMoney) || others.length === 0) return null;
                     const title = isOverspent
-                      ? (locale === "fi" ? "Kateta ylitys" : "Cover overspending")
+                      ? (locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending")
                       : (locale === "fi" ? "Siirrä rahaa" : "Move money");
                     return (
                       <div className="insp-section">
@@ -653,7 +653,7 @@ export default function BudgetPage() {
                                 if (amt === null || !amt || !other) return;
                                 if (isOverspent) moveMoney(other, c.id, amt);
                                 else moveMoney(c.id, other, amt);
-                              }}>{isOverspent ? (locale === "fi" ? "Kateta" : "Cover") : (locale === "fi" ? "Siirrä" : "Move")}</Button>
+                              }}>{isOverspent ? (locale === "fi" ? "Kata" : "Cover") : (locale === "fi" ? "Siirrä" : "Move")}</Button>
                               <Button type="button" variant="ghost" size="sm" onClick={() => { setMoveOpen(false); setMoveOther(""); setMoveDraft(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
                             </div>
                           </div>
@@ -813,7 +813,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
       <span className="budget-num budget-avail-cell">
         {cat.available < -0.005 ? (
           <>
-            <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => setCoverOpen((o) => !o)} aria-label={locale === "fi" ? "Kateta ylitys" : "Cover overspending"} aria-haspopup="menu" aria-expanded={coverOpen}>
+            <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => setCoverOpen((o) => !o)} aria-label={locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"} aria-haspopup="menu" aria-expanded={coverOpen}>
               <F v={cat.available} />
             </button>
             {coverOpen && (() => {
@@ -824,7 +824,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                   <div className="budget-calc-backdrop" onClick={() => setCoverOpen(false)} />
                   <div className="budget-cover-popover">
                     <div className="budget-cover-title">
-                      {locale === "fi" ? "Kateta ylitys" : "Cover overspending"} <span className="budget-cover-amt"><F v={amount} s=" €" /></span>
+                      {locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"} <span className="budget-cover-amt"><F v={amount} s=" €" /></span>
                     </div>
                     <div className="budget-cover-list">
                       {readyToAssign > 0.005 && (
