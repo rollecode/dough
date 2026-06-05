@@ -72,6 +72,9 @@ export default function SettingsPage() {
   const [personalShareSaved, setPersonalShareSaved] = useState(false);
   const [decimalPlaces, setDecimalPlaces] = useState("0");
   const [decimalSaved, setDecimalSaved] = useState(false);
+  const [dateFormatVal, setDateFormatVal] = useState("d.m.yyyy");
+  const [timeFormatVal, setTimeFormatVal] = useState("24h");
+  const [dtSaved, setDtSaved] = useState(false);
   const [synciToken, setSynciToken] = useState("");
   const [synciSaved, setSynciSaved] = useState(false);
   const [synciConnected, setSynciConnected] = useState(false);
@@ -79,7 +82,7 @@ export default function SettingsPage() {
   const [synciMappings, setSynciMappings] = useState<Record<string, string>>({});
   const [synciMappingSaved, setSynciMappingSaved] = useState(false);
   const [synciLoading, setSynciLoading] = useState(false);
-  const { t, locale, setLocale, setDecimals } = useLocale();
+  const { t, locale, setLocale, setDecimals, setDateFormat, setTimeFormat, fmtDate } = useLocale();
 
   useEffect(() => {
     console.debug("[settings] Loading settings");
@@ -111,6 +114,8 @@ export default function SettingsPage() {
           if (householdData.settings?.household_size) {
             setHouseholdSize(householdData.settings.household_size);
           }
+          if (householdData.settings?.date_format) setDateFormatVal(String(householdData.settings.date_format));
+          if (householdData.settings?.time_format) setTimeFormatVal(String(householdData.settings.time_format));
           if (householdData.settings?.decimal_places !== undefined) {
             setDecimalPlaces(String(householdData.settings.decimal_places));
           }
@@ -509,6 +514,75 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Date and time format */}
+        <Card className="settings-card">
+          <CardHeader>
+            <CardTitle className="settings-card-title">
+              <Globe />
+              {locale === "fi" ? "Päivä- ja aikamuoto" : "Date and time format"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="settings-row">
+              <Select
+                value={dateFormatVal}
+                onValueChange={async (v) => {
+                  if (!v) return;
+                  setDateFormatVal(v);
+                  setDateFormat(v);
+                  console.info("[settings] Saving date format:", v);
+                  await fetch("/api/household", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ date_format: v }),
+                  });
+                  setDtSaved(true);
+                  setTimeout(() => setDtSaved(false), 2000);
+                }}
+              >
+                <SelectTrigger className="settings-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="d.m.yyyy">5.6.2026</SelectItem>
+                  <SelectItem value="dd.mm.yyyy">05.06.2026</SelectItem>
+                  <SelectItem value="yyyy-mm-dd">2026-06-05</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={timeFormatVal}
+                onValueChange={async (v) => {
+                  if (!v) return;
+                  setTimeFormatVal(v);
+                  setTimeFormat(v);
+                  console.info("[settings] Saving time format:", v);
+                  await fetch("/api/household", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ time_format: v }),
+                  });
+                  setDtSaved(true);
+                  setTimeout(() => setDtSaved(false), 2000);
+                }}
+              >
+                <SelectTrigger className="settings-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24h">{locale === "fi" ? "24 tuntia (14:30)" : "24-hour (14:30)"}</SelectItem>
+                  <SelectItem value="12h">{locale === "fi" ? "12 tuntia (2:30 PM)" : "12-hour (2:30 PM)"}</SelectItem>
+                </SelectContent>
+              </Select>
+              {dtSaved && <span className="settings-saved">{t.common.saved}</span>}
+            </div>
+            <p className="settings-help">
+              {locale === "fi"
+                ? "Päivämäärien ja aikojen näyttömuoto. Valitsimet käyttävät selaimen omaa muotoa."
+                : "How dates and times are displayed. Native date pickers keep the browser's own format."}
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Household profile */}
         <Card className="settings-card">
           <CardHeader>
@@ -865,7 +939,7 @@ export default function SettingsPage() {
                   </Button>
                   <span className="settings-sync-time">
                     {syncResult || (profile.last_ynab_sync
-                      ? `${t.settings.lastSync}: ${new Date(profile.last_ynab_sync).toLocaleDateString("fi-FI")}`
+                      ? `${t.settings.lastSync}: ${fmtDate(profile.last_ynab_sync)}`
                       : t.common.neverSynced)}
                   </span>
                 </div>

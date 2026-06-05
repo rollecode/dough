@@ -40,7 +40,7 @@ interface SavingsGoal {
 }
 
 export default function SavingsGoalsPage() {
-  const { t, locale } = useLocale();
+  const { t, locale, fmtDate } = useLocale();
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -250,7 +250,7 @@ export default function SavingsGoalsPage() {
                     </div>
                     <p className="list-item-meta">
                       <F v={goal.saved_amount} s="" /> / <F v={goal.target_amount} /> · {progress}%
-                      {goal.target_date && ` · ${locale === "fi" ? "tavoite" : "by"} ${new Date(goal.target_date).toLocaleDateString("fi-FI")}`}
+                      {goal.target_date && ` · ${locale === "fi" ? "tavoite" : "by"} ${fmtDate(goal.target_date)}`}
                       {monthly > 0 && goal.target_date && <> · <F v={monthly} s={` €/${locale === "fi" ? "kk" : "mo"}`} /></>}
                       {goal.ynab_category_name && ` · ${goal.ynab_category_name}`}
                     </p>

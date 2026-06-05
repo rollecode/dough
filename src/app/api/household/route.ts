@@ -26,6 +26,8 @@ export async function GET() {
         prompt_debt_instructions: settings.prompt_debt_instructions || "",
         last_ynab_sync: settings.last_ynab_sync || null,
         decimal_places: settings.decimal_places,
+        date_format: settings.date_format || "d.m.yyyy",
+        time_format: settings.time_format || "24h",
         budget_excluded_accounts: settings.budget_excluded_accounts || "[]",
         budget_include_bills: settings.budget_include_bills || "1",
         reserve_next_month_saving: settings.reserve_next_month_saving || "0",
