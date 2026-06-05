@@ -299,9 +299,10 @@ export async function POST(request: Request) {
       catBatch();
       console.info("[api/ynab/sync] Persisted month budget and", monthBudget.categories.length, "categories for", currentMonth);
 
-      // Propagate YNAB category groups onto the local budget categories
-      const { backfillCategoryGroups } = await import("@/lib/db");
+      // Propagate YNAB category groups and assigned amounts onto the local budget tables
+      const { backfillCategoryGroups, seedMonthlyBudgetsFromYnab } = await import("@/lib/db");
       backfillCategoryGroups(pdb);
+      seedMonthlyBudgetsFromYnab(pdb, true);
 
       console.info("[api/ynab/sync] All relational data persisted to SQLite");
     } catch (err) {

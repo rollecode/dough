@@ -590,6 +590,8 @@ function initializeDb(db: Database.Database) {
     }
     // Self-heal groups for categories synced from an older DB where the YNAB mirror lacked groups
     backfillCategoryGroups(db);
+    // Seed local monthly assigned amounts from YNAB so the budget page is not all-zero after a cutover
+    seedMonthlyBudgetsFromYnab(db, false);
   } catch (err) {
     console.warn("[db] categories seed:", err);
   }
@@ -619,6 +621,33 @@ export function backfillCategoryGroups(db: Database.Database): number {
     return res.changes;
   } catch (err) {
     console.warn("[db] backfillCategoryGroups:", err);
+    return 0;
+  }
+}
+
+// Seed local monthly assigned amounts from the YNAB mirror so the budget page reflects
+// YNAB allocations (and a YNAB->local cutover is seamless). On startup we only fill missing
+// rows; after a YNAB sync we overwrite so YNAB stays the source of truth while connected.
+export function seedMonthlyBudgetsFromYnab(db: Database.Database, overwrite = false): number {
+  try {
+    const conflict = overwrite
+      ? "ON CONFLICT(month, category_id) DO UPDATE SET budgeted = excluded.budgeted, updated_at = datetime('now')"
+      : "ON CONFLICT(month, category_id) DO NOTHING";
+    const res = db
+      .prepare(
+        `INSERT INTO monthly_category_budgets (month, category_id, budgeted)
+         SELECT yc.month, c.id, yc.budgeted
+         FROM ynab_categories yc JOIN categories c ON c.name = yc.name
+         WHERE yc.budgeted <> 0
+         ${conflict}`
+      )
+      .run();
+    if (res.changes > 0) {
+      console.info("[db] Seeded monthly budgets from YNAB:", res.changes, overwrite ? "(overwrite)" : "(missing only)");
+    }
+    return res.changes;
+  } catch (err) {
+    console.warn("[db] seedMonthlyBudgetsFromYnab:", err);
     return 0;
   }
 }

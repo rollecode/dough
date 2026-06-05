@@ -9,6 +9,7 @@
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
 * Pull category groups from YNAB and backfill them onto local categories
+* Seed local monthly assigned amounts from YNAB allocations so the budget page reflects YNAB on cutover
 * Add overspent and money-available filters with a cover-from popout on overspent amounts
 * Apply the app background gradient to the login screen
 * Fix YNAB settings migration resurrecting a disconnected token
