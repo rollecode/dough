@@ -82,8 +82,11 @@ export async function PUT(request: Request) {
     const values: (string | number)[] = [];
     if (body.name !== undefined) { updates.push("name = ?"); values.push(String(body.name).trim()); }
     if (body.type !== undefined) { updates.push("type = ?"); values.push(String(body.type).trim()); }
+    let reconcileDiff = 0;
     if (body.balance !== undefined) {
       const bal = Math.round(Number(body.balance) * 100) / 100;
+      const cur = db.prepare("SELECT balance FROM ynab_accounts WHERE id = ?").get(id) as { balance: number } | undefined;
+      reconcileDiff = Math.round((bal - (cur?.balance ?? 0)) * 100) / 100;
       updates.push("balance = ?"); values.push(bal);
       updates.push("cleared_balance = ?"); values.push(bal);
     }
@@ -95,6 +98,18 @@ export async function PUT(request: Request) {
     updates.push("updated_at = datetime('now')");
     values.push(id);
     db.prepare(`UPDATE ynab_accounts SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+
+    // Record a reconciliation adjustment so the transaction history matches the new balance.
+    // Payee starts with "Reconciliation" so it is excluded from spending/income stats.
+    if (Math.abs(reconcileDiff) > 0.005) {
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      db.prepare(
+        "INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) " +
+          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'reconciled')"
+      ).run(user.id, `recon_${randomUUID()}`, today, reconcileDiff, "Reconciliation Balance Adjustment", "", "", String(id));
+      console.info("[accounts] Reconciliation adjustment", reconcileDiff, "for account", id);
+    }
 
     console.info("[accounts] Updated account", id);
     eventBus.emit("data:updated", { source: "accounts-updated" });
