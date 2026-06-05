@@ -1,3 +1,18 @@
+### 2.12.0: 2026-06-05
+
+* Add automatic local data mode that uses Dough's own data when YNAB is disconnected and YNAB when connected
+* Import all transactions straight to Dough via Synci with transfer auto-pairing in local mode
+* Add local categories with a management UI and direct add, edit and delete of transactions
+* Add an accounts page to manage accounts without YNAB, with spending and exclude-from-budget toggles
+* Add a YNAB-style budget page with monthly allocations, carryover, targets and per-month snooze
+* Add a category inspector with inline rename, breakdown, target editing and hide
+* Add move money and cover overspending between categories
+* Add drag-and-drop reorder for categories and whole groups in the budget view
+* Pull category groups from YNAB and backfill them onto local categories
+* Add overspent and money-available filters with a cover-from popout on overspent amounts
+* Apply the app background gradient to the login screen
+* Fix YNAB settings migration resurrecting a disconnected token
+
 ### 2.11.0: 2026-05-29
 
 * Add household setting to hide AI summaries and debt suggestion everywhere via settings toggle
