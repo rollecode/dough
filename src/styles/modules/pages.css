@@ -205,12 +205,6 @@
   color: var(--foreground);
 }
 
-/* keep its layout space so arrows never jump when it toggles */
-.budget-monthnav-today.is-hidden {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .budget-manage-btn {
   display: inline-flex;
   align-items: center;
@@ -236,17 +230,20 @@
   height: 1.125rem;
 }
 
-/* push the manage button to the far right of the topbar */
-.budget-manage-btn {
-  margin-left: auto;
+/* "Ready to assign" chip, value stacked over label. Grouped on the right with the add button
+   and right-aligned, so the value's right edge stays fixed and the appearing Today button
+   (or a changing value width) never shifts it. */
+.budget-topbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
-/* "Ready to assign" chip, value stacked over label, sits right of the month nav.
-   Left-aligned so the value keeps a fixed left edge when its width changes per month. */
 .budget-ready-box {
   display: inline-flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 0.0625rem;
   line-height: 1.25;
   padding: 0.4375rem 0.875rem;

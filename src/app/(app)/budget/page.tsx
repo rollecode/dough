@@ -364,33 +364,32 @@ export default function BudgetPage() {
           <button type="button" className="budget-monthnav-arrow" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="Next month">
             <ChevronRight />
           </button>
-          <button
-            type="button"
-            className={`budget-monthnav-today ${month === thisMonth() ? "is-hidden" : ""}`}
-            onClick={() => setMonth(thisMonth())}
-            tabIndex={month === thisMonth() ? -1 : 0}
-          >
-            {locale === "fi" ? "Tänään" : "Today"}
+          {month !== thisMonth() && (
+            <button type="button" className="budget-monthnav-today" onClick={() => setMonth(thisMonth())}>
+              {locale === "fi" ? "Tänään" : "Today"}
+            </button>
+          )}
+        </div>
+        <div className="budget-topbar-right">
+          {(() => {
+            const rta = data?.readyToAssign || 0;
+            const state = rta > 0.005 ? "is-positive" : rta < -0.005 ? "is-negative" : "is-zero";
+            const label = state === "is-zero"
+              ? (locale === "fi" ? "Kaikki jaettu" : "All assigned")
+              : state === "is-negative"
+              ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
+              : (locale === "fi" ? "Jaettavissa" : "Ready to assign");
+            return (
+              <div className={`budget-ready-box ${state}`}>
+                <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+                <span className="budget-ready-label">{label}</span>
+              </div>
+            );
+          })()}
+          <button type="button" className="budget-manage-btn" onClick={() => setAddCatOpen(true)} aria-label={locale === "fi" ? "Lisää kategoria" : "Add category"}>
+            <Plus />
           </button>
         </div>
-        {(() => {
-          const rta = data?.readyToAssign || 0;
-          const state = rta > 0.005 ? "is-positive" : rta < -0.005 ? "is-negative" : "is-zero";
-          const label = state === "is-zero"
-            ? (locale === "fi" ? "Kaikki jaettu" : "All assigned")
-            : state === "is-negative"
-            ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
-            : (locale === "fi" ? "Jaettavissa" : "Ready to assign");
-          return (
-            <div className={`budget-ready-box ${state}`}>
-              <span className="budget-ready-value"><F v={rta} s=" €" /></span>
-              <span className="budget-ready-label">{label}</span>
-            </div>
-          );
-        })()}
-        <button type="button" className="budget-manage-btn" onClick={() => setAddCatOpen(true)} aria-label={locale === "fi" ? "Lisää kategoria" : "Add category"}>
-          <Plus />
-        </button>
       </div>
 
       <div className="budget-filterbar">
