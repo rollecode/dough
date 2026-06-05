@@ -396,6 +396,114 @@
   padding: 0.375rem;
 }
 
+/* Toteuma (activity) transactions popout */
+.budget-activity-cell {
+  position: relative;
+}
+
+.budget-activity-btn {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+  transition: color 150ms;
+}
+
+.budget-activity-btn:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.budget-act-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 41;
+  width: 18rem;
+  max-width: 80vw;
+  padding: 0.5rem;
+  border-radius: 0.625rem;
+  background: var(--popover);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  text-align: left;
+}
+
+.budget-act-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  padding: 0.25rem 0.375rem 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-act-loading {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.budget-act-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.budget-act-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4375rem 0.375rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
+}
+
+.budget-act-item:first-child {
+  border-top: none;
+}
+
+.budget-act-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.budget-act-payee {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-act-date {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-act-amt {
+  font-size: 0.8125rem;
+  color: var(--negative);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.budget-act-empty {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0.375rem;
+}
+
 /* Shared 4-column grid: name | assigned | activity | available */
 .budget-grid {
   display: grid;

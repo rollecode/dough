@@ -699,7 +699,27 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   const [calcOpen, setCalcOpen] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [actOpen, setActOpen] = useState(false);
+  const [actTxns, setActTxns] = useState<{ id: string; date: string; payee: string; amount: number; memo: string | null }[] | null>(null);
+  const [actLoading, setActLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { fmtDate } = useLocale();
+
+  const openActivity = async () => {
+    if (actOpen) { setActOpen(false); return; }
+    setActOpen(true);
+    setActLoading(true);
+    try {
+      const res = await fetch(`/api/budget/transactions?month=${month}&category=${encodeURIComponent(cat.name)}`);
+      const d = await res.json();
+      setActTxns(d.transactions || []);
+    } catch (err) {
+      console.error("[budget] Activity transactions error:", err);
+      setActTxns([]);
+    } finally {
+      setActLoading(false);
+    }
+  };
 
   useEffect(() => {
     setDraft(cat.budgeted ? fmt(cat.budgeted) : "");
@@ -809,7 +829,42 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           </>
         )}
       </span>
-      <span className="budget-num text-muted">{cat.activity > 0 ? <>−<F v={cat.activity} /></> : <F v={0} />}</span>
+      <span className="budget-num text-muted budget-activity-cell">
+        {cat.activity > 0 ? (
+          <>
+            <button type="button" className="budget-activity-btn" onClick={openActivity} aria-haspopup="dialog" aria-expanded={actOpen}>
+              −<F v={cat.activity} />
+            </button>
+            {actOpen && (
+              <>
+                <div className="budget-calc-backdrop" onClick={() => setActOpen(false)} />
+                <div className="budget-act-popover">
+                  <div className="budget-act-title">{locale === "fi" ? "Toteuma" : "Activity"} · {cat.name}</div>
+                  {actLoading ? (
+                    <div className="budget-act-loading"><Loader2 className="icon-sm animate-spin" /></div>
+                  ) : actTxns && actTxns.length > 0 ? (
+                    <div className="budget-act-list">
+                      {actTxns.map((tx) => (
+                        <div key={tx.id} className="budget-act-item">
+                          <span className="budget-act-info">
+                            <span className="budget-act-payee">{tx.payee}</span>
+                            <span className="budget-act-date">{fmtDate(tx.date)}</span>
+                          </span>
+                          <span className="budget-act-amt">−<F v={Math.abs(tx.amount)} s=" €" /></span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="budget-act-empty">{locale === "fi" ? "Ei tapahtumia" : "No transactions"}</p>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <F v={0} />
+        )}
+      </span>
       <span className="budget-num budget-avail-cell">
         {cat.available < -0.005 ? (
           <>

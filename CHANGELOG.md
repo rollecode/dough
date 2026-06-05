@@ -11,6 +11,7 @@
 * Pull category groups from YNAB and backfill them onto local categories
 * Seed local monthly assigned amounts from YNAB allocations so the budget page reflects YNAB on cutover
 * Add overspent and money-available filters with a cover-from popout on overspent amounts
+* Click a category's activity amount to see the transactions behind it
 * Load the transactions list with infinite scroll instead of rendering every row at once
 * Restore visible keyboard focus rings for interactive elements and make transaction rows keyboard-operable
 * Add a configurable date and time format setting and apply it to date labels
