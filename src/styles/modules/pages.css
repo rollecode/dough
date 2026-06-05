@@ -1689,6 +1689,38 @@
 }
 
 /* Accounts page */
+.acct-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: grab;
+  padding: 0;
+  opacity: 0.3;
+  transition: opacity 120ms, color 120ms;
+}
+
+.acct-grip:active {
+  cursor: grabbing;
+}
+
+.acct-row:hover .acct-grip {
+  opacity: 0.65;
+}
+
+.acct-grip svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.list-item.acct-row.is-dragging {
+  opacity: 0.5;
+}
+
 .account-badge {
   font-size: 0.625rem;
   font-weight: 600;

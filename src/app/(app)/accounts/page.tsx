@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, GripVertical } from "lucide-react";
 import { F } from "@/components/ui/f";
 
 interface Account {
@@ -28,7 +28,9 @@ interface Account {
   synci_account_id: string;
 }
 
-const TYPES = ["checking", "savings", "cash", "otherAsset", "otherDebt"];
+// Spending accounts shown on /accounts; debts live in /debts, investments in /investments
+const SPENDING_TYPES = ["checking", "savings", "cash"];
+const isSpending = (type: string) => SPENDING_TYPES.includes(type);
 
 function typeLabel(type: string, locale: string): string {
   const fi: Record<string, string> = { checking: "Käyttötili", savings: "Säästötili", cash: "Käteinen", otherAsset: "Sijoitus", otherDebt: "Velka" };
@@ -48,6 +50,8 @@ export default function AccountsPage() {
   const [editNote, setEditNote] = useState("");
   const addFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
+  const [orderedOpen, setOrderedOpen] = useState<Account[]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   const load = useCallback(() => {
     Promise.all([
@@ -67,6 +71,33 @@ export default function AccountsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Open spending accounts, in their saved order, drag-reorderable
+  useEffect(() => {
+    setOrderedOpen(accounts.filter((a) => !a.closed && isSpending(a.type)));
+  }, [accounts]);
+
+  const handleAcctDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    setOrderedOpen((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIdx, 1);
+      next.splice(idx, 0, moved);
+      return next;
+    });
+    setDragIdx(idx);
+  };
+
+  const handleAcctDragEnd = () => {
+    setDragIdx(null);
+    Promise.all(
+      orderedOpen.map((a, i) =>
+        fetch("/api/accounts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: a.id, sort_order: i }) })
+      )
+    ).then(() => load()).catch(() => {});
+    console.info("[accounts] Saved account order");
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,9 +158,8 @@ export default function AccountsPage() {
     return <div className="page-loading"><Loader2 className="page-loading-spinner animate-spin" /></div>;
   }
 
-  const open = accounts.filter((a) => !a.closed);
-  const closed = accounts.filter((a) => a.closed);
-  const total = open.reduce((s, a) => s + a.balance, 0);
+  const closed = accounts.filter((a) => a.closed && isSpending(a.type));
+  const total = orderedOpen.reduce((s, a) => s + a.balance, 0);
 
   return (
     <div className="page-stack">
@@ -154,7 +184,7 @@ export default function AccountsPage() {
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Tyyppi" : "Type"}</Label>
                   <select name="type" className="input" defaultValue="checking">
-                    {TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, locale)}</option>)}
+                    {SPENDING_TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, locale)}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
@@ -171,13 +201,29 @@ export default function AccountsPage() {
       <Card className="metric-card">
         <p className="metric-card-label">{locale === "fi" ? "Yhteensä avoimilla tileillä" : "Total across open accounts"}</p>
         <p className={`metric-card-value-3xl ${total < -0.005 ? "is-negative" : total > 0.005 ? "is-positive" : ""}`}><F v={total} s=" €" /></p>
-        <p className="metric-card-note metric-card-note-mt">{open.length} {locale === "fi" ? "tiliä" : "accounts"}</p>
+        <p className="metric-card-note metric-card-note-mt">{orderedOpen.length} {locale === "fi" ? "tiliä" : "accounts"}</p>
       </Card>
 
-      {open.length > 0 && (
+      {orderedOpen.length > 0 && (
         <Card className="list-card list-card-divider">
-          {open.map((a) => (
-            <div key={a.id} className="list-item" onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); }}>
+          {orderedOpen.map((a, idx) => (
+            <div
+              key={a.id}
+              className={`list-item acct-row ${dragIdx === idx ? "is-dragging" : ""}`}
+              onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); }}
+              onDragOver={(e) => handleAcctDragOver(e, idx)}
+            >
+              <button
+                type="button"
+                className="acct-grip"
+                draggable
+                onClick={(e) => e.stopPropagation()}
+                onDragStart={() => setDragIdx(idx)}
+                onDragEnd={handleAcctDragEnd}
+                aria-label={locale === "fi" ? "Järjestä" : "Reorder"}
+              >
+                <GripVertical />
+              </button>
               <div className="list-item-body">
                 <div className="list-item-name-row">
                   <p className="list-item-name">{a.name}</p>
@@ -227,7 +273,7 @@ export default function AccountsPage() {
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Tyyppi" : "Type"}</Label>
                   <select name="type" className="input" defaultValue={editTarget.type}>
-                    {TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, locale)}</option>)}
+                    {SPENDING_TYPES.map((t) => <option key={t} value={t}>{typeLabel(t, locale)}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
