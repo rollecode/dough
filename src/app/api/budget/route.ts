@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 
 interface CategoryRow {
@@ -104,6 +105,17 @@ export async function GET(request: Request) {
     const cats = db
       .prepare("SELECT id, name, group_name, sort_order, is_active FROM categories ORDER BY group_name, sort_order, name")
       .all() as CategoryRow[];
+
+    // Apply saved group ordering (stable sort keeps within-group sort_order from the query)
+    let groupOrder: string[] = [];
+    try { groupOrder = JSON.parse(getHouseholdSetting("budget_group_order") || "[]"); } catch {}
+    if (Array.isArray(groupOrder) && groupOrder.length > 0) {
+      const gi = (name: string) => {
+        const i = groupOrder.indexOf(name || "");
+        return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+      };
+      cats.sort((a, b) => gi(a.group_name) - gi(b.group_name));
+    }
 
     const budgeted = budgetedForMonth(db, month);
     const activity = activityForMonth(db, month);

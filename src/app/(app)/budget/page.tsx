@@ -101,6 +101,8 @@ export default function BudgetPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [manageOrder, setManageOrder] = useState<BudgetCategory[]>([]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [localGroups, setLocalGroups] = useState<{ key: string; label: string; items: BudgetCategory[] }[]>([]);
+  const [bdrag, setBdrag] = useState<{ type: "row" | "group"; groupKey: string; index: number } | null>(null);
   const addCatRef = useRef<HTMLFormElement>(null);
   const editCatRef = useRef<HTMLFormElement>(null);
   const renameRef = useRef<HTMLFormElement>(null);
@@ -133,6 +135,19 @@ export default function BudgetPage() {
     if (data?.categories) setManageOrder(data.categories);
   }, [data]);
 
+  // Build the grouped, ordered structure the budget view renders (and drags)
+  useEffect(() => {
+    if (!data?.categories) { setLocalGroups([]); return; }
+    const map = new Map<string, { key: string; label: string; items: BudgetCategory[] }>();
+    for (const c of data.categories) {
+      if (!c.is_active) continue;
+      const key = c.group_name || "";
+      if (!map.has(key)) map.set(key, { key, label: key || (locale === "fi" ? "Muut" : "Other"), items: [] });
+      map.get(key)!.items.push(c);
+    }
+    setLocalGroups([...map.values()]);
+  }, [data, locale]);
+
   const handleDragStart = (idx: number) => setDragIdx(idx);
   const handleDragOver = (e: React.DragEvent, idx: number) => {
     e.preventDefault();
@@ -152,6 +167,61 @@ export default function BudgetPage() {
       body: JSON.stringify({ order }),
     }).then(() => load(month)).catch(() => {});
     console.info("[budget] Saved category order");
+  };
+
+  // Drag-and-drop reorder inside the budget view: rows within a group, and whole groups
+  const persistRowOrder = (groups: typeof localGroups) => {
+    const order = groups.flatMap((g) => g.items.map((c) => c.id));
+    fetch("/api/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    }).then(() => load(month)).catch(() => {});
+    console.info("[budget] Saved row order");
+  };
+
+  const persistGroupOrder = (groups: typeof localGroups) => {
+    const order = groups.map((g) => g.key);
+    fetch("/api/household", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ budget_group_order: JSON.stringify(order) }),
+    }).then(() => load(month)).catch(() => {});
+    console.info("[budget] Saved group order");
+  };
+
+  const onRowDragStart = (groupKey: string, index: number) => setBdrag({ type: "row", groupKey, index });
+  const onRowDragOver = (e: React.DragEvent, groupKey: string, index: number) => {
+    if (!bdrag || bdrag.type !== "row" || bdrag.groupKey !== groupKey || bdrag.index === index) return;
+    e.preventDefault();
+    setLocalGroups((prev) => {
+      const next = prev.map((g) => (g.key === groupKey ? { ...g, items: [...g.items] } : g));
+      const g = next.find((x) => x.key === groupKey)!;
+      const [moved] = g.items.splice(bdrag.index, 1);
+      g.items.splice(index, 0, moved);
+      return next;
+    });
+    setBdrag({ ...bdrag, index });
+  };
+
+  const onGroupDragStart = (index: number) => setBdrag({ type: "group", groupKey: "", index });
+  const onGroupDragOver = (e: React.DragEvent, index: number) => {
+    if (!bdrag || bdrag.type !== "group" || bdrag.index === index) return;
+    e.preventDefault();
+    setLocalGroups((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(bdrag.index, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
+    setBdrag({ ...bdrag, index });
+  };
+
+  const onBudgetDragEnd = () => {
+    if (!bdrag) return;
+    if (bdrag.type === "row") persistRowOrder(localGroups);
+    else persistGroupOrder(localGroups);
+    setBdrag(null);
   };
 
   const saveBudgeted = async (catId: number, value: number) => {
@@ -320,14 +390,6 @@ export default function BudgetPage() {
     return <div className="page-loading"><Loader2 className="page-loading-spinner animate-spin" /></div>;
   }
 
-  const groups = new Map<string, BudgetCategory[]>();
-  for (const c of data?.categories || []) {
-    if (!c.is_active) continue;
-    const g = c.group_name || (locale === "fi" ? "Muut" : "Other");
-    if (!groups.has(g)) groups.set(g, []);
-    groups.get(g)!.push(c);
-  }
-
   return (
     <div className="page-stack">
       <div className="budget-topbar">
@@ -376,14 +438,29 @@ export default function BudgetPage() {
         <span>{locale === "fi" ? "Käytettävissä" : "Available"}</span>
       </div>
 
-      {[...groups.entries()].map(([groupName, items]) => {
+      {localGroups.map((group, gIdx) => {
+        const items = group.items;
         const groupBudgeted = items.reduce((s, c) => s + c.budgeted, 0);
         const groupActivity = items.reduce((s, c) => s + c.activity, 0);
         const groupAvailable = items.reduce((s, c) => s + c.available, 0);
         return (
-          <Card key={groupName} className="list-card list-card-divider">
+          <Card
+            key={group.key}
+            className={`list-card list-card-divider ${bdrag?.type === "group" && bdrag.index === gIdx ? "is-drag-active" : ""}`}
+            onDragOver={(e) => onGroupDragOver(e, gIdx)}
+          >
             <div className="budget-grid budget-group-header">
-              <span className="budget-group-name">{groupName}</span>
+              <button
+                type="button"
+                className="budget-grip budget-group-grip"
+                draggable
+                onDragStart={() => onGroupDragStart(gIdx)}
+                onDragEnd={onBudgetDragEnd}
+                aria-label={locale === "fi" ? "Siirrä ryhmää" : "Reorder group"}
+              >
+                <GripVertical />
+              </button>
+              <span className="budget-group-name">{group.label}</span>
               <span className="budget-num"><F v={groupBudgeted} /></span>
               <span className="budget-num text-muted"><F v={groupActivity} /></span>
               <span className="budget-num">
@@ -392,17 +469,32 @@ export default function BudgetPage() {
                 </span>
               </span>
             </div>
-            {items.map((c) => (
-              <BudgetRow
+            {items.map((c, rIdx) => (
+              <div
                 key={c.id}
-                cat={c}
-                saving={savingId === c.id}
-                onSave={(v) => saveBudgeted(c.id, v)}
-                onOpen={() => setInspectorId(c.id)}
-                fmt={fmt}
-                month={month}
-                locale={locale}
-              />
+                className={`budget-row-drag ${bdrag?.type === "row" && bdrag.groupKey === group.key && bdrag.index === rIdx ? "is-dragging" : ""}`}
+                onDragOver={(e) => onRowDragOver(e, group.key, rIdx)}
+              >
+                <button
+                  type="button"
+                  className="budget-grip budget-row-grip"
+                  draggable
+                  onDragStart={() => onRowDragStart(group.key, rIdx)}
+                  onDragEnd={onBudgetDragEnd}
+                  aria-label={locale === "fi" ? "Siirrä" : "Reorder"}
+                >
+                  <GripVertical />
+                </button>
+                <BudgetRow
+                  cat={c}
+                  saving={savingId === c.id}
+                  onSave={(v) => saveBudgeted(c.id, v)}
+                  onOpen={() => setInspectorId(c.id)}
+                  fmt={fmt}
+                  month={month}
+                  locale={locale}
+                />
+              </div>
             ))}
           </Card>
         );

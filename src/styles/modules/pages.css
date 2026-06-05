@@ -314,8 +314,63 @@
 }
 
 .budget-group-header {
+  position: relative;
   padding: 0.625rem 1rem;
   background: color-mix(in srgb, var(--muted) 25%, transparent);
+}
+
+/* Drag handles for reordering rows and whole groups in the budget view */
+.budget-row-drag {
+  position: relative;
+}
+
+.budget-grip {
+  position: absolute;
+  left: 0.125rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.875rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 120ms, color 120ms;
+}
+
+.budget-grip:active {
+  cursor: grabbing;
+}
+
+.budget-grip:hover {
+  color: var(--foreground);
+}
+
+.budget-grip svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.budget-row-drag:hover .budget-grip,
+.budget-group-header:hover .budget-grip,
+.budget-grip:focus-visible {
+  opacity: 0.55;
+}
+
+.budget-row-drag.is-dragging {
+  opacity: 0.45;
+}
+
+.card.list-card.is-drag-active {
+  opacity: 0.7;
+  outline: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
+  outline-offset: -1px;
 }
 
 .budget-group-name {
