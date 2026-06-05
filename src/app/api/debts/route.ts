@@ -12,21 +12,25 @@ export async function GET() {
 
     const token = getYnabToken();
     const budgetId = getYnabBudgetId();
-    if (!token || !budgetId) {
-      return NextResponse.json({ debts: [], error: "YNAB not connected" });
+    const db = getDb();
+
+    // Dual mode: live YNAB data when connected, otherwise the local debt accounts
+    let debtAccounts: any[];
+    let monthBudget: any = { categories: [] };
+    if (token && budgetId) {
+      console.info("[debts] Fetching debt data from YNAB");
+      const { getBudgetSummary, getMonthBudget } = await import("@/lib/ynab/client");
+      const [summary, mb] = await Promise.all([
+        getBudgetSummary(budgetId, token),
+        getMonthBudget(budgetId, undefined, token),
+      ]);
+      monthBudget = mb;
+      debtAccounts = summary.accounts.filter((a: any) => a.type === "otherDebt" && a.balance < 0);
+    } else {
+      console.info("[debts] Reading debt accounts from local data");
+      debtAccounts = db.prepare("SELECT id, name, balance FROM ynab_accounts WHERE type = 'otherDebt' AND closed = 0").all() as any[];
     }
 
-    console.info("[debts] Fetching debt data from YNAB");
-    const { getBudgetSummary, getMonthBudget } = await import("@/lib/ynab/client");
-
-    const [summary, monthBudget] = await Promise.all([
-      getBudgetSummary(budgetId, token),
-      getMonthBudget(budgetId, undefined, token),
-    ]);
-
-    const debtAccounts = summary.accounts.filter((a: any) => a.type === "otherDebt" && a.balance < 0);
-
-    const db = getDb();
     const overrides = db.prepare("SELECT * FROM debt_overrides").all() as any[];
     const overrideMap: Record<string, any> = {};
     for (const o of overrides) {
