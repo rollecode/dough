@@ -13,8 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Loader2, Plus, Settings, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Plus, Settings, GripVertical, Pencil, EyeOff, Eye, Check } from "lucide-react";
 import { F } from "@/components/ui/f";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 interface BudgetCategory {
   id: number;
@@ -78,13 +84,19 @@ export default function BudgetPage() {
   const [manageOpen, setManageOpen] = useState(false);
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [editCat, setEditCat] = useState<BudgetCategory | null>(null);
-  const [targetCat, setTargetCat] = useState<BudgetCategory | null>(null);
+  const [inspectorId, setInspectorId] = useState<number | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [manageOrder, setManageOrder] = useState<BudgetCategory[]>([]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const addCatRef = useRef<HTMLFormElement>(null);
   const editCatRef = useRef<HTMLFormElement>(null);
+  const renameRef = useRef<HTMLFormElement>(null);
+
+  const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
+  const closeInspector = () => { setInspectorId(null); setRenaming(false); setTargetEditing(false); setTargetDraft(""); };
 
   const load = useCallback((m: string) => {
     console.debug("[budget] Loading month", m);
@@ -181,16 +193,16 @@ export default function BudgetPage() {
   };
 
   const saveTarget = async () => {
-    if (!targetCat) return;
+    if (!inspectorCat) return;
     const value = evalExpression(targetDraft);
     if (value === null) return;
     try {
       await fetch("/api/targets", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category_id: targetCat.id, monthly_amount: value }),
+        body: JSON.stringify({ category_id: inspectorCat.id, monthly_amount: value }),
       });
-      setTargetCat(null);
+      setTargetEditing(false);
       setTargetDraft("");
       load(month);
     } catch (err) {
@@ -205,10 +217,28 @@ export default function BudgetPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ category_id: catId }),
       });
-      setTargetCat(null);
+      setTargetEditing(false);
+      setTargetDraft("");
       load(month);
     } catch (err) {
       console.error("[budget] Clear target error:", err);
+    }
+  };
+
+  const handleRename = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inspectorCat || !renameRef.current) return;
+    const fd = new FormData(renameRef.current);
+    try {
+      await fetch("/api/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: inspectorCat.id, name: fd.get("name"), group_name: fd.get("group_name") }),
+      });
+      setRenaming(false);
+      load(month);
+    } catch (err) {
+      console.error("[budget] Rename category error:", err);
     }
   };
 
@@ -333,7 +363,7 @@ export default function BudgetPage() {
                 cat={c}
                 saving={savingId === c.id}
                 onSave={(v) => saveBudgeted(c.id, v)}
-                onOpenTarget={() => { setTargetCat(c); setTargetDraft(c.target_monthly ? fmt(c.target_monthly) : ""); }}
+                onOpen={() => setInspectorId(c.id)}
                 fmt={fmt}
                 month={month}
                 locale={locale}
@@ -397,58 +427,107 @@ export default function BudgetPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Target editor dialog */}
-      <Dialog open={!!targetCat} onOpenChange={(open) => { if (!open) { setTargetCat(null); setTargetDraft(""); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {locale === "fi" ? "Kuukausitavoite" : "Monthly target"}
-              {targetCat && ` — ${targetCat.name}`}
-            </DialogTitle>
-          </DialogHeader>
-          {targetCat && (
-            <div className="form-stack">
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Summa per kuukausi (€)" : "Amount per month (€)"}</Label>
-                <Input
-                  value={targetDraft}
-                  onChange={(e) => setTargetDraft(e.target.value)}
-                  placeholder="0.00"
-                  inputMode="decimal"
-                  autoFocus
-                />
-                <p className="settings-help">
-                  {locale === "fi"
-                    ? "Esim. 200 tarkoittaa että tähän kategoriaan jaetaan 200 € joka kuukausi."
-                    : "E.g. 200 means 200 € is assigned to this category every month."}
-                </p>
-              </div>
-              {targetCat.target_monthly > 0 && (
-                <div className="form-field">
-                  <Label>{locale === "fi" ? "Tämä kuukausi" : "This month"}</Label>
-                  {targetCat.snooze_until_month >= month ? (
-                    <Button type="button" variant="outline" size="sm" onClick={() => { unsnoozeTarget(targetCat.id); setTargetCat(null); }}>
-                      {locale === "fi" ? "Jatka tavoitetta" : "Resume target"}
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" size="sm" onClick={() => { snoozeTarget(targetCat.id); setTargetCat(null); }}>
-                      {locale === "fi" ? "Tauota tämä kuukausi" : "Snooze this month"}
-                    </Button>
+      {/* Category inspector */}
+      <Sheet open={inspectorCat !== null} onOpenChange={(open) => { if (!open) closeInspector(); }}>
+        <SheetContent className="budget-inspector">
+          {inspectorCat && (() => {
+            const c = inspectorCat;
+            const availState = c.available > 0.005 ? "is-positive" : c.available < -0.005 ? "is-negative" : "is-zero";
+            const hasTarget = c.target_monthly > 0;
+            const isSnoozed = hasTarget && c.snooze_until_month >= month;
+            const progress = hasTarget ? Math.min(1, c.budgeted / c.target_monthly) : 0;
+            return (
+              <>
+                <SheetHeader className="insp-header">
+                  <div className="insp-title-row">
+                    <div className="insp-title-text">
+                      <SheetTitle>{c.name}</SheetTitle>
+                      {c.group_name && <span className="insp-group">{c.group_name}</span>}
+                    </div>
+                    {!renaming && (
+                      <button type="button" className="insp-icon-btn" onClick={() => setRenaming(true)} aria-label={locale === "fi" ? "Muokkaa" : "Edit"}>
+                        <Pencil />
+                      </button>
+                    )}
+                  </div>
+                  {renaming && (
+                    <form ref={renameRef} onSubmit={handleRename} className="insp-rename">
+                      <Input name="name" defaultValue={c.name} required autoComplete="off" autoFocus />
+                      <Input name="group_name" defaultValue={c.group_name} placeholder={locale === "fi" ? "Ryhmä" : "Group"} autoComplete="off" />
+                      <div className="insp-rename-actions">
+                        <Button type="submit" size="sm"><Check className="icon-sm" />{locale === "fi" ? "Tallenna" : "Save"}</Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setRenaming(false)}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
+                      </div>
+                    </form>
                   )}
+                </SheetHeader>
+
+                <div className="insp-body">
+                  <div className={`insp-available ${availState}`}>
+                    <span className="insp-available-value"><F v={c.available} s=" €" /></span>
+                    <span className="insp-available-label">
+                      {availState === "is-negative" ? (locale === "fi" ? "Ylitetty" : "Overspent") : (locale === "fi" ? "Käytettävissä" : "Available")}
+                    </span>
+                  </div>
+
+                  <div className="insp-breakdown">
+                    <div className="insp-line">
+                      <span className="insp-line-label">{locale === "fi" ? "Jäi viime kuulta" : "Left over last month"}</span>
+                      <span className="insp-line-value"><F v={c.carryover} s=" €" /></span>
+                    </div>
+                    <div className="insp-line">
+                      <span className="insp-line-label">{locale === "fi" ? "Budjetoitu" : "Assigned"}</span>
+                      <InspectorAssign cat={c} fmt={fmt} onSave={(v) => saveBudgeted(c.id, v)} />
+                    </div>
+                    <div className="insp-line">
+                      <span className="insp-line-label">{locale === "fi" ? "Toteuma" : "Activity"}</span>
+                      <span className="insp-line-value text-muted">{c.activity > 0 ? <>−<F v={c.activity} s=" €" /></> : <F v={0} s=" €" />}</span>
+                    </div>
+                  </div>
+
+                  <div className="insp-section">
+                    <span className="insp-section-title">{locale === "fi" ? "Tavoite" : "Target"}</span>
+                    {targetEditing ? (
+                      <div className="insp-target-edit">
+                        <Input value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} placeholder="0.00" inputMode="decimal" autoFocus />
+                        <p className="settings-help">{locale === "fi" ? "Summa joka jaetaan tähän joka kuukausi." : "Amount assigned here every month."}</p>
+                        <div className="insp-actions">
+                          <Button type="button" size="sm" onClick={saveTarget}>{locale === "fi" ? "Tallenna" : "Save"}</Button>
+                          {hasTarget && <Button type="button" variant="destructive" size="sm" onClick={() => clearTarget(c.id)}>{locale === "fi" ? "Poista" : "Clear"}</Button>}
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setTargetEditing(false); setTargetDraft(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
+                        </div>
+                      </div>
+                    ) : hasTarget ? (
+                      <div className="insp-target">
+                        <div className="budget-target-progress insp-target-bar"><span className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+                        <p className="insp-target-text">
+                          {isSnoozed ? (locale === "fi" ? "Tauolla tässä kuussa" : "Paused this month") : <><F v={c.target_monthly} s=" €" /> {locale === "fi" ? "/ kk" : "/ mo"}</>}
+                        </p>
+                        <div className="insp-actions">
+                          <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(c.target_monthly ? fmt(c.target_monthly) : ""); setTargetEditing(true); }}>{locale === "fi" ? "Muokkaa" : "Edit"}</Button>
+                          {isSnoozed ? (
+                            <Button type="button" variant="outline" size="sm" onClick={() => unsnoozeTarget(c.id)}>{locale === "fi" ? "Jatka" : "Resume"}</Button>
+                          ) : (
+                            <Button type="button" variant="outline" size="sm" onClick={() => snoozeTarget(c.id)}>{locale === "fi" ? "Tauota" : "Snooze"}</Button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
+                    )}
+                  </div>
+
+                  <div className="insp-section insp-section-end">
+                    <Button type="button" variant="ghost" size="sm" className="insp-hide" onClick={() => toggleActive(c)}>
+                      {c.is_active ? <><EyeOff className="icon-sm" />{locale === "fi" ? "Piilota kategoria" : "Hide category"}</> : <><Eye className="icon-sm" />{locale === "fi" ? "Näytä kategoria" : "Unhide category"}</>}
+                    </Button>
+                  </div>
                 </div>
-              )}
-              <div className="form-grid-2">
-                {targetCat.target_monthly > 0 && (
-                  <Button type="button" variant="destructive" onClick={() => clearTarget(targetCat.id)}>
-                    {locale === "fi" ? "Poista tavoite" : "Clear target"}
-                  </Button>
-                )}
-                <Button type="button" onClick={saveTarget}>{locale === "fi" ? "Tallenna" : "Save"}</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
 
       {/* Edit category dialog */}
       <Dialog open={!!editCat} onOpenChange={(open) => { if (!open) setEditCat(null); }}>
@@ -473,11 +552,11 @@ export default function BudgetPage() {
   );
 }
 
-function BudgetRow({ cat, saving, onSave, onOpenTarget, fmt, month, locale }: {
+function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale }: {
   cat: BudgetCategory;
   saving: boolean;
   onSave: (value: number) => void;
-  onOpenTarget: () => void;
+  onOpen: () => void;
   fmt: (v: number) => string;
   month: string;
   locale: string;
@@ -527,7 +606,7 @@ function BudgetRow({ cat, saving, onSave, onOpenTarget, fmt, month, locale }: {
 
   return (
     <div className="budget-grid budget-row">
-      <button type="button" className="budget-row-main" onClick={onOpenTarget}>
+      <button type="button" className="budget-row-main" onClick={onOpen}>
         <span className="budget-row-name">{cat.name}</span>
         {hasTarget && (
           <span className="budget-row-target">
@@ -601,5 +680,39 @@ function BudgetRow({ cat, saving, onSave, onOpenTarget, fmt, month, locale }: {
         <span className={`budget-pill ${pillClass}`}><F v={cat.available} /></span>
       </span>
     </div>
+  );
+}
+
+// Compact assigned editor used inside the category inspector (no calculator popover)
+function InspectorAssign({ cat, fmt, onSave }: {
+  cat: BudgetCategory;
+  fmt: (v: number) => string;
+  onSave: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<string>(cat.budgeted ? fmt(cat.budgeted) : "");
+
+  useEffect(() => {
+    setDraft(cat.budgeted ? fmt(cat.budgeted) : "");
+  }, [cat.budgeted, fmt]);
+
+  const commit = () => {
+    const value = evalExpression(draft);
+    if (value === null) return;
+    if (Math.abs(value - cat.budgeted) < 0.005) return;
+    onSave(value);
+  };
+
+  return (
+    <Input
+      className="insp-assign-input"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onFocus={(e) => e.target.select()}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+      type="text"
+      inputMode="decimal"
+      placeholder="0"
+    />
   );
 }
