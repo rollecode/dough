@@ -412,7 +412,7 @@ export default function BudgetPage() {
       <div className="budget-grid budget-table-header">
         <span>{locale === "fi" ? "Kategoria" : "Category"}</span>
         <span>{locale === "fi" ? "Budjetoitu" : "Assigned"}</span>
-        <span>{locale === "fi" ? "Toteuma" : "Activity"}</span>
+        <span className="budget-col-activity">{locale === "fi" ? "Toteuma" : "Activity"}</span>
         <span>{locale === "fi" ? "Käytettävissä" : "Available"}</span>
       </div>
 
@@ -446,7 +446,7 @@ export default function BudgetPage() {
               {dragEnabled && <span className="budget-grip budget-group-grip" aria-hidden="true"><GripVertical /></span>}
               <span className="budget-group-name">{group.label}</span>
               <span className="budget-num"><F v={groupBudgeted} /></span>
-              <span className="budget-num text-muted"><F v={groupActivity} /></span>
+              <span className="budget-num text-muted budget-col-activity"><F v={groupActivity} /></span>
               <span className="budget-num">
                 <span className={`budget-pill ${groupAvailable > 0 ? "is-positive" : groupAvailable < 0 ? "is-negative" : "is-zero"}`}>
                   <F v={groupAvailable} />
@@ -835,7 +835,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           </>
         )}
       </span>
-      <span className="budget-num text-muted budget-activity-cell">
+      <span className="budget-num text-muted budget-activity-cell budget-col-activity">
         {cat.activity > 0 ? (
           <>
             <button type="button" className="budget-activity-btn" onClick={openActivity} aria-haspopup="dialog" aria-expanded={actOpen}>
