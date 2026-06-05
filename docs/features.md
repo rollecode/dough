@@ -57,6 +57,32 @@
 - Floating action button for quick expense entry (hidden on chat page)
 - Unread indicator dot when new data synced
 
+### Budget
+
+- YNAB-style budget page with category groups, monthly assigned amounts, activity and available
+- Carryover: positive available rolls forward, overspending does not drag into the next month
+- Per-category monthly targets with progress, snooze for a single month, and clear
+- Inline assigned editor with a calculator popover
+- Category inspector (right sheet): rename, available breakdown, target editing, hide and unhide
+- Move money between categories and cover overspending from ready-to-assign or any funded category
+- Cover-from popout on overspent amounts and filters for all, overspent and money available
+- Drag-and-drop reorder of categories within a group and of whole groups
+- Hidden categories section at the bottom to unhide
+- Add categories from the topbar, today button to jump back to the current month
+
+### Accounts
+
+- Manage accounts without YNAB: add, edit, close and delete manual accounts
+- Mark a spending account and exclude accounts from the budget
+- Per-account AI notes and source badges for manual, Synci and YNAB accounts
+
+### Local data mode
+
+- Dough works with or without YNAB: it uses YNAB when connected and its own local data when disconnected
+- Synci imports all transactions straight into Dough with automatic transfer pairing in local mode
+- Categories, accounts, transactions, monthly budgets and targets are all stored locally
+- YNAB allocations and category groups are mirrored into the local tables so a cutover is seamless
+
 ### Bills
 
 - Add/edit/delete recurring bills

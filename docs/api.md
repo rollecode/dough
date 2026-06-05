@@ -27,6 +27,33 @@ All endpoints require authentication via `dough-session` cookie (except `/api/au
 - `GET /api/ynab/categories` — list budget categories
 - `POST /api/ynab/transaction` — create a new transaction in YNAB (with AI auto-categorization)
 
+### Budget
+
+- `GET /api/budget?month=YYYY-MM` — per-category budgeted, activity, carryover and available, plus income, total budgeted and ready-to-assign
+- `PUT /api/budget` — set the assigned amount for a category in a month
+- `POST /api/budget/move` — move assigned money between two categories in a month (cover overspending)
+
+### Categories
+
+- `GET /api/categories` — list local budget categories
+- `POST /api/categories` — create a category
+- `PUT /api/categories` — update name, group, color, active state or sort order
+- `PATCH /api/categories` — reorder categories by sort order
+- `DELETE /api/categories` — soft-delete a category
+
+### Category targets
+
+- `GET /api/targets` — list category monthly targets
+- `PUT /api/targets` — set a monthly target amount or snooze the target for a month
+- `DELETE /api/targets` — clear a category target
+
+### Accounts
+
+- `GET /api/accounts` — list all accounts
+- `POST /api/accounts` — create a manual account
+- `PUT /api/accounts` — update name, type, balance, closed state or sort order
+- `DELETE /api/accounts` — delete a manual account or close a synced one
+
 ### Income
 
 - `GET /api/income` — list all income sources with averages
