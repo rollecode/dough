@@ -6,14 +6,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Loader2, Plus, Settings, GripVertical, Pencil, EyeOff, Eye, Check, ArrowRightLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, Pencil, EyeOff, Eye, Check, ArrowRightLeft } from "lucide-react";
 import { F } from "@/components/ui/f";
 import {
   Sheet,
@@ -88,9 +87,7 @@ export default function BudgetPage() {
   const [month, setMonth] = useState<string>(thisMonth());
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [manageOpen, setManageOpen] = useState(false);
   const [addCatOpen, setAddCatOpen] = useState(false);
-  const [editCat, setEditCat] = useState<BudgetCategory | null>(null);
   const [inspectorId, setInspectorId] = useState<number | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [targetEditing, setTargetEditing] = useState(false);
@@ -99,12 +96,10 @@ export default function BudgetPage() {
   const [moveOther, setMoveOther] = useState<string>("");
   const [moveDraft, setMoveDraft] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
-  const [manageOrder, setManageOrder] = useState<BudgetCategory[]>([]);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [localGroups, setLocalGroups] = useState<{ key: string; label: string; items: BudgetCategory[] }[]>([]);
   const [bdrag, setBdrag] = useState<{ type: "row" | "group"; groupKey: string; index: number } | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
   const addCatRef = useRef<HTMLFormElement>(null);
-  const editCatRef = useRef<HTMLFormElement>(null);
   const renameRef = useRef<HTMLFormElement>(null);
 
   const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
@@ -130,11 +125,6 @@ export default function BudgetPage() {
 
   useEffect(() => { load(month); }, [load, month]);
 
-  // Keep the manage-dialog ordering in sync with loaded categories
-  useEffect(() => {
-    if (data?.categories) setManageOrder(data.categories);
-  }, [data]);
-
   // Build the grouped, ordered structure the budget view renders (and drags)
   useEffect(() => {
     if (!data?.categories) { setLocalGroups([]); return; }
@@ -147,27 +137,6 @@ export default function BudgetPage() {
     }
     setLocalGroups([...map.values()]);
   }, [data, locale]);
-
-  const handleDragStart = (idx: number) => setDragIdx(idx);
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === idx) return;
-    const reordered = [...manageOrder];
-    const [moved] = reordered.splice(dragIdx, 1);
-    reordered.splice(idx, 0, moved);
-    setManageOrder(reordered);
-    setDragIdx(idx);
-  };
-  const handleDragEnd = () => {
-    setDragIdx(null);
-    const order = manageOrder.map((c) => c.id);
-    fetch("/api/categories", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order }),
-    }).then(() => load(month)).catch(() => {});
-    console.info("[budget] Saved category order");
-  };
 
   // Drag-and-drop reorder inside the budget view: rows within a group, and whole groups
   const persistRowOrder = (groups: typeof localGroups) => {
@@ -260,23 +229,6 @@ export default function BudgetPage() {
       }
     } catch (err) {
       console.error("[budget] Add category error:", err);
-    }
-  };
-
-  const handleEditCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editCat || !editCatRef.current) return;
-    const fd = new FormData(editCatRef.current);
-    try {
-      await fetch("/api/categories", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editCat.id, name: fd.get("name"), group_name: fd.get("group_name") }),
-      });
-      setEditCat(null);
-      load(month);
-    } catch (err) {
-      console.error("[budget] Edit category error:", err);
     }
   };
 
@@ -425,8 +377,8 @@ export default function BudgetPage() {
             </div>
           );
         })()}
-        <button type="button" className="budget-manage-btn" onClick={() => setManageOpen(true)} aria-label={locale === "fi" ? "Hallinnoi" : "Manage"}>
-          <Settings />
+        <button type="button" className="budget-manage-btn" onClick={() => setAddCatOpen(true)} aria-label={locale === "fi" ? "Lisää kategoria" : "Add category"}>
+          <Plus />
         </button>
       </div>
 
@@ -499,42 +451,27 @@ export default function BudgetPage() {
           </Card>
         );
       })}
-      </div>
 
-      {/* Manage categories dialog */}
-      <Dialog open={manageOpen} onOpenChange={setManageOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{locale === "fi" ? "Hallinnoi kategorioita" : "Manage categories"}</DialogTitle></DialogHeader>
-          <div className="form-stack">
-            <Button variant="outline" size="sm" onClick={() => { setManageOpen(false); setAddCatOpen(true); }}>
-              <Plus className="icon-sm" />
-              {locale === "fi" ? "Lisää kategoria" : "Add category"}
-            </Button>
-            <p className="settings-help">{locale === "fi" ? "Vedä järjestääksesi. Napauta muokataksesi." : "Drag to reorder. Tap to edit."}</p>
-            <div className="manage-cat-list">
-              {manageOrder.map((c, idx) => (
-                <div
-                  key={c.id}
-                  className={`manage-cat-row ${dragIdx === idx ? "is-dragging" : ""}`}
-                  draggable
-                  onDragStart={() => handleDragStart(idx)}
-                  onDragOver={(e) => handleDragOver(e, idx)}
-                  onDragEnd={handleDragEnd}
-                >
-                  <GripVertical className="manage-cat-grip" />
-                  <button type="button" className="manage-cat-main" onClick={() => { setManageOpen(false); setEditCat(c); }}>
-                    <span className={`manage-cat-name ${!c.is_active ? "is-inactive" : ""}`}>{c.name}</span>
-                    {c.group_name && <span className="manage-cat-group">{c.group_name}</span>}
-                  </button>
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <Switch checked={!!c.is_active} onCheckedChange={() => toggleActive(c)} />
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {(() => {
+        const hiddenCats = (data?.categories || []).filter((c) => !c.is_active);
+        if (hiddenCats.length === 0) return null;
+        return (
+          <Card className="list-card list-card-divider">
+            <button type="button" className="budget-hidden-toggle" onClick={() => setShowHidden((s) => !s)}>
+              <ChevronDown className={`budget-hidden-chevron ${showHidden ? "is-open" : ""}`} />
+              <span>{locale === "fi" ? "Piilotetut kategoriat" : "Hidden categories"}</span>
+              <span className="budget-hidden-count">{hiddenCats.length}</span>
+            </button>
+            {showHidden && hiddenCats.map((c) => (
+              <button key={c.id} type="button" className="budget-hidden-row" onClick={() => setInspectorId(c.id)}>
+                <span className="budget-hidden-name">{c.name}</span>
+                {c.group_name && <span className="budget-hidden-group">{c.group_name}</span>}
+              </button>
+            ))}
+          </Card>
+        );
+      })()}
+      </div>
 
       {/* Add category dialog */}
       <Dialog open={addCatOpen} onOpenChange={setAddCatOpen}>
@@ -700,26 +637,6 @@ export default function BudgetPage() {
           })()}
         </SheetContent>
       </Sheet>
-
-      {/* Edit category dialog */}
-      <Dialog open={!!editCat} onOpenChange={(open) => { if (!open) setEditCat(null); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{locale === "fi" ? "Muokkaa kategoriaa" : "Edit category"}</DialogTitle></DialogHeader>
-          {editCat && (
-            <form ref={editCatRef} onSubmit={handleEditCategory} className="form-stack">
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Nimi" : "Name"}</Label>
-                <Input name="name" defaultValue={editCat.name} required autoComplete="off" />
-              </div>
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Ryhmä" : "Group"}</Label>
-                <Input name="group_name" defaultValue={editCat.group_name} autoComplete="off" />
-              </div>
-              <Button type="submit">{locale === "fi" ? "Tallenna" : "Save"}</Button>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
