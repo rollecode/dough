@@ -13,6 +13,7 @@
 * Add a category inspector with inline-editable name, group and description, breakdown, target editing and hide
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
+* Make the budget page usable on small mobile screens (320-540px)
 * Pull category groups from YNAB and backfill them onto local categories
 * Seed local monthly assigned amounts from YNAB allocations so the budget page reflects YNAB on cutover
 * Add overspent and money-available filters with a cover-from popout on overspent amounts
