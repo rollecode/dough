@@ -181,7 +181,8 @@
 }
 
 .budget-monthnav-label {
-  min-width: 8.5rem;
+  width: 10rem;
+  flex-shrink: 0;
   text-align: center;
   font-weight: 600;
   font-size: 1rem;
