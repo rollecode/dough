@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { isTransfer } from "@/lib/transaction-utils";
 import { useYnab } from "@/lib/ynab-context";
@@ -47,6 +47,8 @@ export default function TransactionsPage() {
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(50);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   // Load accounts for edit dialog
   useEffect(() => {
     fetch("/api/ynab/accounts").then((r) => r.json()).then((data) => {
@@ -107,6 +109,19 @@ export default function TransactionsPage() {
       if (filter === "all" && txIsTransfer) return false;
       return true;
     });
+
+  // Infinite scroll: reset the window when filter/search changes, grow it as the sentinel scrolls into view
+  useEffect(() => { setVisibleCount(50); }, [search, filter]);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) setVisibleCount((c) => c + 50); },
+      { rootMargin: "300px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [filtered.length]);
 
   if (!connected) {
     return (
@@ -169,7 +184,7 @@ export default function TransactionsPage() {
         </div>
       ) : (
         <Card className="list-card list-card-divider">
-          {filtered.map((tx) => {
+          {filtered.slice(0, visibleCount).map((tx) => {
             const txIsTransfer = isTransfer(tx.payee, tx.category);
             return (
             <div key={tx.id} className="list-item is-clickable" onClick={() => setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date })}>
@@ -197,6 +212,7 @@ export default function TransactionsPage() {
               <p>{locale === "fi" ? "Ei tapahtumia" : "No transactions"}</p>
             </div>
           )}
+          {visibleCount < filtered.length && <div ref={sentinelRef} className="infinite-sentinel" aria-hidden="true" />}
         </Card>
       )}
 

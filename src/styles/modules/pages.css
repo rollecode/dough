@@ -1923,6 +1923,9 @@
 /* Full width utility */
 .w-full { width: 100%; }
 
+/* Infinite-scroll sentinel — observed to grow the rendered window */
+.infinite-sentinel { height: 1px; }
+
 /* Search input padding — compound to beat .input base */
 .input.input-with-icon {
   height: 2.5rem;

@@ -11,6 +11,7 @@
 * Pull category groups from YNAB and backfill them onto local categories
 * Seed local monthly assigned amounts from YNAB allocations so the budget page reflects YNAB on cutover
 * Add overspent and money-available filters with a cover-from popout on overspent amounts
+* Load the transactions list with infinite scroll instead of rendering every row at once
 * Apply the app background gradient to the login screen
 * Fix YNAB settings migration resurrecting a disconnected token
 
