@@ -871,61 +871,64 @@
   padding-bottom: 0;
 }
 
-.insp-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-right: 2rem;
-}
-
-.insp-title-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.insp-group {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-.insp-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  flex-shrink: 0;
+/* Inline-editable category fields in the inspector (click straight in, saves on blur) */
+.insp-name-input {
+  width: 100%;
   border: none;
-  border-radius: 9999px;
+  background: none;
+  color: var(--foreground);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.25rem;
+  padding-right: 1.75rem;
+  margin-left: -0.25rem;
+  border-radius: 0.375rem;
+}
+
+.insp-group-input {
+  width: 100%;
+  border: none;
   background: none;
   color: var(--muted-foreground);
-  cursor: pointer;
-  transition: background-color 150ms, color 150ms;
+  font-size: 0.8125rem;
+  padding: 0.125rem 0.25rem;
+  margin: 0.125rem 0 0 -0.25rem;
+  border-radius: 0.375rem;
 }
 
-.insp-icon-btn:hover {
-  background: color-mix(in srgb, var(--muted) 50%, transparent);
+.insp-name-input:hover,
+.insp-group-input:hover {
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.insp-name-input:focus,
+.insp-group-input:focus {
+  outline: none;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+.insp-desc-input {
+  width: 100%;
+  margin-top: 0.625rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
   color: var(--foreground);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  line-height: 1.35;
+  resize: vertical;
+  min-height: 2.5rem;
 }
 
-.insp-icon-btn svg {
-  width: 1rem;
-  height: 1rem;
+.insp-desc-input::placeholder {
+  color: var(--muted-foreground);
 }
 
-.insp-rename {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-
-.insp-rename-actions {
-  display: flex;
-  gap: 0.5rem;
+.insp-desc-input:focus {
+  outline: none;
+  border-color: var(--ring);
 }
 
 .insp-body {

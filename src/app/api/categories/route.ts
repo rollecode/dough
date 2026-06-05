@@ -70,6 +70,7 @@ export async function PUT(request: Request) {
       updates.push("name = ?"); values.push(name);
     }
     if (body.group_name !== undefined) { updates.push("group_name = ?"); values.push(String(body.group_name).trim()); }
+    if (body.description !== undefined) { updates.push("description = ?"); values.push(String(body.description)); }
     if (body.color !== undefined) { updates.push("color = ?"); values.push(String(body.color).trim()); }
     if (body.is_active !== undefined) { updates.push("is_active = ?"); values.push(body.is_active ? 1 : 0); }
     if (body.sort_order !== undefined) { updates.push("sort_order = ?"); values.push(parseInt(String(body.sort_order), 10) || 0); }

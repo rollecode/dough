@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, Pencil, EyeOff, Eye, Check, ArrowRightLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft } from "lucide-react";
 import { F } from "@/components/ui/f";
 import {
   Sheet,
@@ -32,6 +32,7 @@ interface BudgetCategory {
   id: number;
   name: string;
   group_name: string;
+  description: string;
   is_active: number;
   budgeted: number;
   activity: number;
@@ -96,7 +97,6 @@ export default function BudgetPage() {
   const [loading, setLoading] = useState(true);
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [inspectorId, setInspectorId] = useState<number | null>(null);
-  const [renaming, setRenaming] = useState(false);
   const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
   const [moveOpen, setMoveOpen] = useState(false);
@@ -108,12 +108,10 @@ export default function BudgetPage() {
   const [showHidden, setShowHidden] = useState(false);
   const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
   const addCatRef = useRef<HTMLFormElement>(null);
-  const renameRef = useRef<HTMLFormElement>(null);
 
   const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
   const closeInspector = () => {
     setInspectorId(null);
-    setRenaming(false);
     setTargetEditing(false);
     setTargetDraft("");
     setMoveOpen(false);
@@ -273,20 +271,16 @@ export default function BudgetPage() {
     }
   };
 
-  const handleRename = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inspectorCat || !renameRef.current) return;
-    const fd = new FormData(renameRef.current);
+  const saveCategoryFields = async (id: number, fields: { name?: string; group_name?: string; description?: string }) => {
     try {
       await fetch("/api/categories", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: inspectorCat.id, name: fd.get("name"), group_name: fd.get("group_name") }),
+        body: JSON.stringify({ id, ...fields }),
       });
-      setRenaming(false);
       load(month);
     } catch (err) {
-      console.error("[budget] Rename category error:", err);
+      console.error("[budget] Save category error:", err);
     }
   };
 
@@ -549,27 +543,33 @@ export default function BudgetPage() {
             return (
               <>
                 <SheetHeader className="insp-header">
-                  <div className="insp-title-row">
-                    <div className="insp-title-text">
-                      <SheetTitle>{c.name}</SheetTitle>
-                      {c.group_name && <span className="insp-group">{c.group_name}</span>}
-                    </div>
-                    {!renaming && (
-                      <button type="button" className="insp-icon-btn" onClick={() => setRenaming(true)} aria-label={locale === "fi" ? "Muokkaa" : "Edit"}>
-                        <Pencil />
-                      </button>
-                    )}
-                  </div>
-                  {renaming && (
-                    <form ref={renameRef} onSubmit={handleRename} className="insp-rename">
-                      <Input name="name" defaultValue={c.name} required autoComplete="off" autoFocus />
-                      <Input name="group_name" defaultValue={c.group_name} placeholder={locale === "fi" ? "Ryhmä" : "Group"} autoComplete="off" />
-                      <div className="insp-rename-actions">
-                        <Button type="submit" size="sm"><Check className="icon-sm" />{locale === "fi" ? "Tallenna" : "Save"}</Button>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setRenaming(false)}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
-                      </div>
-                    </form>
-                  )}
+                  <SheetTitle className="sr-only">{c.name}</SheetTitle>
+                  <input
+                    key={`name-${c.id}`}
+                    className="insp-name-input"
+                    defaultValue={c.name}
+                    onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== c.name) saveCategoryFields(c.id, { name: v }); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    aria-label={locale === "fi" ? "Kategorian nimi" : "Category name"}
+                  />
+                  <input
+                    key={`group-${c.id}`}
+                    className="insp-group-input"
+                    defaultValue={c.group_name}
+                    placeholder={locale === "fi" ? "Ryhmä" : "Group"}
+                    onBlur={(e) => { const v = e.target.value.trim(); if (v !== c.group_name) saveCategoryFields(c.id, { group_name: v }); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    aria-label={locale === "fi" ? "Ryhmä" : "Group"}
+                  />
+                  <textarea
+                    key={`desc-${c.id}`}
+                    className="insp-desc-input"
+                    defaultValue={c.description}
+                    placeholder={locale === "fi" ? "Kuvaus (valinnainen)" : "Description (optional)"}
+                    rows={2}
+                    onBlur={(e) => { if (e.target.value !== c.description) saveCategoryFields(c.id, { description: e.target.value }); }}
+                    aria-label={locale === "fi" ? "Kuvaus" : "Description"}
+                  />
                 </SheetHeader>
 
                 <div className="insp-body">

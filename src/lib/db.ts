@@ -420,6 +420,13 @@ function initializeDb(db: Database.Database) {
     db.exec("ALTER TABLE ynab_accounts ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
   }
 
+  // Add description column to categories if missing
+  const catCols = db.prepare("PRAGMA table_info(categories)").all() as { name: string }[];
+  if (catCols.length > 0 && !catCols.some((c) => c.name === "description")) {
+    console.info("[db] Adding description column to categories");
+    db.exec("ALTER TABLE categories ADD COLUMN description TEXT DEFAULT ''");
+  }
+
   // Add min_amount/max_amount columns to payee_matches if missing
   const payeeCols = db.prepare("PRAGMA table_info(payee_matches)").all() as { name: string }[];
   if (!payeeCols.some((c) => c.name === "min_amount")) {

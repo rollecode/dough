@@ -8,6 +8,7 @@ interface CategoryRow {
   id: number;
   name: string;
   group_name: string;
+  description: string;
   sort_order: number;
   is_active: number;
 }
@@ -103,7 +104,7 @@ export async function GET(request: Request) {
 
     const db = getDb();
     const cats = db
-      .prepare("SELECT id, name, group_name, sort_order, is_active FROM categories ORDER BY group_name, sort_order, name")
+      .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active FROM categories ORDER BY group_name, sort_order, name")
       .all() as CategoryRow[];
 
     // Apply saved group ordering (stable sort keeps within-group sort_order from the query)
@@ -137,6 +138,7 @@ export async function GET(request: Request) {
         id: c.id,
         name: c.name,
         group_name: c.group_name,
+        description: c.description || "",
         is_active: c.is_active,
         budgeted: Math.round(b * 100) / 100,
         activity: Math.round(a * 100) / 100,
