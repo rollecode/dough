@@ -1568,6 +1568,7 @@
 
 .list-edit-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.5rem;
   margin-top: 0.5rem;
@@ -1576,7 +1577,7 @@
 }
 
 .list-edit-field {
-  flex: 1;
+  flex: 0 1 7rem;
   min-width: 0;
 }
 

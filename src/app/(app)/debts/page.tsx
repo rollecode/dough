@@ -427,16 +427,6 @@ export default function DebtsPage() {
                   {saving === debt.id ? <Check /> : <Save />}
                 </Button>
               </div>
-              <Button
-                type="button"
-                variant={debt.isPriority ? "destructive" : "outline"}
-                size="sm"
-                onClick={async () => { await fetch("/api/debts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ynab_account_id: debt.id, is_priority: debt.isPriority ? 0 : 1 }) }); setDebts((prev) => prev.map((d) => d.id === debt.id ? { ...d, isPriority: debt.isPriority ? 0 : 1 } : d)); }}
-              >
-                {debt.isPriority
-                  ? (locale === "fi" ? "Pakollinen velka" : "Must-pay debt")
-                  : (locale === "fi" ? "Merkitse pakolliseksi" : "Mark as must-pay")}
-              </Button>
             </div>
           ))}
         </Card>
