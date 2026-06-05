@@ -368,32 +368,50 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback if no YNAB data
+    // Fallback: assemble context from local data when YNAB is not connected
     if (!context) {
-      console.warn("[chat] Using empty context, no YNAB data available");
+      console.info("[chat] Building local financial context (no YNAB)");
+      const { buildLocalFinancialData } = await import("@/lib/local-financial-data");
+      const { getHouseholdSetting: getHS } = await import("@/lib/household");
+      const dbc = getDb();
+      const local = buildLocalFinancialData(dbc);
+      const dOv = dbc.prepare("SELECT * FROM debt_overrides").all() as any[];
+      const dOvMap: Record<string, any> = {};
+      for (const o of dOv) dOvMap[o.ynab_account_id] = o;
+      const iOv = dbc.prepare("SELECT * FROM investment_overrides").all() as any[];
+      const iOvMap: Record<string, any> = {};
+      for (const o of iOv) iOvMap[o.ynab_account_id] = o;
+      const debts = local.summary.accounts
+        .filter((a: any) => a.type === "otherDebt" && a.balance < 0)
+        .map((a: any) => ({ name: a.name, remaining: Math.abs(a.balance), rate: dOvMap[a.id]?.interest_rate ?? 0, minimumPayment: dOvMap[a.id]?.minimum_payment ?? 0, dueDay: dOvMap[a.id]?.due_day ?? 0 }));
+      const investments = local.summary.accounts
+        .filter((a: any) => a.type === "otherAsset")
+        .map((a: any) => ({ name: a.name, balance: a.balance, monthlyContribution: iOvMap[a.id]?.monthly_contribution ?? 0, expectedReturn: iOvMap[a.id]?.expected_return ?? 0 }));
+      const incomeSources = (dbc.prepare("SELECT name, amount, expected_day FROM income_sources WHERE is_active = 1").all() as any[])
+        .map((s: any) => ({ name: s.name, amount: s.amount, expectedDay: s.expected_day }));
       context = {
-        totalBalance: 0,
-        monthlyIncome: 0,
-        monthlyExpenses: 0,
+        totalBalance: local.summary.totalBalance,
+        monthlyIncome: local.monthBudget.income,
+        monthlyExpenses: local.monthBudget.activity,
         todaySpent: 0,
         todayFixedCosts: 0,
         tomorrowBudget: 0,
         upcomingBills: [],
-        recentTransactions: [],
-        debts: [],
-        investments: [],
+        recentTransactions: local.transactions.slice(0, 30).map((t: any) => ({ date: t.date, payee: t.payee, amount: t.amount, category: t.category })),
+        debts,
+        investments,
         savingGoal: 0,
-        incomeSources: [],
+        incomeSources,
         dailyBudget: 0,
         daysUntilNextIncome: 0,
         availableBeforePayday: 0,
         dailySpendableBeforePayday: 0,
         monthlyHistory: [],
         savingsGoals: [],
-        accounts: [],
-        locale: "en",
-        householdProfile: "",
-        currentUser: "unknown",
+        accounts: local.summary.accounts.map((a: any) => ({ name: a.name, balance: a.balance, type: a.type, note: "" })),
+        locale: user?.locale || "en",
+        householdProfile: getHS("household_profile") || "",
+        currentUser: user?.display_name || "unknown",
       };
     }
 

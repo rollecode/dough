@@ -41,10 +41,10 @@ export async function GET(request: Request) {
     console.info("[debts/suggestion] Generating fresh AI suggestion");
 
     const cached = db.prepare("SELECT data FROM ynab_cache WHERE id = 1").get() as { data: string } | undefined;
-    if (!cached) return NextResponse.json({ suggestion: null });
-
-    const ynabData = JSON.parse(cached.data);
-    const debtAccounts = ynabData.summary.accounts.filter((a: any) => a.type === "otherDebt" && a.balance < 0);
+    const allAccounts: any[] = cached
+      ? JSON.parse(cached.data).summary.accounts
+      : (db.prepare("SELECT id, name, type, balance FROM ynab_accounts WHERE closed = 0").all() as any[]);
+    const debtAccounts = allAccounts.filter((a: any) => a.type === "otherDebt" && a.balance < 0);
     if (debtAccounts.length === 0) return NextResponse.json({ suggestion: null });
 
     // Load overrides for interest rates and payments

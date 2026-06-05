@@ -55,19 +55,17 @@ export async function GET(request: Request) {
     const token = getYnabToken();
     const budgetId = getYnabBudgetId();
 
-    if (!token || !budgetId) {
-      return NextResponse.json({ summary: null, error: "YNAB not connected" });
-    }
-
     const now = new Date();
 
-    // Use cached data instead of calling YNAB API directly
+    // YNAB cache when connected, otherwise assemble the same shape from local data
     const cached = db.prepare("SELECT data FROM ynab_cache WHERE id = 1").get() as { data: string } | undefined;
-    if (!cached) {
-      return NextResponse.json({ summary: null, error: "No cached data. Sync first." });
+    let summary: any, transactions: any, monthBudget: any;
+    if (token && budgetId && cached) {
+      ({ summary, transactions, monthBudget } = JSON.parse(cached.data));
+    } else {
+      const { buildLocalFinancialData } = await import("@/lib/local-financial-data");
+      ({ summary, transactions, monthBudget } = buildLocalFinancialData(db));
     }
-    const ynabData = JSON.parse(cached.data);
-    const { summary, transactions, monthBudget } = ynabData;
 
     // Load historical monthly data for comparisons
     const billMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
