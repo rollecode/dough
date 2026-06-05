@@ -118,7 +118,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    if (!due_day || due_day < 1 || due_day > 31) return NextResponse.json({ error: "Due day (1-31) required" }, { status: 400 });
+    if (due_day !== undefined && due_day !== 0 && (due_day < 1 || due_day > 31)) {
+      return NextResponse.json({ error: "Due day must be 1-31" }, { status: 400 });
+    }
 
     const db = getDb();
     db.prepare(`

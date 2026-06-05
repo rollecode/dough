@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -20,6 +26,7 @@ import {
   Save,
   Check,
   GripVertical,
+  Plus,
 } from "lucide-react";
 import {
   AreaChart,
@@ -92,6 +99,44 @@ export default function DebtsPage() {
   const [aiHidden, setAiHidden] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const addFormRef = useRef<HTMLFormElement>(null);
+
+  const loadDebts = () => {
+    fetch("/api/debts").then((r) => r.json()).then((data) => { if (data.debts) setDebts(data.debts); }).catch(() => {});
+  };
+
+  const handleAddDebt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = addFormRef.current;
+    if (!form) return;
+    const fd = new FormData(form);
+    const name = String(fd.get("name") || "").trim();
+    if (!name) return;
+    const balance = Math.abs(parseFloat(String(fd.get("balance") || "0").replace(",", ".")) || 0);
+    const interest = parseFloat(String(fd.get("interest") || "0").replace(",", ".")) || 0;
+    const payment = parseFloat(String(fd.get("payment") || "0").replace(",", ".")) || 0;
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, type: "otherDebt", balance: -balance }),
+      });
+      const j = await res.json();
+      if (res.ok && j.id && (interest || payment)) {
+        await fetch("/api/debts", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ynab_account_id: j.id, interest_rate: interest, minimum_payment: payment }),
+        });
+      }
+      form.reset();
+      setAddOpen(false);
+      loadDebts();
+    } catch (err) {
+      console.error("[debts] Add error:", err);
+    }
+  };
 
   useEffect(() => {
     console.debug("[debts] Loading debts");
@@ -144,6 +189,12 @@ export default function DebtsPage() {
     setSaving(debt.id);
     console.info("[debts] Saving override for", debt.name);
     try {
+      // Persist the owed balance on the account (stored negative) and the debt override
+      await fetch("/api/accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: debt.id, balance: -Math.abs(debt.balance) }),
+      });
       await fetch("/api/debts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -203,7 +254,38 @@ export default function DebtsPage() {
           <h1 className="page-heading">{t.debts.title}</h1>
           <p className="page-subtitle">{t.debts.subtitle}</p>
         </div>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="icon-sm" />
+          {locale === "fi" ? "Lisää velka" : "Add debt"}
+        </Button>
       </div>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{locale === "fi" ? "Uusi velka" : "New debt"}</DialogTitle></DialogHeader>
+          <form ref={addFormRef} onSubmit={handleAddDebt} className="form-stack">
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Nimi" : "Name"}</Label>
+              <Input name="name" required autoComplete="off" />
+            </div>
+            <div className="form-grid-2">
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Velkaa (€)" : "Amount owed (€)"}</Label>
+                <Input name="balance" type="text" inputMode="decimal" placeholder="0.00" autoComplete="off" />
+              </div>
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Korko %" : "Interest %"}</Label>
+                <Input name="interest" type="text" inputMode="decimal" placeholder="0" autoComplete="off" />
+              </div>
+            </div>
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Kuukausimaksu (€)" : "Monthly payment (€)"}</Label>
+              <Input name="payment" type="text" inputMode="decimal" placeholder="0" autoComplete="off" />
+            </div>
+            <Button type="submit">{locale === "fi" ? "Lisää" : "Add"}</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Summary cards */}
       <div className="page-grid-3-sm">
@@ -291,6 +373,17 @@ export default function DebtsPage() {
               </div>
               <div className="list-edit-row">
                 <div className="list-edit-field">
+                  <Label className="list-edit-label">{locale === "fi" ? "Saldo €" : "Balance €"}</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={debt.balance || ""}
+                    onChange={(e) => updateDebt(debt.id, "balance", parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    className="list-edit-input"
+                  />
+                </div>
+                <div className="list-edit-field">
                   <Label className="list-edit-label">{locale === "fi" ? "Korko %" : "Interest %"}</Label>
                   <Input
                     type="number"
@@ -330,7 +423,6 @@ export default function DebtsPage() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => saveOverride(debt)}
-                  disabled={!debt.dueDay || debt.dueDay < 1}
                 >
                   {saving === debt.id ? <Check /> : <Save />}
                 </Button>
