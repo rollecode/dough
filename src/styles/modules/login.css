@@ -5,7 +5,10 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--background);
+  background-color: var(--background);
+  background-image: var(--app-gradient, none);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .login-container {
