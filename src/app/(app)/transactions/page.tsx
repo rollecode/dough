@@ -186,8 +186,16 @@ export default function TransactionsPage() {
         <Card className="list-card list-card-divider">
           {filtered.slice(0, visibleCount).map((tx) => {
             const txIsTransfer = isTransfer(tx.payee, tx.category);
+            const openEdit = () => setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date });
             return (
-            <div key={tx.id} className="list-item is-clickable" onClick={() => setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date })}>
+            <div
+              key={tx.id}
+              className="list-item is-clickable"
+              role="button"
+              tabIndex={0}
+              onClick={openEdit}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEdit(); } }}
+            >
               <div className="list-item-icon" data-color={txIsTransfer ? "chart-3" : tx.amount < 0 ? "negative" : "positive"}>
                 {tx.amount < 0 ? <ArrowUpRight className="icon-sm" /> : <ArrowDownLeft className="icon-sm" />}
               </div>

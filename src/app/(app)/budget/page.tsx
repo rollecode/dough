@@ -811,7 +811,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
       <span className="budget-num budget-avail-cell">
         {cat.available < -0.005 ? (
           <>
-            <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => setCoverOpen((o) => !o)}>
+            <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => setCoverOpen((o) => !o)} aria-label={locale === "fi" ? "Kateta ylitys" : "Cover overspending"} aria-haspopup="menu" aria-expanded={coverOpen}>
               <F v={cat.available} />
             </button>
             {coverOpen && (() => {

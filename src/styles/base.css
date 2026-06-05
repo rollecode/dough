@@ -85,6 +85,18 @@ a {
   box-shadow: none !important;
 }
 
+/* Accessibility: restore a visible keyboard-focus ring for interactive elements */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+}
+
 img, video {
   max-width: 100%;
   height: auto;
