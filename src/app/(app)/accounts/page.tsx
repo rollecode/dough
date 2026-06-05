@@ -170,7 +170,7 @@ export default function AccountsPage() {
 
       <Card className="metric-card">
         <p className="metric-card-label">{locale === "fi" ? "Yhteensä avoimilla tileillä" : "Total across open accounts"}</p>
-        <p className="metric-card-value-3xl"><F v={total} /></p>
+        <p className={`metric-card-value-3xl ${total < -0.005 ? "is-negative" : total > 0.005 ? "is-positive" : ""}`}><F v={total} s=" €" /></p>
         <p className="metric-card-note metric-card-note-mt">{open.length} {locale === "fi" ? "tiliä" : "accounts"}</p>
       </Card>
 
@@ -187,7 +187,7 @@ export default function AccountsPage() {
                 <p className="list-item-meta">{typeLabel(a.type, locale)}{a.source === "manual" ? ` · ${locale === "fi" ? "käsin" : "manual"}` : a.synci_account_id ? " · Synci" : ""}</p>
               </div>
               <div className="list-item-end">
-                <p className="list-item-amount-value"><F v={a.balance} /></p>
+                <p className={`list-item-amount-value ${a.balance < -0.005 ? "is-negative" : a.balance > 0.005 ? "is-positive" : ""}`}><F v={a.balance} s=" €" /></p>
               </div>
             </div>
           ))}
@@ -205,7 +205,7 @@ export default function AccountsPage() {
                   <p className="list-item-meta">{typeLabel(a.type, locale)}</p>
                 </div>
                 <div className="list-item-end">
-                  <p className="list-item-amount-value"><F v={a.balance} /></p>
+                  <p className={`list-item-amount-value ${a.balance < -0.005 ? "is-negative" : a.balance > 0.005 ? "is-positive" : ""}`}><F v={a.balance} s=" €" /></p>
                 </div>
               </div>
             ))}

@@ -1428,6 +1428,11 @@
   color: var(--positive);
 }
 
+.list-item-amount-value.is-negative { color: var(--negative); }
+.list-item-amount-value.is-positive { color: var(--positive); }
+.metric-card-value-3xl.is-negative { color: var(--negative); }
+.metric-card-value-3xl.is-positive { color: var(--positive); }
+
 .list-item-amount-date {
   font-size: 10px;
   color: var(--muted-foreground);
