@@ -123,28 +123,19 @@ export default function TransactionsPage() {
     return () => obs.disconnect();
   }, [filtered.length]);
 
-  if (!connected) {
-    return (
-      <div className="page-stack">
-        <div>
-          <h1 className="page-heading">{t.transactions.title}</h1>
-          <p className="page-subtitle">{t.settings.ynabDescription}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="page-stack">
       <div className="page-header-row">
         <div>
           <h1 className="page-heading">{t.transactions.title}</h1>
-          <p className="page-subtitle">{t.transactions.subtitle}</p>
+          <p className="page-subtitle">{connected ? t.transactions.subtitle : (locale === "fi" ? "Kaikki tapahtumasi" : "All your transactions")}</p>
         </div>
         <div className="sync-row">
-          <Button variant="outline" size="sm" onClick={() => sync()} disabled={loading}>
-            <RefreshCw className={loading ? "icon-sm animate-spin" : "icon-sm"} />
-          </Button>
+          {connected && (
+            <Button variant="outline" size="sm" onClick={() => sync()} disabled={loading}>
+              <RefreshCw className={loading ? "icon-sm animate-spin" : "icon-sm"} />
+            </Button>
+          )}
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="icon-sm" />
             {locale === "fi" ? "Lisää kulu" : "Add expense"}

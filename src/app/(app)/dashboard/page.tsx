@@ -526,16 +526,18 @@ export default function DashboardPage() {
           </span>
         </h1>
         </div>
-        <div className="sync-row">
-          {lastYnabSync && (
-            <span className="sync-time">
-              {formatDistanceToNow(new Date(lastYnabSync), { addSuffix: true, locale: locale === "fi" ? fiFns : enUS })}
-            </span>
-          )}
-          <Button variant="outline" size="sm" onClick={() => { if (typeof window !== "undefined") localStorage.removeItem("dough-last-sync"); sync(); }} disabled={loading}>
-            <RefreshCw className={loading ? "icon-sm animate-spin" : "icon-sm"} />
-          </Button>
-        </div>
+        {connected && (
+          <div className="sync-row">
+            {lastYnabSync && (
+              <span className="sync-time">
+                {formatDistanceToNow(new Date(lastYnabSync), { addSuffix: true, locale: locale === "fi" ? fiFns : enUS })}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={() => { if (typeof window !== "undefined") localStorage.removeItem("dough-last-sync"); sync(); }} disabled={loading}>
+              <RefreshCw className={loading ? "icon-sm animate-spin" : "icon-sm"} />
+            </Button>
+          </div>
+        )}
       </div>
 
       <EntryReminder
