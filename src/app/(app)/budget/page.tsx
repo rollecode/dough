@@ -283,28 +283,25 @@ export default function BudgetPage() {
             {locale === "fi" ? "Tänään" : "Today"}
           </button>
         </div>
-        <button type="button" className="budget-manage-btn" onClick={() => setManageOpen(true)} aria-label={locale === "fi" ? "Hallinnoi" : "Manage"}>
-          <Settings />
-        </button>
-      </div>
-
-      {(() => {
-        const rta = data?.readyToAssign || 0;
-        const state = rta > 0.005 ? "is-positive" : rta < -0.005 ? "is-negative" : "is-zero";
-        const label = state === "is-zero"
-          ? (locale === "fi" ? "Kaikki rahat jaettu" : "All money assigned")
-          : state === "is-negative"
-          ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
-          : (locale === "fi" ? "Budjetoimatonta rahaa" : "Ready to assign");
-        return (
-          <div className="budget-ready-wrap">
+        {(() => {
+          const rta = data?.readyToAssign || 0;
+          const state = rta > 0.005 ? "is-positive" : rta < -0.005 ? "is-negative" : "is-zero";
+          const label = state === "is-zero"
+            ? (locale === "fi" ? "Kaikki jaettu" : "All assigned")
+            : state === "is-negative"
+            ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
+            : (locale === "fi" ? "Jaettavissa" : "Ready to assign");
+          return (
             <div className={`budget-ready-box ${state}`}>
               <span className="budget-ready-value"><F v={rta} s=" €" /></span>
               <span className="budget-ready-label">{label}</span>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
+        <button type="button" className="budget-manage-btn" onClick={() => setManageOpen(true)} aria-label={locale === "fi" ? "Hallinnoi" : "Manage"}>
+          <Settings />
+        </button>
+      </div>
 
       <div className="budget-table">
       <div className="budget-grid budget-table-header">
