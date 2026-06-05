@@ -121,7 +121,9 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const setPrivacyMode = useCallback((v: boolean) => setPrivacyModeState(v), []);
 
   const fmt = useCallback((n: number) => {
-    const formatted = n.toFixed(decimals);
+    let formatted = n.toFixed(decimals);
+    // Normalise negative zero ("-0", "-0.00") so it never shows as a minus
+    if (/^-0(\.0+)?$/.test(formatted)) formatted = formatted.slice(1);
     if (!privacyMode) return formatted;
     return formatted.replace(/\d/g, "•");
   }, [decimals, privacyMode]);

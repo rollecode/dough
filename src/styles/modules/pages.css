@@ -143,10 +143,22 @@
 
 /* Budget page */
 .budget-topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 0.5rem 0;
+  background: var(--background);
+}
+
+@supports (backdrop-filter: blur(8px)) {
+  .budget-topbar {
+    background: color-mix(in srgb, var(--background) 72%, transparent);
+    backdrop-filter: blur(8px);
+  }
 }
 
 .budget-monthnav {
@@ -209,6 +221,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  justify-self: end;
   width: 2rem;
   height: 2rem;
   flex-shrink: 0;
@@ -230,23 +243,15 @@
   height: 1.125rem;
 }
 
-/* "Ready to assign" chip, value stacked over label. Grouped on the right with the add button
-   and right-aligned, so the value's right edge stays fixed and the appearing Today button
-   (or a changing value width) never shifts it. */
-.budget-topbar-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
+/* "Ready to assign" chip — centered in the sticky topbar (its own grid column, so a
+   changing value width or the appearing Today button never shifts it), value over label */
 .budget-ready-box {
   display: inline-flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 0.0625rem;
-  line-height: 1.25;
-  padding: 0.4375rem 0.875rem;
+  align-items: center;
+  gap: 0;
+  line-height: 1.1;
+  padding: 0.375rem 1rem;
   border-radius: 0.75rem;
   white-space: nowrap;
 }
@@ -267,15 +272,17 @@
 }
 
 .budget-ready-value {
-  font-size: 0.9375rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .budget-ready-label {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   font-weight: 500;
+  line-height: 1;
+  margin: 7px 0 0 0;
   opacity: 0.8;
 }
 
@@ -962,6 +969,8 @@
 .insp-available-label {
   font-size: 0.75rem;
   font-weight: 500;
+  line-height: 1;
+  margin: 7px 0 0 0;
   opacity: 0.85;
 }
 

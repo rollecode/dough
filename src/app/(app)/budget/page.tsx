@@ -82,8 +82,15 @@ function formatMonth(month: string, locale: string): string {
   return d.toLocaleDateString(locale === "fi" ? "fi" : "en", { month: "long", year: "numeric" });
 }
 
+// Half a display step: a value within this of zero rounds to "0", so it should read as
+// fully assigned, not overspent. Keeps state in sync with the shown precision.
+function availEps(decimals: number): number {
+  return decimals >= 2 ? 0.005 : 0.5 / Math.pow(10, decimals);
+}
+
 export default function BudgetPage() {
-  const { locale, fmt } = useLocale();
+  const { locale, fmt, decimals } = useLocale();
+  const eps = availEps(decimals);
   const [month, setMonth] = useState<string>(thisMonth());
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -370,26 +377,24 @@ export default function BudgetPage() {
             </button>
           )}
         </div>
-        <div className="budget-topbar-right">
-          {(() => {
-            const rta = data?.readyToAssign || 0;
-            const state = rta > 0.005 ? "is-positive" : rta < -0.005 ? "is-negative" : "is-zero";
-            const label = state === "is-zero"
-              ? (locale === "fi" ? "Kaikki jaettu" : "All assigned")
-              : state === "is-negative"
-              ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
-              : (locale === "fi" ? "Jaettavissa" : "Ready to assign");
-            return (
-              <div className={`budget-ready-box ${state}`}>
-                <span className="budget-ready-value"><F v={rta} s=" €" /></span>
-                <span className="budget-ready-label">{label}</span>
-              </div>
-            );
-          })()}
-          <button type="button" className="budget-manage-btn" onClick={() => setAddCatOpen(true)} aria-label={locale === "fi" ? "Lisää kategoria" : "Add category"}>
-            <Plus />
-          </button>
-        </div>
+        {(() => {
+          const rta = data?.readyToAssign || 0;
+          const state = rta > eps ? "is-positive" : rta < -eps ? "is-negative" : "is-zero";
+          const label = state === "is-zero"
+            ? (locale === "fi" ? "Kaikki jaettu" : "All assigned")
+            : state === "is-negative"
+            ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
+            : (locale === "fi" ? "Jaettavissa" : "Ready to assign");
+          return (
+            <div className={`budget-ready-box ${state}`}>
+              <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+              <span className="budget-ready-label">{label}</span>
+            </div>
+          );
+        })()}
+        <button type="button" className="budget-manage-btn" onClick={() => setAddCatOpen(true)} aria-label={locale === "fi" ? "Lisää kategoria" : "Add category"}>
+          <Plus />
+        </button>
       </div>
 
       <div className="budget-filterbar">
@@ -537,7 +542,7 @@ export default function BudgetPage() {
         <SheetContent className="budget-inspector">
           {inspectorCat && (() => {
             const c = inspectorCat;
-            const availState = c.available > 0.005 ? "is-positive" : c.available < -0.005 ? "is-negative" : "is-zero";
+            const availState = c.available > eps ? "is-positive" : c.available < -eps ? "is-negative" : "is-zero";
             const hasTarget = c.target_monthly > 0;
             const isSnoozed = hasTarget && c.snooze_until_month >= month;
             const progress = hasTarget ? Math.min(1, c.budgeted / c.target_monthly) : 0;
@@ -624,8 +629,8 @@ export default function BudgetPage() {
 
                   {(() => {
                     const others = (data?.categories || []).filter((o) => o.is_active && o.id !== c.id);
-                    const isOverspent = c.available < -0.005;
-                    const hasMoney = c.available > 0.005;
+                    const isOverspent = c.available < -eps;
+                    const hasMoney = c.available > eps;
                     if ((!isOverspent && !hasMoney) || others.length === 0) return null;
                     const title = isOverspent
                       ? (locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending")
@@ -703,7 +708,8 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   const [actTxns, setActTxns] = useState<{ id: string; date: string; payee: string; amount: number; memo: string | null }[] | null>(null);
   const [actLoading, setActLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { fmtDate } = useLocale();
+  const { fmtDate, decimals } = useLocale();
+  const eps = availEps(decimals);
 
   const openActivity = async () => {
     if (actOpen) { setActOpen(false); return; }
@@ -750,11 +756,11 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   const progress = hasTarget ? Math.min(1, cat.budgeted / cat.target_monthly) : 0;
   const underfunded = cat.target_active && cat.budgeted < cat.target_monthly - 0.005;
   const stillNeeded = underfunded ? Math.round((cat.target_monthly - cat.budgeted) * 100) / 100 : 0;
-  const pillClass = cat.available < -0.005
+  const pillClass = cat.available < -eps
     ? "is-negative"
     : underfunded
     ? "is-underfunded"
-    : cat.available > 0.005
+    : cat.available > eps
     ? "is-positive"
     : "is-zero";
 
@@ -866,7 +872,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
         )}
       </span>
       <span className="budget-num budget-avail-cell">
-        {cat.available < -0.005 ? (
+        {cat.available < -eps ? (
           <>
             <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => setCoverOpen((o) => !o)} aria-label={locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"} aria-haspopup="menu" aria-expanded={coverOpen}>
               <F v={cat.available} />
