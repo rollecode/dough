@@ -48,7 +48,7 @@ Dough was built to solve this:
 ## Installation
 
 ```bash
-git clone https://github.com/ronilaukkarinen/dough.git
+git clone https://github.com/rollecode/dough.git
 cd dough
 npm install
 ```
