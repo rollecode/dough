@@ -99,6 +99,7 @@ export default function BudgetPage() {
   const [localGroups, setLocalGroups] = useState<{ key: string; label: string; items: BudgetCategory[] }[]>([]);
   const [bdrag, setBdrag] = useState<{ type: "row" | "group"; groupKey: string; index: number } | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
   const addCatRef = useRef<HTMLFormElement>(null);
   const renameRef = useRef<HTMLFormElement>(null);
 
@@ -299,6 +300,16 @@ export default function BudgetPage() {
     }
   };
 
+  // Cover an overspent category from ready-to-assign (raise its assigned) or another category (move)
+  const coverOverspend = async (cat: BudgetCategory, source: number | "rta", amount: number) => {
+    if (!(amount > 0)) return;
+    if (source === "rta") {
+      await saveBudgeted(cat.id, Math.round((cat.budgeted + amount) * 100) / 100);
+    } else {
+      await moveMoney(source, cat.id, amount);
+    }
+  };
+
   const snoozeTarget = async (catId: number) => {
     try {
       await fetch("/api/targets", {
@@ -382,6 +393,23 @@ export default function BudgetPage() {
         </button>
       </div>
 
+      <div className="budget-filterbar">
+        {([
+          ["all", locale === "fi" ? "Kaikki" : "All"],
+          ["overspent", locale === "fi" ? "Ylitetyt" : "Overspent"],
+          ["available", locale === "fi" ? "Rahaa jäljellä" : "Money available"],
+        ] as const).map(([key, lbl]) => (
+          <button
+            key={key}
+            type="button"
+            className={`budget-filter ${filter === key ? "is-active" : ""}`}
+            onClick={() => setFilter(key)}
+          >
+            {lbl}
+          </button>
+        ))}
+      </div>
+
       <div className="budget-table">
       <div className="budget-grid budget-table-header">
         <span>{locale === "fi" ? "Kategoria" : "Category"}</span>
@@ -395,23 +423,30 @@ export default function BudgetPage() {
         const groupBudgeted = items.reduce((s, c) => s + c.budgeted, 0);
         const groupActivity = items.reduce((s, c) => s + c.activity, 0);
         const groupAvailable = items.reduce((s, c) => s + c.available, 0);
+        const dragEnabled = filter === "all";
+        const visibleItems = dragEnabled
+          ? items
+          : items.filter((c) => (filter === "overspent" ? c.available < -0.005 : c.available > 0.005));
+        if (!dragEnabled && visibleItems.length === 0) return null;
         return (
           <Card
             key={group.key}
             className={`list-card list-card-divider ${bdrag?.type === "group" && bdrag.index === gIdx ? "is-drag-active" : ""}`}
-            onDragOver={(e) => onGroupDragOver(e, gIdx)}
+            onDragOver={dragEnabled ? (e) => onGroupDragOver(e, gIdx) : undefined}
           >
             <div className="budget-grid budget-group-header">
-              <button
-                type="button"
-                className="budget-grip budget-group-grip"
-                draggable
-                onDragStart={() => onGroupDragStart(gIdx)}
-                onDragEnd={onBudgetDragEnd}
-                aria-label={locale === "fi" ? "Siirrä ryhmää" : "Reorder group"}
-              >
-                <GripVertical />
-              </button>
+              {dragEnabled && (
+                <button
+                  type="button"
+                  className="budget-grip budget-group-grip"
+                  draggable
+                  onDragStart={() => onGroupDragStart(gIdx)}
+                  onDragEnd={onBudgetDragEnd}
+                  aria-label={locale === "fi" ? "Siirrä ryhmää" : "Reorder group"}
+                >
+                  <GripVertical />
+                </button>
+              )}
               <span className="budget-group-name">{group.label}</span>
               <span className="budget-num"><F v={groupBudgeted} /></span>
               <span className="budget-num text-muted"><F v={groupActivity} /></span>
@@ -421,22 +456,24 @@ export default function BudgetPage() {
                 </span>
               </span>
             </div>
-            {items.map((c, rIdx) => (
+            {visibleItems.map((c, rIdx) => (
               <div
                 key={c.id}
                 className={`budget-row-drag ${bdrag?.type === "row" && bdrag.groupKey === group.key && bdrag.index === rIdx ? "is-dragging" : ""}`}
-                onDragOver={(e) => onRowDragOver(e, group.key, rIdx)}
+                onDragOver={dragEnabled ? (e) => onRowDragOver(e, group.key, rIdx) : undefined}
               >
-                <button
-                  type="button"
-                  className="budget-grip budget-row-grip"
-                  draggable
-                  onDragStart={() => onRowDragStart(group.key, rIdx)}
-                  onDragEnd={onBudgetDragEnd}
-                  aria-label={locale === "fi" ? "Siirrä" : "Reorder"}
-                >
-                  <GripVertical />
-                </button>
+                {dragEnabled && (
+                  <button
+                    type="button"
+                    className="budget-grip budget-row-grip"
+                    draggable
+                    onDragStart={() => onRowDragStart(group.key, rIdx)}
+                    onDragEnd={onBudgetDragEnd}
+                    aria-label={locale === "fi" ? "Siirrä" : "Reorder"}
+                  >
+                    <GripVertical />
+                  </button>
+                )}
                 <BudgetRow
                   cat={c}
                   saving={savingId === c.id}
@@ -445,6 +482,9 @@ export default function BudgetPage() {
                   fmt={fmt}
                   month={month}
                   locale={locale}
+                  siblings={data?.categories || []}
+                  readyToAssign={data?.readyToAssign || 0}
+                  onCover={(source, amount) => coverOverspend(c, source, amount)}
                 />
               </div>
             ))}
@@ -641,7 +681,7 @@ export default function BudgetPage() {
   );
 }
 
-function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale }: {
+function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, readyToAssign, onCover }: {
   cat: BudgetCategory;
   saving: boolean;
   onSave: (value: number) => void;
@@ -649,10 +689,14 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale }: {
   fmt: (v: number) => string;
   month: string;
   locale: string;
+  siblings: BudgetCategory[];
+  readyToAssign: number;
+  onCover: (source: number | "rta", amount: number) => void;
 }) {
   const [draft, setDraft] = useState<string>(cat.budgeted ? fmt(cat.budgeted) : "");
   const [invalid, setInvalid] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -765,8 +809,47 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale }: {
         )}
       </span>
       <span className="budget-num text-muted">{cat.activity > 0 ? <>−<F v={cat.activity} /></> : <F v={0} />}</span>
-      <span className="budget-num">
-        <span className={`budget-pill ${pillClass}`}><F v={cat.available} /></span>
+      <span className="budget-num budget-avail-cell">
+        {cat.available < -0.005 ? (
+          <>
+            <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => setCoverOpen((o) => !o)}>
+              <F v={cat.available} />
+            </button>
+            {coverOpen && (() => {
+              const amount = Math.round(Math.abs(cat.available) * 100) / 100;
+              const sources = siblings.filter((o) => o.is_active && o.id !== cat.id && o.available > 0.005);
+              return (
+                <>
+                  <div className="budget-calc-backdrop" onClick={() => setCoverOpen(false)} />
+                  <div className="budget-cover-popover">
+                    <div className="budget-cover-title">
+                      {locale === "fi" ? "Kateta ylitys" : "Cover overspending"} <span className="budget-cover-amt"><F v={amount} s=" €" /></span>
+                    </div>
+                    <div className="budget-cover-list">
+                      {readyToAssign > 0.005 && (
+                        <button type="button" className="budget-cover-item" onClick={() => { onCover("rta", amount); setCoverOpen(false); }}>
+                          <span className="budget-cover-name">{locale === "fi" ? "Budjetoimaton raha" : "Ready to assign"}</span>
+                          <span className="budget-cover-src"><F v={readyToAssign} s=" €" /></span>
+                        </button>
+                      )}
+                      {sources.map((o) => (
+                        <button key={o.id} type="button" className="budget-cover-item" onClick={() => { onCover(o.id, amount); setCoverOpen(false); }}>
+                          <span className="budget-cover-name">{o.name}</span>
+                          <span className="budget-cover-src"><F v={o.available} s=" €" /></span>
+                        </button>
+                      ))}
+                      {readyToAssign <= 0.005 && sources.length === 0 && (
+                        <p className="budget-cover-empty">{locale === "fi" ? "Ei rahaa katettavaksi" : "No money available to cover"}</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </>
+        ) : (
+          <span className={`budget-pill ${pillClass}`}><F v={cat.available} /></span>
+        )}
       </span>
     </div>
   );

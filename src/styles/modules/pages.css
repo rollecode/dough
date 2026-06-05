@@ -241,13 +241,15 @@
   margin-left: auto;
 }
 
-/* Compact "ready to assign" pill, sits right of the month nav */
+/* Compact "ready to assign" chip, value stacked over label, sits right of the month nav */
 .budget-ready-box {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  line-height: 1.15;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 0.625rem;
   white-space: nowrap;
 }
 
@@ -274,9 +276,126 @@
 }
 
 .budget-ready-label {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 500;
-  opacity: 0.85;
+  opacity: 0.8;
+}
+
+/* Filter bar: All / Overspent / Money available */
+.budget-filterbar {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.budget-filter {
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.budget-filter:hover {
+  color: var(--foreground);
+}
+
+.budget-filter.is-active {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  color: var(--foreground);
+}
+
+/* Cover-overspending popout anchored to the red available amount */
+.budget-avail-cell {
+  position: relative;
+}
+
+.budget-pill-btn {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  transition: filter 150ms;
+}
+
+.budget-pill-btn:hover {
+  filter: brightness(1.15);
+}
+
+.budget-cover-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 41;
+  width: 15rem;
+  padding: 0.5rem;
+  border-radius: 0.625rem;
+  background: var(--popover);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  text-align: left;
+}
+
+.budget-cover-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+  padding: 0.25rem 0.375rem 0.5rem;
+}
+
+.budget-cover-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.budget-cover-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.4375rem 0.375rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.budget-cover-item:hover {
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+}
+
+.budget-cover-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-cover-src {
+  color: var(--positive);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.budget-cover-amt {
+  color: var(--negative);
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-cover-empty {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  padding: 0.375rem;
 }
 
 /* Shared 4-column grid: name | assigned | activity | available */
