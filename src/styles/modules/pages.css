@@ -739,6 +739,21 @@
   color: var(--muted-foreground);
 }
 
+.insp-move {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.insp-move-select,
+.insp-move-amount {
+  width: 100%;
+}
+
+.insp-move-amount {
+  text-align: right;
+}
+
 /* Manage categories dialog */
 .manage-cat-list {
   display: flex;

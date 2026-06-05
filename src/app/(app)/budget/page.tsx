@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Loader2, Plus, Settings, GripVertical, Pencil, EyeOff, Eye, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Plus, Settings, GripVertical, Pencil, EyeOff, Eye, Check, ArrowRightLeft } from "lucide-react";
 import { F } from "@/components/ui/f";
 import {
   Sheet,
@@ -21,6 +21,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BudgetCategory {
   id: number;
@@ -88,6 +95,9 @@ export default function BudgetPage() {
   const [renaming, setRenaming] = useState(false);
   const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveOther, setMoveOther] = useState<string>("");
+  const [moveDraft, setMoveDraft] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [manageOrder, setManageOrder] = useState<BudgetCategory[]>([]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -96,7 +106,15 @@ export default function BudgetPage() {
   const renameRef = useRef<HTMLFormElement>(null);
 
   const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
-  const closeInspector = () => { setInspectorId(null); setRenaming(false); setTargetEditing(false); setTargetDraft(""); };
+  const closeInspector = () => {
+    setInspectorId(null);
+    setRenaming(false);
+    setTargetEditing(false);
+    setTargetDraft("");
+    setMoveOpen(false);
+    setMoveOther("");
+    setMoveDraft("");
+  };
 
   const load = useCallback((m: string) => {
     console.debug("[budget] Loading month", m);
@@ -239,6 +257,23 @@ export default function BudgetPage() {
       load(month);
     } catch (err) {
       console.error("[budget] Rename category error:", err);
+    }
+  };
+
+  const moveMoney = async (fromId: number, toId: number, amount: number) => {
+    if (!fromId || !toId || fromId === toId || !(amount > 0)) return;
+    try {
+      await fetch("/api/budget/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, from_category_id: fromId, to_category_id: toId, amount }),
+      });
+      setMoveOpen(false);
+      setMoveOther("");
+      setMoveDraft("");
+      load(month);
+    } catch (err) {
+      console.error("[budget] Move money error:", err);
     }
   };
 
@@ -516,6 +551,51 @@ export default function BudgetPage() {
                       <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
                     )}
                   </div>
+
+                  {(() => {
+                    const others = (data?.categories || []).filter((o) => o.is_active && o.id !== c.id);
+                    const isOverspent = c.available < -0.005;
+                    const hasMoney = c.available > 0.005;
+                    if ((!isOverspent && !hasMoney) || others.length === 0) return null;
+                    const title = isOverspent
+                      ? (locale === "fi" ? "Kateta ylitys" : "Cover overspending")
+                      : (locale === "fi" ? "Siirrä rahaa" : "Move money");
+                    return (
+                      <div className="insp-section">
+                        <span className="insp-section-title">{title}</span>
+                        {moveOpen ? (
+                          <div className="insp-move">
+                            <Select value={moveOther} onValueChange={(v) => v && setMoveOther(v)}>
+                              <SelectTrigger className="insp-move-select">
+                                <SelectValue placeholder={isOverspent ? (locale === "fi" ? "Mistä katetaan" : "Cover from") : (locale === "fi" ? "Mihin siirretään" : "Move to")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {others.map((o) => (
+                                  <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input value={moveDraft} onChange={(e) => setMoveDraft(e.target.value)} placeholder="0.00" inputMode="decimal" className="insp-move-amount" />
+                            <div className="insp-actions">
+                              <Button type="button" size="sm" onClick={() => {
+                                const amt = evalExpression(moveDraft);
+                                const other = Number(moveOther);
+                                if (amt === null || !amt || !other) return;
+                                if (isOverspent) moveMoney(other, c.id, amt);
+                                else moveMoney(c.id, other, amt);
+                              }}>{isOverspent ? (locale === "fi" ? "Kateta" : "Cover") : (locale === "fi" ? "Siirrä" : "Move")}</Button>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => { setMoveOpen(false); setMoveOther(""); setMoveDraft(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button type="button" variant="outline" size="sm" onClick={() => { setMoveOpen(true); setMoveDraft(fmt(Math.abs(c.available))); }}>
+                            <ArrowRightLeft className="icon-sm" />
+                            {title}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div className="insp-section insp-section-end">
                     <Button type="button" variant="ghost" size="sm" className="insp-hide" onClick={() => toggleActive(c)}>
