@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2 } from "lucide-react";
 import { F } from "@/components/ui/f";
 import {
   Sheet,
@@ -105,6 +105,8 @@ export default function BudgetPage() {
   const [moveDir, setMoveDir] = useState<"in" | "out">("out");
   const [moveOther, setMoveOther] = useState<string>("");
   const [moveDraft, setMoveDraft] = useState<string>("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteDest, setDeleteDest] = useState<string>("rta");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [localGroups, setLocalGroups] = useState<{ key: string; label: string; items: BudgetCategory[] }[]>([]);
   const [bdrag, setBdrag] = useState<{ type: "row" | "group"; id: number | string; fromGroup: string } | null>(null);
@@ -123,7 +125,18 @@ export default function BudgetPage() {
     setMoveOpen(false);
     setMoveOther("");
     setMoveDraft("");
+    setDeleteOpen(false);
+    setDeleteDest("rta");
   };
+
+  // Reset the per-category panels when switching to another category in the inspector
+  useEffect(() => {
+    setMoveOpen(false);
+    setMoveOther("");
+    setMoveDraft("");
+    setDeleteOpen(false);
+    setDeleteDest("rta");
+  }, [inspectorId]);
 
   const load = useCallback((m: string) => {
     console.debug("[budget] Loading month", m);
@@ -425,6 +438,61 @@ export default function BudgetPage() {
     }
   };
 
+  // Delete a category. Any leftover available money is moved out first (back to Ready to
+  // Assign or into another category), and an overspent category is covered first, so no
+  // money is orphaned. dest: "rta" | another category id.
+  const deleteCategory = async (c: BudgetCategory, dest: number | "rta") => {
+    try {
+      const avail = c.available;
+      if (avail > eps) {
+        if (dest === "rta") {
+          await fetch("/api/budget", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ month, category_id: c.id, budgeted: Math.round((c.budgeted - avail) * 100) / 100 }),
+          });
+        } else {
+          await fetch("/api/budget/move", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ month, from_category_id: c.id, to_category_id: dest, amount: avail }),
+          });
+        }
+      } else if (avail < -eps && typeof dest === "number") {
+        await fetch("/api/budget/move", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ month, from_category_id: dest, to_category_id: c.id, amount: Math.round(-avail * 100) / 100 }),
+        });
+      }
+      await fetch("/api/categories", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: c.id }),
+      });
+      setDeleteOpen(false);
+      setDeleteDest("rta");
+      setInspectorId(null);
+      load(month);
+    } catch (err) {
+      console.error("[budget] Delete category error:", err);
+    }
+  };
+
+  // Delete a group: move all its categories to "no group" (categories are kept, the grouping
+  // is removed). Groups are derived from category group_name, so emptying it removes it.
+  const deleteGroup = async (groupKey: string) => {
+    try {
+      const ids = (data?.categories || []).filter((c) => (c.group_name || "") === groupKey).map((c) => c.id);
+      await Promise.all(ids.map((id) =>
+        fetch("/api/categories", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, group_name: "" }) })
+      ));
+      load(month);
+    } catch (err) {
+      console.error("[budget] Delete group error:", err);
+    }
+  };
+
   if (loading && !data) {
     return <div className="page-loading"><Loader2 className="page-loading-spinner animate-spin" /></div>;
   }
@@ -522,7 +590,27 @@ export default function BudgetPage() {
                 onDragEnd={dragEnabled ? clearDrag : undefined}
               >
                 {dragEnabled && <span className="budget-grip budget-group-grip" aria-hidden="true"><GripVertical /></span>}
-                <span className="budget-group-name">{group.label}</span>
+                <span className="budget-group-name">
+                  <span className="budget-group-label">{group.label}</span>
+                  {dragEnabled && group.key && (
+                    <button
+                      type="button"
+                      className="budget-group-delete"
+                      draggable={false}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const msg = locale === "fi"
+                          ? `Poistetaanko ryhmä "${group.label}"? Sen ${items.length} kategoriaa säilyvät ryhmättöminä.`
+                          : `Delete group "${group.label}"? Its ${items.length} categories are kept, without a group.`;
+                        if (window.confirm(msg)) deleteGroup(group.key);
+                      }}
+                      aria-label={locale === "fi" ? "Poista ryhmä" : "Delete group"}
+                    >
+                      <Trash2 />
+                    </button>
+                  )}
+                </span>
                 <span className="budget-num"><F v={groupBudgeted} /></span>
                 <span className="budget-num text-muted budget-col-activity"><F v={groupActivity} /></span>
                 <span className="budget-num">
@@ -787,6 +875,47 @@ export default function BudgetPage() {
                     <Button type="button" variant="ghost" size="sm" className="insp-hide" onClick={() => toggleActive(c)}>
                       {c.is_active ? <><EyeOff className="icon-sm" />{locale === "fi" ? "Piilota kategoria" : "Hide category"}</> : <><Eye className="icon-sm" />{locale === "fi" ? "Näytä kategoria" : "Unhide category"}</>}
                     </Button>
+                    {deleteOpen ? (
+                      <div className="insp-delete">
+                        {c.available > eps && (
+                          <>
+                            <span className="insp-delete-note">{locale === "fi" ? `Kategoriassa on ${fmt(c.available)} €. Mihin se siirretään?` : `This category holds ${fmt(c.available)} €. Move it where?`}</span>
+                            <Select value={deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
+                              <SelectTrigger className="insp-move-select"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="rta">{locale === "fi" ? "Budjetoimatta" : "Ready to Assign"}</SelectItem>
+                                {(data?.categories || []).filter((o) => o.is_active && o.id !== c.id).map((o) => (
+                                  <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </>
+                        )}
+                        {c.available < -eps && (
+                          <>
+                            <span className="insp-delete-note">{locale === "fi" ? `Kategoria on ylitetty ${fmt(Math.abs(c.available))} €. Mistä kate otetaan?` : `Overspent by ${fmt(Math.abs(c.available))} €. Cover it from where?`}</span>
+                            <Select value={deleteDest === "rta" ? "" : deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
+                              <SelectTrigger className="insp-move-select"><SelectValue placeholder={locale === "fi" ? "Valitse kategoria" : "Pick a category"} /></SelectTrigger>
+                              <SelectContent>
+                                {(data?.categories || []).filter((o) => o.is_active && o.id !== c.id && o.available > eps).map((o) => (
+                                  <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </>
+                        )}
+                        <div className="insp-actions">
+                          <Button type="button" variant="destructive" size="sm" disabled={c.available < -eps && (deleteDest === "rta" || !deleteDest)} onClick={() => deleteCategory(c, deleteDest === "rta" ? "rta" : Number(deleteDest))}>
+                            {locale === "fi" ? "Poista" : "Delete"}
+                          </Button>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setDeleteOpen(false); setDeleteDest("rta"); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button type="button" variant="ghost" size="sm" className="insp-hide insp-delete-btn" onClick={() => { setDeleteOpen(true); setDeleteDest("rta"); }}>
+                        <Trash2 className="icon-sm" />{locale === "fi" ? "Poista kategoria" : "Delete category"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </>

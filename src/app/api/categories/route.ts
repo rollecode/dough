@@ -152,12 +152,32 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
     const db = getDb();
-    // Soft delete via is_active to preserve historical references on transactions
-    db.prepare("UPDATE categories SET is_active = 0, updated_at = datetime('now') WHERE id = ?").run(id);
+    const cat = db.prepare("SELECT name FROM categories WHERE id = ?").get(id) as { name: string } | undefined;
+    if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
 
-    console.info("[categories] Soft-deleted id", id);
+    // A category with any history (transactions assigned to it, or assigned amounts in any
+    // month) cannot be erased without orphaning that history, so it is archived (hidden).
+    // A never-used category is removed outright. Targets and snoozes are cleared either way
+    // so a deleted category stops nudging the budget.
+    const txCount = (db.prepare("SELECT COUNT(*) AS c FROM transactions WHERE category = ?").get(cat.name) as { c: number }).c;
+    const budgetCount = (db.prepare("SELECT COUNT(*) AS c FROM monthly_category_budgets WHERE category_id = ?").get(id) as { c: number }).c;
+    const hasHistory = txCount > 0 || budgetCount > 0;
+
+    const run = db.transaction(() => {
+      db.prepare("DELETE FROM category_targets WHERE category_id = ?").run(id);
+      db.prepare("DELETE FROM category_snoozes WHERE category_id = ?").run(id);
+      if (hasHistory) {
+        db.prepare("UPDATE categories SET is_active = 0, updated_at = datetime('now') WHERE id = ?").run(id);
+      } else {
+        db.prepare("DELETE FROM monthly_category_budgets WHERE category_id = ?").run(id);
+        db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+      }
+    });
+    run();
+
+    console.info("[categories]", hasHistory ? "Archived" : "Hard-deleted", "id", id, cat.name);
     eventBus.emit("data:updated", { source: "categories-deleted" });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, archived: hasHistory });
   } catch (error) {
     console.error("[categories] DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

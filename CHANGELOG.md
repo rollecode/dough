@@ -23,6 +23,9 @@
 * Base Ready to Assign on the viewed month so prior-month leftover carries forward instead of vanishing
 * Use YNAB's own per-month Ready to Assign and income, adjusted for local assignment edits; fall back to a per-month income model without YNAB
 * Carry Ready to Assign forward into not-yet-synced future months so budgeting next month is seamless
+* Delete a category from the inspector, moving any leftover money to Ready to Assign or another category first
+* Cover an overspent category before deleting it; archive categories with history and remove unused ones outright
+* Delete a category group from its header, keeping its categories without a group
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
