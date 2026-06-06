@@ -38,6 +38,7 @@
 - Conservative advice rules with 3-day buffer requirement
 - Today's spending, remaining budget, and tomorrow's budget in context
 - All data read from local DB for real-time accuracy
+- Per-task AI model configurable in settings (Claude CLI, no API key): Haiku for categorizing, Sonnet for chat, Opus for receipt vision
 - Auto-trigger YNAB sync if cache older than 2 hours
 - Message reactions context for learning preferences
 - Attachments: read-only by default, expense adding only on explicit request
@@ -54,6 +55,8 @@
 - Add expense with AI auto-categorization and receipt image recognition
 - Receipt photo or PDF attachment auto-fills payee and amount via Claude vision
 - Auto-detect YNAB account from receipt content
+- Edit a transaction's category from the edit dialog (writes back to YNAB and local data)
+- Date fields follow the configured date format with a themed calendar picker
 - Floating action button for quick expense entry (hidden on chat page)
 - Unread indicator dot when new data synced
 
@@ -62,6 +65,8 @@
 - YNAB-style budget page with category groups, monthly assigned amounts, activity and available
 - Carryover: positive available rolls forward, overspending does not drag into the next month
 - Ready to Assign carries forward across months (cumulative); within YNAB's synced range it uses YNAB's own per-month figure adjusted for local edits, and it extends the carry-forward into not-yet-synced future months so budgeting ahead stays seamless
+- Assigning money to a future month lowers the current Ready to Assign (single global figure, like YNAB)
+- Age of Money box (YNAB's own per-month figure) plus a 12-month history line chart with the current month as a dashed reference
 - Activity is net: refunds and other inflows to a category reduce its spending and raise available, like YNAB
 - Per-category targets per day, week, month or year; the amount is distributed into the month's need, with progress, single-month snooze and clear
 - Auto-assign (Quick Budget): fund to targets, copy last month's assigned, or copy last month's spending
