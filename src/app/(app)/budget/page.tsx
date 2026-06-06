@@ -609,7 +609,6 @@ export default function BudgetPage() {
                     onBlur={(e) => { if (e.target.value !== c.description) saveCategoryFields(c.id, { description: e.target.value }); }}
                     aria-label={locale === "fi" ? "Kuvaus" : "Description"}
                   />
-                  <span className={`insp-saved ${catSaved ? "is-shown" : ""}`}>{locale === "fi" ? "Tallennettu" : "Saved"}</span>
                 </SheetHeader>
 
                 <div className="insp-body">
@@ -731,6 +730,10 @@ export default function BudgetPage() {
           })()}
         </SheetContent>
       </Sheet>
+
+      <div className={`budget-toast ${catSaved ? "is-shown" : ""}`} role="status" aria-live="polite">
+        {locale === "fi" ? "Tallennettu" : "Saved"}
+      </div>
     </div>
   );
 }
