@@ -38,12 +38,17 @@ export const BRANDS: Record<string, { color: string; logo: string; svg?: string 
   bookbeat: { color: "#CD96FF", logo: "B", svg: "bookbeat" },
 };
 
-export function getBrandConfig(name: string): { color: string; logo: string; svg?: string } {
+export function getBrandConfig(name: string): { color: string; logo: string; svg?: string; known: boolean } {
   const lower = name.toLowerCase();
   for (const [key, config] of Object.entries(BRANDS)) {
-    if (lower.includes(key)) return config;
+    if (lower.includes(key)) return { ...config, known: true };
   }
-  return { color: "#6366f1", logo: name.charAt(0).toUpperCase() };
+  return { color: "#6366f1", logo: name.charAt(0).toUpperCase(), known: false };
+}
+
+// True when the name matches a known brand (so callers can skip the generic initial fallback)
+export function isKnownBrand(name: string): boolean {
+  return getBrandConfig(name).known;
 }
 
 export function BrandIcon({ svg, logo }: { svg?: string; logo: string }) {

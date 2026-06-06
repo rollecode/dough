@@ -288,9 +288,11 @@ export default function BillsPage() {
                 className="list-item-main"
                 onClick={() => { setEditTarget(bill); setEditOpen(true); }}
               >
-                <div className="subscription-brand-icon" style={{ backgroundColor: getBrandConfig(bill.name).color }}>
-                  <BrandIcon svg={getBrandConfig(bill.name).svg} logo={bill.name.charAt(0).toUpperCase()} />
-                </div>
+                {getBrandConfig(bill.name).known && (
+                  <div className="subscription-brand-icon" style={{ backgroundColor: getBrandConfig(bill.name).color }}>
+                    <BrandIcon svg={getBrandConfig(bill.name).svg} logo={bill.name.charAt(0).toUpperCase()} />
+                  </div>
+                )}
                 <div className="list-item-body">
                   <div className="list-item-name-row">
                     <p className={`list-item-name ${!bill.is_active ? "is-inactive" : ""}`}>{bill.name}</p>
