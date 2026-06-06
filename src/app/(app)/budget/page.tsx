@@ -378,7 +378,7 @@ export default function BudgetPage() {
             ? (locale === "fi" ? "Kaikki jaettu" : "All assigned")
             : state === "is-negative"
             ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
-            : (locale === "fi" ? "Jaettavissa" : "Ready to assign");
+            : (locale === "fi" ? "Budjetoimatta" : "Ready to assign");
           return (
             <div className={`budget-ready-box ${state}`}>
               <span className="budget-ready-value"><F v={rta} s=" €" /></span>
