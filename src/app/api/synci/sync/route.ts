@@ -105,11 +105,24 @@ export async function POST(request: Request) {
         // no YNAB round trip. Dormant while YNAB is connected.
         if (mode === "local") {
           const localAccountId = accountMapping[synciAccountId] || "";
+          const importDate = txDate || now.toISOString().slice(0, 10);
+          // Skip if a matching transaction was already added by hand (same account, amount and
+          // date), so Synci never duplicates something entered manually. Keeps repeated syncs safe.
+          const manualDup = localAccountId
+            ? db.prepare(
+                "SELECT 1 FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND date = ? AND ynab_id NOT LIKE 'synci_%' LIMIT 1"
+              ).get(localAccountId, amount, importDate)
+            : undefined;
+          if (manualDup) {
+            console.info("[synci/sync] Skipping duplicate of a manual entry:", payee, amount, "on", importDate);
+            db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
+            continue;
+          }
           if (localAccountId && firstUser) {
             db.prepare(`
               INSERT OR IGNORE INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
               VALUES (?, ?, ?, ?, ?, '', 'Synci', ?, 1, 'cleared')
-            `).run(firstUser.id, synciTxId, txDate || now.toISOString().slice(0, 10), amount, payee, localAccountId);
+            `).run(firstUser.id, synciTxId, importDate, amount, payee, localAccountId);
             db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?")
               .run(amount, localAccountId);
             totalImported++;
@@ -148,11 +161,12 @@ export async function POST(request: Request) {
           if (pattern.max_amount > 0 && amount > pattern.max_amount) continue;
 
           try {
-            // Income source may override the target account when the institution
-            // deposits into a different bank account than the one the household
-            // wants to track it under in YNAB
+            // The money actually landed on the account we polled, so that mapping wins. The
+            // income source's target_account_id is only a fallback when an account is unmapped.
+            // (Previously the override took priority, which misfiled income onto the wrong
+            // person's account when a source was configured for a different account.)
             const overrideAccount = db.prepare("SELECT target_account_id FROM income_sources WHERE id = ?").get(pattern.source_id) as { target_account_id: string } | undefined;
-            const ynabAccountId = (overrideAccount?.target_account_id || accountMapping[synciAccountId] || "");
+            const ynabAccountId = (accountMapping[synciAccountId] || overrideAccount?.target_account_id || "");
             const ynabToken = getHouseholdSetting("ynab_access_token");
             const ynabBudgetId = getHouseholdSetting("ynab_budget_id");
             let realYnabId = synciTxId;
