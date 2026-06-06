@@ -148,16 +148,21 @@
   align-items: center;
   gap: 0.5rem;
   position: sticky;
-  top: 0;
+  top: 0.5rem;
   z-index: 20;
-  padding: 0.5rem 0;
-  background: var(--background);
+  margin-top: 0.25rem;
+  padding: 0.625rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
-@supports (backdrop-filter: blur(8px)) {
+@supports (backdrop-filter: blur(12px)) {
   .budget-topbar {
-    background: color-mix(in srgb, var(--background) 72%, transparent);
-    backdrop-filter: blur(8px);
+    background: color-mix(in srgb, var(--card) 55%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
