@@ -87,6 +87,7 @@ function initializeDb(db: Database.Database) {
       category TEXT DEFAULT '',
       memo TEXT DEFAULT '',
       is_recurring INTEGER NOT NULL DEFAULT 0,
+      split_group TEXT DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -412,6 +413,12 @@ function initializeDb(db: Database.Database) {
     console.info("[db] Adding approved and cleared columns to transactions");
     db.exec("ALTER TABLE transactions ADD COLUMN approved INTEGER NOT NULL DEFAULT 1");
     db.exec("ALTER TABLE transactions ADD COLUMN cleared TEXT NOT NULL DEFAULT 'cleared'");
+  }
+  // Split transactions: child rows share a split_group id (the parent's source id). Each child is
+  // a normal categorized row, so budget activity and account balances stay correct unchanged.
+  if (!txCols.some((c) => c.name === "split_group")) {
+    console.info("[db] Adding split_group column to transactions");
+    db.exec("ALTER TABLE transactions ADD COLUMN split_group TEXT DEFAULT ''");
   }
 
   // Add account independence columns to ynab_accounts (also serves locally-managed accounts)

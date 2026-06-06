@@ -262,11 +262,13 @@ export async function POST(request: Request) {
       }
       console.info("[api/ynab/sync] Persisted", summary.accounts.length, "accounts");
 
-      // Upsert transactions
+      // Upsert transactions. Locally-split parents (split_group set) are left untouched so a
+      // Dough-side split is not reset to YNAB's single category on the next sync.
       const upsertTx = pdb.prepare(`
         INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(ynab_id) DO UPDATE SET date=excluded.date, amount=excluded.amount, payee=excluded.payee, category=excluded.category, memo=excluded.memo, account_id=excluded.account_id, approved=excluded.approved, cleared=excluded.cleared
+        WHERE COALESCE(transactions.split_group, '') = ''
       `);
       const txBatch = pdb.transaction(() => {
         for (const t of heatmapTransactions) {
@@ -278,7 +280,7 @@ export async function POST(request: Request) {
       // Delete local transactions that were removed from YNAB (all users, current month)
       const ynabIds = new Set(heatmapTransactions.map((t: any) => t.id));
       const localTx = pdb.prepare(
-        "SELECT DISTINCT ynab_id FROM transactions WHERE date >= ? AND ynab_id NOT LIKE 'synci_%'"
+        "SELECT DISTINCT ynab_id FROM transactions WHERE date >= ? AND ynab_id NOT LIKE 'synci_%' AND ynab_id NOT LIKE 'split_%'"
       ).all(sinceDate) as { ynab_id: string }[];
       let deleted = 0;
       for (const lt of localTx) {

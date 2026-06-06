@@ -299,15 +299,24 @@ export async function DELETE(request: Request) {
     const transaction_id = body.transaction_id;
     if (!transaction_id) return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
 
-    // LOCAL MODE: delete the row and reverse its balance effect
+    // LOCAL MODE: delete the row (and any split siblings) and reverse their balance effect
     if (getBudgetMode() === "local") {
       const { getDb } = await import("@/lib/db");
       const db = getDb();
-      const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string } | undefined;
-      db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transaction_id);
-      if (prev) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
+      const row = db.prepare("SELECT split_group FROM transactions WHERE ynab_id = ?").get(transaction_id) as { split_group: string } | undefined;
+      const group = row?.split_group || "";
+      // Reverse the summed amount of all rows being removed, then delete them
+      if (group) {
+        const rows = db.prepare("SELECT amount, account_id FROM transactions WHERE split_group = ?").all(group) as { amount: number; account_id: string }[];
+        for (const r of rows) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(r.amount, r.account_id);
+        db.prepare("DELETE FROM transactions WHERE split_group = ?").run(group);
+      } else {
+        const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string } | undefined;
+        db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transaction_id);
+        if (prev) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
+      }
       eventBus.emit("data:updated", { source: "transaction-deleted", userId: user.id });
-      console.info("[ynab/transaction] Local transaction deleted:", transaction_id);
+      console.info("[ynab/transaction] Local transaction deleted:", transaction_id, group ? "(split group)" : "");
       return NextResponse.json({ success: true });
     }
 
@@ -326,7 +335,9 @@ export async function DELETE(request: Request) {
     }
     try {
       const { getDb } = await import("@/lib/db");
-      getDb().prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transaction_id);
+      const db = getDb();
+      // Remove the row plus any local split siblings sharing its group
+      db.prepare("DELETE FROM transactions WHERE ynab_id = ? OR split_group = ?").run(transaction_id, transaction_id);
     } catch (err) {
       console.warn("[ynab/transaction] Local delete failed:", err);
     }
