@@ -101,6 +101,7 @@ export default function BudgetPage() {
   const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
   const [moveOpen, setMoveOpen] = useState(false);
+  const [moveDir, setMoveDir] = useState<"in" | "out">("out");
   const [moveOther, setMoveOther] = useState<string>("");
   const [moveDraft, setMoveDraft] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -633,20 +634,25 @@ export default function BudgetPage() {
 
                   {(() => {
                     const others = (data?.categories || []).filter((o) => o.is_active && o.id !== c.id);
-                    const isOverspent = c.available < -eps;
-                    const hasMoney = c.available > eps;
-                    if ((!isOverspent && !hasMoney) || others.length === 0) return null;
-                    const title = isOverspent
-                      ? (locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending")
-                      : (locale === "fi" ? "Siirrä rahaa" : "Move money");
+                    if (others.length === 0) return null;
+                    const dirIn = moveDir === "in";
+                    const dirLabel = dirIn
+                      ? (locale === "fi" ? "Mistä siirretään" : "Move from")
+                      : (locale === "fi" ? "Mihin siirretään" : "Move to");
                     return (
                       <div className="insp-section">
-                        <span className="insp-section-title">{title}</span>
+                        <span className="insp-section-title">{locale === "fi" ? "Siirrä rahaa" : "Move money"}</span>
                         {moveOpen ? (
                           <div className="insp-move">
+                            <div className="insp-move-dir">
+                              <button type="button" className="insp-move-swap" onClick={() => setMoveDir(dirIn ? "out" : "in")} aria-label={locale === "fi" ? "Vaihda suunta" : "Switch direction"}>
+                                <ArrowRightLeft />
+                              </button>
+                              <span className="insp-move-dir-label">{dirLabel}</span>
+                            </div>
                             <Select value={moveOther} onValueChange={(v) => v && setMoveOther(v)}>
                               <SelectTrigger className="insp-move-select">
-                                <SelectValue placeholder={isOverspent ? (locale === "fi" ? "Mistä katetaan" : "Cover from") : (locale === "fi" ? "Mihin siirretään" : "Move to")} />
+                                <SelectValue placeholder={dirLabel} />
                               </SelectTrigger>
                               <SelectContent>
                                 {others.map((o) => (
@@ -660,16 +666,16 @@ export default function BudgetPage() {
                                 const amt = evalExpression(moveDraft);
                                 const other = Number(moveOther);
                                 if (amt === null || !amt || !other) return;
-                                if (isOverspent) moveMoney(other, c.id, amt);
+                                if (dirIn) moveMoney(other, c.id, amt);
                                 else moveMoney(c.id, other, amt);
-                              }}>{isOverspent ? (locale === "fi" ? "Kata" : "Cover") : (locale === "fi" ? "Siirrä" : "Move")}</Button>
+                              }}>{locale === "fi" ? "Siirrä" : "Move"}</Button>
                               <Button type="button" variant="ghost" size="sm" onClick={() => { setMoveOpen(false); setMoveOther(""); setMoveDraft(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
                             </div>
                           </div>
                         ) : (
-                          <Button type="button" variant="outline" size="sm" onClick={() => { setMoveOpen(true); setMoveDraft(fmt(Math.abs(c.available))); }}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => { setMoveOpen(true); setMoveDir(c.available < -eps ? "in" : "out"); setMoveDraft(fmt(Math.abs(c.available))); }}>
                             <ArrowRightLeft className="icon-sm" />
-                            {title}
+                            {locale === "fi" ? "Siirrä rahaa" : "Move money"}
                           </Button>
                         )}
                       </div>

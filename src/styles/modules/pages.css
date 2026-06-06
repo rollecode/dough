@@ -1149,6 +1149,41 @@
   gap: 0.5rem;
 }
 
+.insp-move-dir {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.insp-move-swap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.insp-move-swap:hover {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+.insp-move-swap svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.insp-move-dir-label {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
 .insp-move-select,
 .insp-move-amount {
   width: 100%;
