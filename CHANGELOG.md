@@ -17,6 +17,9 @@
 * Rework budget drag-and-drop: the list no longer reshuffles mid-drag, a dashed placeholder marks the drop spot
 * Drag a category into another group to move it between groups
 * Use the rounding epsilon for the group total colour so it matches the rows
+* Count refunds and other inflows toward a category so available reflects them like YNAB
+* Rewrite a category's transaction history when it is renamed so its activity is not lost
+* Cap move money and cover overspending at the source category's available balance
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
