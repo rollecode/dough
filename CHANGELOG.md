@@ -26,6 +26,7 @@
 * Delete a category from the inspector, moving any leftover money to Ready to Assign or another category first
 * Cover an overspent category before deleting it; archive categories with history and remove unused ones outright
 * Delete a category group from its header, keeping its categories without a group
+* Show recurring bills with the same brand colours and icons as subscriptions via a shared brand module
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view

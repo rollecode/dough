@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, AlertCircle, Loader2, Check, X } from "lucide-react";
 import { F } from "@/components/ui/f";
+import { getBrandConfig, BrandIcon } from "@/lib/brands";
 
 interface Bill {
   id: number;
@@ -287,6 +288,9 @@ export default function BillsPage() {
                 className="list-item-main"
                 onClick={() => { setEditTarget(bill); setEditOpen(true); }}
               >
+                <div className="subscription-brand-icon" style={{ backgroundColor: getBrandConfig(bill.name).color }}>
+                  <BrandIcon svg={getBrandConfig(bill.name).svg} logo={bill.name.charAt(0).toUpperCase()} />
+                </div>
                 <div className="list-item-body">
                   <div className="list-item-name-row">
                     <p className={`list-item-name ${!bill.is_active ? "is-inactive" : ""}`}>{bill.name}</p>
