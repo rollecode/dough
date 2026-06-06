@@ -56,6 +56,7 @@
 - Receipt photo or PDF attachment auto-fills payee and amount via Claude vision
 - Auto-detect YNAB account from receipt content
 - Edit a transaction's category from the edit dialog (writes back to YNAB and local data)
+- Split a transaction across multiple categories (Dough-side, stored as child rows sharing a split_group, with live remaining + auto-distribute); shown as one grouped row and preserved across YNAB re-sync
 - Date fields follow the configured date format with a themed calendar picker
 - Floating action button for quick expense entry (hidden on chat page)
 - Unread indicator dot when new data synced

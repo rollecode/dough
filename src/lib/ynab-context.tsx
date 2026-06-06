@@ -29,6 +29,7 @@ interface YnabTransaction {
   approved: boolean;
   cleared: string;
   account_id?: string;
+  split_group?: string;
 }
 
 interface YnabMonthBudget {
