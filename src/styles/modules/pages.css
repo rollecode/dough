@@ -153,16 +153,16 @@
   margin-top: 0.25rem;
   padding: 0.625rem 1rem;
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
-  background: color-mix(in srgb, var(--card) 80%, transparent);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  background: color-mix(in srgb, var(--background) 96%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
-@supports (backdrop-filter: blur(12px)) {
+@supports (backdrop-filter: blur(20px)) {
   .budget-topbar {
-    background: color-mix(in srgb, var(--card) 55%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: color-mix(in srgb, var(--background) 84%, transparent);
+    backdrop-filter: blur(20px) saturate(135%);
+    -webkit-backdrop-filter: blur(20px) saturate(135%);
   }
 }
 
