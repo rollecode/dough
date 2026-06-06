@@ -103,47 +103,6 @@ export function monthlyTargetEquivalent(amount: number, cadence: string, month: 
   }
 }
 
-// Age of Money (YNAB): average, over the last 10 outflows, of how old the money was when spent.
-// Each outflow is FIFO-matched against earlier inflows (oldest money spent first); when an outflow
-// draws from several inflow dates its age is the amount-weighted average. Transfers, starting
-// balances and reconciliations are excluded. Returns null when there are no outflows yet.
-export function ageOfMoney(db: ReturnType<typeof getDb>): number | null {
-  const rows = db
-    .prepare(
-      "SELECT date, amount FROM transactions WHERE payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' ORDER BY date ASC, id ASC"
-    )
-    .all() as { date: string; amount: number }[];
-
-  const buckets: { date: string; remaining: number }[] = [];
-  const ages: number[] = [];
-  const dayDiff = (from: string, to: string) => Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 86400000));
-
-  for (const r of rows) {
-    if (r.amount > 0) {
-      buckets.push({ date: r.date, remaining: r.amount });
-    } else if (r.amount < 0) {
-      let need = -r.amount;
-      let weighted = 0;
-      let covered = 0;
-      while (need > 0.0001 && buckets.length > 0) {
-        const b = buckets[0];
-        const take = Math.min(b.remaining, need);
-        weighted += take * dayDiff(b.date, r.date);
-        covered += take;
-        b.remaining -= take;
-        need -= take;
-        if (b.remaining <= 0.0001) buckets.shift();
-      }
-      // Money spent that no inflow covers (spending ahead of income) ages at 0 days
-      ages.push(covered > 0 ? weighted / covered : 0);
-    }
-  }
-
-  if (ages.length === 0) return null;
-  const last10 = ages.slice(-10);
-  return Math.round(last10.reduce((s, a) => s + a, 0) / last10.length);
-}
-
 function ymOffset(monthYM: string, offset: number): string {
   const [y, m] = monthYM.split("-").map(Number);
   const d = new Date(y, m - 1 + offset, 1);

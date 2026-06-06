@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
-import { monthBudgetNumbers, monthlyTargetEquivalent, ageOfMoney } from "@/lib/budget-math";
+import { monthBudgetNumbers, monthlyTargetEquivalent } from "@/lib/budget-math";
 
 interface CategoryRow {
   id: number;
@@ -170,7 +170,14 @@ export async function GET(request: Request) {
     const totalBudgeted = rows.reduce((s, r) => s + r.budgeted, 0);
     const { income: combinedIncome, readyToAssign } = monthBudgetNumbers(db, month, Math.round(totalBudgeted * 100) / 100);
 
-    console.debug("[budget] Month", month, "categories", rows.length, "income", combinedIncome, "budgeted", totalBudgeted, "rta", readyToAssign);
+    // Age of Money: use YNAB's own per-month figure (it accounts for off-budget transfers, which
+    // a naive local FIFO cannot). Fall back to the most recent month that has it.
+    const aomForMonth = db.prepare("SELECT age_of_money AS v FROM ynab_month_budget WHERE month = ? AND age_of_money IS NOT NULL").get(month) as { v: number } | undefined;
+    const aomLatest = aomForMonth ? undefined : (db.prepare("SELECT age_of_money AS v FROM ynab_month_budget WHERE age_of_money IS NOT NULL ORDER BY month DESC LIMIT 1").get() as { v: number } | undefined);
+    const ageOfMoney = aomForMonth?.v ?? aomLatest?.v ?? null;
+    const ageOfMoneyHistory = db.prepare("SELECT month, age_of_money AS age FROM ynab_month_budget WHERE age_of_money IS NOT NULL ORDER BY month ASC").all() as { month: string; age: number }[];
+
+    console.debug("[budget] Month", month, "categories", rows.length, "income", combinedIncome, "budgeted", totalBudgeted, "rta", readyToAssign, "aom", ageOfMoney);
 
     return NextResponse.json({
       month,
@@ -178,7 +185,8 @@ export async function GET(request: Request) {
       income: combinedIncome,
       totalBudgeted: Math.round(totalBudgeted * 100) / 100,
       readyToAssign,
-      ageOfMoney: ageOfMoney(db),
+      ageOfMoney,
+      ageOfMoneyHistory,
     });
   } catch (error) {
     console.error("[budget] GET error:", error);

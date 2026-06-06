@@ -275,6 +275,21 @@
   color: var(--chart-3, #38bdf8);
 }
 
+.budget-aom-chart {
+  padding: 0.875rem 1rem;
+}
+
+.budget-aom-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.budget-aom-chart-range {
+  font-size: 0.75rem;
+}
+
 .budget-ready-box.is-positive {
   background: color-mix(in srgb, var(--positive) 16%, transparent);
   color: var(--positive);

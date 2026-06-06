@@ -109,6 +109,7 @@ export async function getMonthBudget(budgetId: string, month?: string, token?: s
     budgeted: (monthData.budgeted ?? 0) / 1000,
     activity: (monthData.activity ?? 0) / 1000,
     toBeBudgeted: (monthData.to_be_budgeted ?? 0) / 1000,
+    ageOfMoney: monthData.age_of_money ?? null,
     categories: (monthData.categories ?? [])
       .filter((c: any) => !c.hidden && !c.deleted)
       .map((c: any) => ({

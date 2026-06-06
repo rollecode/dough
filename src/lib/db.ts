@@ -340,6 +340,7 @@ function initializeDb(db: Database.Database) {
       budgeted REAL NOT NULL DEFAULT 0,
       activity REAL NOT NULL DEFAULT 0,
       to_be_budgeted REAL NOT NULL DEFAULT 0,
+      age_of_money INTEGER,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -440,6 +441,13 @@ function initializeDb(db: Database.Database) {
   if (targetCols.length > 0 && !targetCols.some((c) => c.name === "cadence")) {
     console.info("[db] Adding cadence column to category_targets");
     db.exec("ALTER TABLE category_targets ADD COLUMN cadence TEXT NOT NULL DEFAULT 'monthly'");
+  }
+
+  // Add age_of_money column to ynab_month_budget (YNAB's own per-month figure) if missing
+  const monthCols = db.prepare("PRAGMA table_info(ynab_month_budget)").all() as { name: string }[];
+  if (monthCols.length > 0 && !monthCols.some((c) => c.name === "age_of_money")) {
+    console.info("[db] Adding age_of_money column to ynab_month_budget");
+    db.exec("ALTER TABLE ynab_month_budget ADD COLUMN age_of_money INTEGER");
   }
 
   // Add min_amount/max_amount columns to payee_matches if missing

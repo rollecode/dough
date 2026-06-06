@@ -29,7 +29,9 @@
 * Show recurring bills with the same brand colours and icons as subscriptions via a shared brand module
 * Set a category target per day, week, month or year; the amount is distributed into the month's need
 * Add Auto-assign on the budget page: fund to targets, copy last month's assigned, or copy last month's spending
-* Add an Age of Money box to the budget topbar (average days from receiving money to spending it, FIFO)
+* Add an Age of Money box to the budget topbar using YNAB's own per-month figure (synced from YNAB)
+* Add an Age of Money history line chart at the bottom of the budget page, with the current month as a dashed reference
+* Backfill up to twelve months of YNAB month data including age of money on sync
 * Lower Ready to Assign when money is assigned to a future month, so budgeting ahead is reflected now
 * Rename the fully-budgeted state to "Kaikki budjetoitu" and tidy the topbar sizing
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month

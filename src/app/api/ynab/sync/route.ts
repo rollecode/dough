@@ -180,29 +180,41 @@ export async function POST(request: Request) {
       `).run(snapMonth, snapIncome, snapExpenses, JSON.stringify(snapCategories), snapSavingGoal);
       console.info("[api/ynab/sync] Monthly snapshot saved for", snapMonth);
 
-      // Backfill up to 5 previous months if not already saved
-      for (let offset = 1; offset <= 5; offset++) {
+      // Backfill up to 12 previous months: monthly snapshots (for the dashboard) and the
+      // ynab_month_budget row including YNAB's own age_of_money (for the age-of-money chart).
+      // Skip a month only when both are already present, so existing installs gain age_of_money.
+      const upsertPastMonthBudget = snapDb.prepare(`
+        INSERT INTO ynab_month_budget (month, income, budgeted, activity, to_be_budgeted, age_of_money, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(month) DO UPDATE SET income=excluded.income, budgeted=excluded.budgeted, activity=excluded.activity, to_be_budgeted=excluded.to_be_budgeted, age_of_money=excluded.age_of_money, updated_at=datetime('now')
+      `);
+      for (let offset = 1; offset <= 12; offset++) {
         const pastDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
         const pastMonth = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, "0")}`;
-        const exists = snapDb.prepare("SELECT id FROM monthly_snapshots WHERE month = ?").get(pastMonth);
-        if (exists) continue;
+        const snapExists = snapDb.prepare("SELECT id FROM monthly_snapshots WHERE month = ?").get(pastMonth);
+        const aomRow = snapDb.prepare("SELECT age_of_money FROM ynab_month_budget WHERE month = ?").get(pastMonth) as { age_of_money: number | null } | undefined;
+        const haveAom = !!aomRow && aomRow.age_of_money != null;
+        if (snapExists && haveAom) continue;
 
-        console.info("[api/ynab/sync] Backfilling monthly snapshot for", pastMonth);
+        console.info("[api/ynab/sync] Backfilling month data for", pastMonth);
         try {
           const pastSinceDate = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, "0")}-01`;
           const pastBudget = await getMonthBudget(budgetId, pastSinceDate, token);
-          const pastIncome = pastBudget.income;
-          const pastExpenses = Math.abs(pastBudget.activity);
-          const pastCategories = pastBudget.categories
-            .filter((c: any) => c.activity < 0 && c.name !== "Inflow: Ready to Assign")
-            .sort((a: any, b: any) => a.activity - b.activity)
-            .slice(0, 10)
-            .map((c: any) => ({ name: c.name, amount: Math.abs(c.activity) }));
-          snapDb.prepare(`
-            INSERT INTO monthly_snapshots (month, income, expenses, categories_json, saving_goal)
-            VALUES (?, ?, ?, ?, 0)
-          `).run(pastMonth, pastIncome, pastExpenses, JSON.stringify(pastCategories));
-          console.info("[api/ynab/sync] Backfilled", pastMonth, "income:", Math.round(pastIncome), "expenses:", Math.round(pastExpenses));
+          upsertPastMonthBudget.run(pastMonth, pastBudget.income, pastBudget.budgeted, pastBudget.activity, pastBudget.toBeBudgeted, pastBudget.ageOfMoney ?? null);
+          if (!snapExists) {
+            const pastIncome = pastBudget.income;
+            const pastExpenses = Math.abs(pastBudget.activity);
+            const pastCategories = pastBudget.categories
+              .filter((c: any) => c.activity < 0 && c.name !== "Inflow: Ready to Assign")
+              .sort((a: any, b: any) => a.activity - b.activity)
+              .slice(0, 10)
+              .map((c: any) => ({ name: c.name, amount: Math.abs(c.activity) }));
+            snapDb.prepare(`
+              INSERT INTO monthly_snapshots (month, income, expenses, categories_json, saving_goal)
+              VALUES (?, ?, ?, ?, 0)
+            `).run(pastMonth, pastIncome, pastExpenses, JSON.stringify(pastCategories));
+          }
+          console.info("[api/ynab/sync] Backfilled", pastMonth, "age of money:", pastBudget.ageOfMoney);
         } catch (backfillErr) {
           console.warn("[api/ynab/sync] Failed to backfill", pastMonth, backfillErr);
         }
@@ -281,10 +293,10 @@ export async function POST(request: Request) {
       // Upsert month budget + categories
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
       pdb.prepare(`
-        INSERT INTO ynab_month_budget (month, income, budgeted, activity, to_be_budgeted, updated_at)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
-        ON CONFLICT(month) DO UPDATE SET income=excluded.income, budgeted=excluded.budgeted, activity=excluded.activity, to_be_budgeted=excluded.to_be_budgeted, updated_at=datetime('now')
-      `).run(currentMonth, monthBudget.income, monthBudget.budgeted, monthBudget.activity, monthBudget.toBeBudgeted);
+        INSERT INTO ynab_month_budget (month, income, budgeted, activity, to_be_budgeted, age_of_money, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(month) DO UPDATE SET income=excluded.income, budgeted=excluded.budgeted, activity=excluded.activity, to_be_budgeted=excluded.to_be_budgeted, age_of_money=excluded.age_of_money, updated_at=datetime('now')
+      `).run(currentMonth, monthBudget.income, monthBudget.budgeted, monthBudget.activity, monthBudget.toBeBudgeted, monthBudget.ageOfMoney ?? null);
 
       const upsertCat = pdb.prepare(`
         INSERT INTO ynab_categories (ynab_id, month, name, group_name, budgeted, activity, balance, updated_at)
