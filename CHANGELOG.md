@@ -22,6 +22,7 @@
 * Cap move money and cover overspending at the source category's available balance
 * Base Ready to Assign on the viewed month so prior-month leftover carries forward instead of vanishing
 * Use YNAB's own per-month Ready to Assign and income, adjusted for local assignment edits; fall back to a per-month income model without YNAB
+* Carry Ready to Assign forward into not-yet-synced future months so budgeting next month is seamless
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
