@@ -61,13 +61,19 @@
 
 - YNAB-style budget page with category groups, monthly assigned amounts, activity and available
 - Carryover: positive available rolls forward, overspending does not drag into the next month
-- Per-category monthly targets with progress, snooze for a single month, and clear
+- Ready to Assign carries forward across months (cumulative); within YNAB's synced range it uses YNAB's own per-month figure adjusted for local edits, and it extends the carry-forward into not-yet-synced future months so budgeting ahead stays seamless
+- Activity is net: refunds and other inflows to a category reduce its spending and raise available, like YNAB
+- Per-category targets per day, week, month or year; the amount is distributed into the month's need, with progress, single-month snooze and clear
+- Auto-assign (Quick Budget): fund to targets, copy last month's assigned, or copy last month's spending
 - Inline assigned editor with a calculator popover
-- Category inspector (right sheet): rename, available breakdown, target editing, hide and unhide
-- Move money between categories and cover overspending from ready-to-assign or any funded category
+- Category inspector (right sheet): inline-editable name, group and description, available breakdown, target editing, snooze, hide and delete
+- Delete a category with leftover-money reallocation (move to Ready to Assign or another category; cover an overspent category first); categories with history are archived, unused ones removed
+- Delete a category group from its header, keeping its categories without a group
+- Move money between categories and cover overspending, capped at the source's available balance
 - Cover-from popout on overspent amounts and filters for all, overspent and money available
-- Drag-and-drop reorder of categories within a group and of whole groups
-- Hidden categories section at the bottom to unhide
+- Smooth drag-and-drop reorder with a dashed drop placeholder; drag a category into another group to move it
+- Renaming a category rewrites its transaction history so its activity is not lost
+- Hidden categories and snoozed categories sections at the bottom
 - Add categories from the topbar, today button to jump back to the current month
 
 ### Accounts
@@ -93,6 +99,7 @@
 - Amount difference display when actual differs from expected
 - Average amount from history (2+ months)
 - Bill amount history tracking
+- Brand-styled icons and colours shared with subscriptions (auto-detected from the name)
 
 ### Income
 
@@ -122,7 +129,7 @@
 
 ### Subscriptions
 
-- Brand-styled cards with auto-detected colors and SVG logos
+- Brand-styled cards with auto-detected colors and SVG logos (shared brand module, also used by bills)
 - Must-pay priority flag
 - Monthly and yearly cost summary
 - YNAB payee matching for auto-detection
