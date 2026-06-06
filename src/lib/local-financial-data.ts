@@ -32,7 +32,7 @@ export function buildLocalFinancialData(database: Database.Database = getDb()) {
 
   const activityRows = database
     .prepare(
-      "SELECT category, ROUND(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 2) AS activity " +
+      "SELECT category, ROUND(SUM(-amount), 2) AS activity " +
         "FROM transactions WHERE date >= ? AND date <= ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' GROUP BY category"
     )
     .all(monthStart, monthEnd) as { category: string; activity: number }[];

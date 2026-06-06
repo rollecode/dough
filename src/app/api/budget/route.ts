@@ -35,9 +35,11 @@ function activityForMonth(db: ReturnType<typeof getDb>, month: string): Map<stri
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(y, m, 0).getDate();
   const end = `${month}-${String(lastDay).padStart(2, "0")}`;
+  // Net activity: outflows minus inflows (a refund to a category reduces its spending,
+  // matching YNAB). Stored as a positive "spent" figure, so it can go negative on a net refund.
   const rows = db
     .prepare(
-      "SELECT category, ROUND(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 2) AS total " +
+      "SELECT category, ROUND(SUM(-amount), 2) AS total " +
         "FROM transactions WHERE date >= ? AND date <= ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' GROUP BY category"
     )
     .all(start, end) as ActivityRow[];
@@ -82,7 +84,7 @@ function carryoverThrough(db: ReturnType<typeof getDb>, categoryId: number, cate
     const aEnd = `${cursor}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}`;
     const a = (db
       .prepare(
-        "SELECT ROUND(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 2) AS v " +
+        "SELECT ROUND(SUM(-amount), 2) AS v " +
           "FROM transactions WHERE category = ? AND date >= ? AND date <= ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%'"
       )
       .get(categoryName, aStart, aEnd) as { v: number | null }).v || 0;
