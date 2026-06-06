@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import { getHouseholdSetting } from "@/lib/household";
+import { getAiModel } from "./model";
 import { DEFAULT_CHAT_GUIDELINES } from "./default-prompts";
 
 interface FinancialContext {
@@ -150,8 +151,10 @@ export async function getFinancialAdvice(
   try {
     console.info("[ai] Calling claude CLI via stdin pipe");
 
+    const chatModel = getAiModel("chat");
+    console.info("[ai] Chat model:", chatModel);
     const response = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", "opus", "-"], {
+      const proc = spawn(claudePath, ["-p", "--model", chatModel, "-"], {
         env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: "cli" },
         timeout: 120000,
       });

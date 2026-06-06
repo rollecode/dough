@@ -35,6 +35,7 @@
 * Date inputs now follow the configured date format with a themed calendar picker and a dark-mode icon
 * Fix the native select dropdown chevron being cramped against the right edge
 * Change a transaction's category from the edit dialog (writes back to YNAB and local data)
+* Make the AI model configurable per task in settings: fast Haiku for categorizing, Sonnet for Dougie chat, Opus for receipts
 * Lower Ready to Assign when money is assigned to a future month, so budgeting ahead is reflected now
 * Rename the fully-budgeted state to "Kaikki budjetoitu" and tidy the topbar sizing
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month

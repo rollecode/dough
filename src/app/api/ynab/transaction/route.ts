@@ -3,18 +3,20 @@ import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
+import { getAiModel } from "@/lib/ai/model";
 import { spawn } from "child_process";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 async function aiCategorize(payeeName: string, categories: string[]): Promise<string | null> {
   const claudePath = process.env.CLAUDE_PATH || "claude";
+  const model = getAiModel("categorize");
   const prompt = `Given the payee "${payeeName}", which category fits best from this list? Reply with ONLY the exact category name, nothing else.\n\nCategories:\n${categories.join("\n")}`;
 
   try {
-    console.debug("[ynab/transaction] AI categorizing:", payeeName);
+    console.debug("[ynab/transaction] AI categorizing:", payeeName, "with", model);
     const result = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", "opus", "-"], { timeout: 30000 });
+      const proc = spawn(claudePath, ["-p", "--model", model, "-"], { timeout: 30000 });
       let stdout = "";
       proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
       proc.on("close", (code: number) => {

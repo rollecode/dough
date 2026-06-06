@@ -65,6 +65,8 @@ export default function SettingsPage() {
   const [billsModeSaved, setBillsModeSaved] = useState(false);
   const [thresholds, setThresholds] = useState({ tight: "20", normal: "30", good: "50" });
   const [thresholdsSaved, setThresholdsSaved] = useState(false);
+  const [aiModels, setAiModels] = useState({ categorize: "haiku", chat: "sonnet", vision: "opus" });
+  const [aiModelsSaved, setAiModelsSaved] = useState(false);
   const [accountsSaved, setAccountsSaved] = useState(false);
   const [accountNotes, setAccountNotes] = useState<Record<string, string>>({});
   const [notesSaved, setNotesSaved] = useState(false);
@@ -146,6 +148,9 @@ export default function SettingsPage() {
           if (householdData.settings?.budget_threshold_tight) setThresholds((p) => ({ ...p, tight: householdData.settings.budget_threshold_tight }));
           if (householdData.settings?.budget_threshold_normal) setThresholds((p) => ({ ...p, normal: householdData.settings.budget_threshold_normal }));
           if (householdData.settings?.budget_threshold_good) setThresholds((p) => ({ ...p, good: householdData.settings.budget_threshold_good }));
+          if (householdData.settings?.ai_model_categorize) setAiModels((p) => ({ ...p, categorize: householdData.settings.ai_model_categorize }));
+          if (householdData.settings?.ai_model_chat) setAiModels((p) => ({ ...p, chat: householdData.settings.ai_model_chat }));
+          if (householdData.settings?.ai_model_vision) setAiModels((p) => ({ ...p, vision: householdData.settings.ai_model_vision }));
           if (householdData.settings?.synci_api_token) {
             setSynciConnected(true);
             setSynciToken("••••••••");
@@ -577,8 +582,59 @@ export default function SettingsPage() {
             </div>
             <p className="settings-help">
               {locale === "fi"
-                ? "Päivämäärien ja aikojen näyttömuoto. Valitsimet käyttävät selaimen omaa muotoa."
-                : "How dates and times are displayed. Native date pickers keep the browser's own format."}
+                ? "Päivämäärien ja aikojen näyttömuoto. Myös päivämääräkentät noudattavat tätä muotoa."
+                : "How dates and times are displayed. Date input fields follow this format too."}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* AI models */}
+        <Card className="settings-card">
+          <CardHeader>
+            <CardTitle className="settings-card-title">
+              <Globe />
+              {locale === "fi" ? "Tekoälymallit" : "AI models"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="settings-row">
+              {([
+                ["categorize", locale === "fi" ? "Kategorisointi" : "Categorizing"],
+                ["chat", locale === "fi" ? "Dougie-keskustelu" : "Dougie chat"],
+                ["vision", locale === "fi" ? "Kuitit (kuvat)" : "Receipts (images)"],
+              ] as const).map(([key, label]) => (
+                <div className="form-field" key={key}>
+                  <Label>{label}</Label>
+                  <Select
+                    value={aiModels[key]}
+                    onValueChange={async (v) => {
+                      if (!v) return;
+                      const next = { ...aiModels, [key]: v };
+                      setAiModels(next);
+                      await fetch("/api/household", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ [`ai_model_${key}`]: v }),
+                      });
+                      setAiModelsSaved(true);
+                      setTimeout(() => setAiModelsSaved(false), 2000);
+                    }}
+                  >
+                    <SelectTrigger className="settings-input"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="haiku">Haiku ({locale === "fi" ? "nopein" : "fastest"})</SelectItem>
+                      <SelectItem value="sonnet">Sonnet</SelectItem>
+                      <SelectItem value="opus">Opus ({locale === "fi" ? "tarkin" : "most capable"})</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+              {aiModelsSaved && <span className="settings-saved">{t.common.saved}</span>}
+            </div>
+            <p className="settings-help">
+              {locale === "fi"
+                ? "Mikä Claude-malli hoitaa kunkin tehtävän. Haiku on nopein kategorisointiin, Opus tarkin kuiteille. Käyttää samaa CLI-kirjautumista, ei API-avainta."
+                : "Which Claude model handles each task. Haiku is fastest for categorizing, Opus most capable for receipts. Uses the same CLI login, no API key."}
             </p>
           </CardContent>
         </Card>

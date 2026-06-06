@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { getAiModel } from "./model";
 
 interface ClaudeImageResult {
   text: string;
@@ -34,8 +35,10 @@ export async function queryClaudeWithImage(
 
   console.debug("[claude-image] Sending image prompt, text length:", textPrompt.length, "image size:", Math.round(imageBase64.length / 1024), "KB");
 
+  const visionModel = getAiModel("vision");
+  console.debug("[claude-image] Vision model:", visionModel);
   return new Promise((resolve, reject) => {
-    const proc = spawn(claudePath, ["-p", "--model", "opus", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"], {
+    const proc = spawn(claudePath, ["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"], {
       env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: "cli" },
       timeout: timeoutMs,
     });
