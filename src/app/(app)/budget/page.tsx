@@ -97,6 +97,7 @@ export default function BudgetPage() {
   const [loading, setLoading] = useState(true);
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [inspectorId, setInspectorId] = useState<number | null>(null);
+  const [catSaved, setCatSaved] = useState(false);
   const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
   const [moveOpen, setMoveOpen] = useState(false);
@@ -278,6 +279,8 @@ export default function BudgetPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...fields }),
       });
+      setCatSaved(true);
+      setTimeout(() => setCatSaved(false), 1800);
       load(month);
     } catch (err) {
       console.error("[budget] Save category error:", err);
@@ -570,6 +573,7 @@ export default function BudgetPage() {
                     onBlur={(e) => { if (e.target.value !== c.description) saveCategoryFields(c.id, { description: e.target.value }); }}
                     aria-label={locale === "fi" ? "Kuvaus" : "Description"}
                   />
+                  <span className={`insp-saved ${catSaved ? "is-shown" : ""}`}>{locale === "fi" ? "Tallennettu" : "Saved"}</span>
                 </SheetHeader>
 
                 <div className="insp-body">
@@ -767,7 +771,10 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   return (
     <div className="budget-grid budget-row">
       <button type="button" className="budget-row-main" onClick={onOpen}>
-        <span className="budget-row-name">{cat.name}</span>
+        <span className="budget-row-nameline">
+          <span className="budget-row-name">{cat.name}</span>
+          {cat.description && <span className="budget-row-desc">{cat.description}</span>}
+        </span>
         {hasTarget && (
           <span className="budget-row-target">
             <span className="budget-target-progress">

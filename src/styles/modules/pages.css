@@ -714,10 +714,30 @@
   text-align: left;
 }
 
+.budget-row-nameline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4375rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .budget-row-name {
   font-weight: 500;
   color: var(--foreground);
+  flex-shrink: 0;
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-row-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  opacity: 0.7;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -973,6 +993,20 @@
 .insp-desc-input:focus {
   outline: none;
   border-color: var(--ring);
+}
+
+.insp-saved {
+  align-self: flex-start;
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--positive);
+  opacity: 0;
+  transition: opacity 150ms;
+}
+
+.insp-saved.is-shown {
+  opacity: 1;
 }
 
 .insp-body {
