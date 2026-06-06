@@ -604,7 +604,7 @@ export default function BudgetPage() {
                     {targetEditing ? (
                       <div className="insp-target-edit">
                         <Input value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} placeholder="0.00" inputMode="decimal" autoFocus />
-                        <p className="settings-help">{locale === "fi" ? "Summa joka jaetaan tähän joka kuukausi." : "Amount assigned here every month."}</p>
+                        <p className="settings-help">{locale === "fi" ? "Summa, joka pitää varata jemmaan tälle kuukausittain." : "Amount assigned here every month."}</p>
                         <div className="insp-actions">
                           <Button type="button" size="sm" onClick={saveTarget}>{locale === "fi" ? "Tallenna" : "Save"}</Button>
                           {hasTarget && <Button type="button" variant="destructive" size="sm" onClick={() => clearTarget(c.id)}>{locale === "fi" ? "Poista" : "Clear"}</Button>}
