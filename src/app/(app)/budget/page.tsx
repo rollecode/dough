@@ -52,6 +52,7 @@ interface BudgetData {
   income: number;
   totalBudgeted: number;
   readyToAssign: number;
+  ageOfMoney: number | null;
 }
 
 // Safe expression evaluator: only allows digits, decimal/comma separators and basic operators
@@ -564,14 +565,22 @@ export default function BudgetPage() {
           const rta = data?.readyToAssign || 0;
           const state = rta > eps ? "is-positive" : rta < -eps ? "is-negative" : "is-zero";
           const label = state === "is-zero"
-            ? (locale === "fi" ? "Kaikki jaettu" : "All assigned")
+            ? (locale === "fi" ? "Kaikki budjetoitu" : "All assigned")
             : state === "is-negative"
             ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
             : (locale === "fi" ? "Budjetoimatta" : "Ready to assign");
           return (
-            <div className={`budget-ready-box ${state}`}>
-              <span className="budget-ready-value"><F v={rta} s=" €" /></span>
-              <span className="budget-ready-label">{label}</span>
+            <div className="budget-center">
+              <div className={`budget-ready-box ${state}`}>
+                <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+                <span className="budget-ready-label">{label}</span>
+              </div>
+              {data?.ageOfMoney != null && (
+                <div className="budget-aom-box" title={locale === "fi" ? "Aika rahan saamisesta sen käyttämiseen" : "Time from receiving money to spending it"}>
+                  <span className="budget-ready-value">{data.ageOfMoney} {locale === "fi" ? "pv" : "days"}</span>
+                  <span className="budget-ready-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</span>
+                </div>
+              )}
             </div>
           );
         })()}

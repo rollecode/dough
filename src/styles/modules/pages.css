@@ -192,7 +192,7 @@
 }
 
 .budget-monthnav-label {
-  width: 10rem;
+  width: 8rem;
   flex-shrink: 0;
   text-align: center;
   font-weight: 600;
@@ -244,15 +244,35 @@
 
 /* "Ready to assign" chip — centered in the sticky topbar (its own grid column, so a
    changing value width or the appearing Today button never shifts it), value over label */
+.budget-center {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  justify-self: center;
+}
+
 .budget-ready-box {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
   line-height: 1.1;
-  padding: 0.375rem 1rem;
+  padding: 0.5rem 0.8rem;
   border-radius: 0.75rem;
   white-space: nowrap;
+}
+
+.budget-aom-box {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  line-height: 1.1;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.75rem;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--chart-3, #38bdf8) 16%, transparent);
+  color: var(--chart-3, #38bdf8);
 }
 
 .budget-ready-box.is-positive {
@@ -566,7 +586,7 @@
   }
   .budget-monthnav { grid-row: 1; grid-column: 1; min-width: 0; }
   .budget-manage-btn { grid-row: 1; grid-column: 2; }
-  .budget-ready-box { grid-row: 2; grid-column: 1 / -1; justify-self: center; }
+  .budget-center { grid-row: 2; grid-column: 1 / -1; justify-self: center; flex-wrap: wrap; justify-content: center; }
   .budget-monthnav-label {
     width: auto;
     min-width: 0;
