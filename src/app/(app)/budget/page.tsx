@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2, Sparkles } from "lucide-react";
 import { F } from "@/components/ui/f";
 import {
   Sheet,
@@ -145,6 +145,7 @@ export default function BudgetPage() {
   const [showHidden, setShowHidden] = useState(false);
   const [showSnoozed, setShowSnoozed] = useState(false);
   const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
+  const [autoOpen, setAutoOpen] = useState(false);
   const addCatRef = useRef<HTMLFormElement>(null);
 
   const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
@@ -509,6 +510,21 @@ export default function BudgetPage() {
     }
   };
 
+  // Auto-assign (YNAB Quick Budget): fund to targets, copy last month's assigned, or last month's spending
+  const autoAssign = async (mode: "underfunded" | "last_assigned" | "last_spent") => {
+    try {
+      await fetch("/api/budget/auto-assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, mode }),
+      });
+      setAutoOpen(false);
+      load(month);
+    } catch (err) {
+      console.error("[budget] Auto-assign error:", err);
+    }
+  };
+
   // Delete a group: move all its categories to "no group" (categories are kept, the grouping
   // is removed). Groups are derived from category group_name, so emptying it removes it.
   const deleteGroup = async (groupKey: string) => {
@@ -579,6 +595,21 @@ export default function BudgetPage() {
             {lbl}
           </button>
         ))}
+        <div className="budget-autoassign-wrap">
+          <button type="button" className="budget-filter budget-autoassign-btn" onClick={() => setAutoOpen((o) => !o)}>
+            <Sparkles className="icon-xs" />{locale === "fi" ? "Automaatti" : "Auto-assign"}
+          </button>
+          {autoOpen && (
+            <>
+              <div className="budget-autoassign-backdrop" onClick={() => setAutoOpen(false)} />
+              <div className="budget-autoassign-menu">
+                <button type="button" onClick={() => autoAssign("underfunded")}>{locale === "fi" ? "Täytä tavoitteisiin" : "Fund to targets"}</button>
+                <button type="button" onClick={() => autoAssign("last_assigned")}>{locale === "fi" ? "Kuten viime kuussa" : "Assigned last month"}</button>
+                <button type="button" onClick={() => autoAssign("last_spent")}>{locale === "fi" ? "Viime kuun toteuma" : "Spent last month"}</button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div

@@ -28,6 +28,7 @@
 * Delete a category group from its header, keeping its categories without a group
 * Show recurring bills with the same brand colours and icons as subscriptions via a shared brand module
 * Set a category target per day, week, month or year; the amount is distributed into the month's need
+* Add Auto-assign on the budget page: fund to targets, copy last month's assigned, or copy last month's spending
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
