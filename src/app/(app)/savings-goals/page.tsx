@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
@@ -184,7 +185,7 @@ export default function SavingsGoalsPage() {
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Tavoitepäivä" : "Target date"}</Label>
-                <Input name="target_date" type="date" />
+                <DateField name="target_date" />
               </div>
               {categories.length > 0 && (
                 <div className="form-field">
@@ -298,7 +299,7 @@ export default function SavingsGoalsPage() {
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Tavoitepäivä" : "Target date"}</Label>
-                <Input name="target_date" type="date" defaultValue={editTarget.target_date || ""} />
+                <DateField name="target_date" defaultValue={editTarget.target_date || ""} />
               </div>
               {categories.length > 0 && (
                 <div className="form-field">

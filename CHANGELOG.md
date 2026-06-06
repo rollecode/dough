@@ -32,6 +32,8 @@
 * Add an Age of Money box to the budget topbar using YNAB's own per-month figure (synced from YNAB)
 * Add an Age of Money history line chart at the bottom of the budget page, with the current month as a dashed reference
 * Backfill up to twelve months of YNAB month data including age of money on sync
+* Date inputs now follow the configured date format with a themed calendar picker and a dark-mode icon
+* Fix the native select dropdown chevron being cramped against the right edge
 * Lower Ready to Assign when money is assigned to a future month, so budgeting ahead is reflected now
 * Rename the fully-budgeted state to "Kaikki budjetoitu" and tidy the topbar sizing
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month

@@ -8,6 +8,7 @@ import { useEvent } from "@/lib/use-events";
 import { relativeDate } from "@/lib/date-utils";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -233,7 +234,7 @@ export default function TransactionsPage() {
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>
-                <Input type="date" value={editTx.date} onChange={(e) => setEditTx({ ...editTx, date: e.target.value })} />
+                <DateField value={editTx.date} onChange={(v) => setEditTx({ ...editTx, date: v })} />
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Tili" : "Account"}</Label>

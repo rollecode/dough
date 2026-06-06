@@ -56,6 +56,76 @@
   background-color: color-mix(in srgb, var(--input) 30%, transparent);
 }
 
+/* Native date/time pickers follow the theme so the calendar icon is not black on dark */
+.input[type="date"],
+.input[type="time"],
+.input[type="datetime-local"] {
+  color-scheme: light;
+}
+
+.dark .input[type="date"],
+.dark .input[type="time"],
+.dark .input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+/* Date field: text in the configured format + a themed calendar picker button */
+.date-field {
+  position: relative;
+  width: 100%;
+}
+
+.date-field-text {
+  padding-right: 2.25rem;
+}
+
+.date-field-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.date-field-btn:hover {
+  color: var(--foreground);
+}
+
+.date-field-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.date-field-native {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Native selects: replace the cramped default arrow with a spaced custom chevron */
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 1rem;
+}
+
 .dark .input:disabled {
   background-color: color-mix(in srgb, var(--input) 80%, transparent);
 }
