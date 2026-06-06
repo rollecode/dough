@@ -62,11 +62,15 @@ export async function PUT(request: Request) {
     const db = getDb();
     const updates: string[] = [];
     const values: (string | number)[] = [];
+    let renameFrom = "";
+    let renameTo = "";
     if (body.name !== undefined) {
       const name = String(body.name).trim();
       if (!name) return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 });
       const dup = db.prepare("SELECT id FROM categories WHERE name = ? AND id != ?").get(name, id) as { id: number } | undefined;
       if (dup) return NextResponse.json({ error: "Another category already has that name" }, { status: 409 });
+      const old = db.prepare("SELECT name FROM categories WHERE id = ?").get(id) as { name: string } | undefined;
+      if (old && old.name !== name) { renameFrom = old.name; renameTo = name; }
       updates.push("name = ?"); values.push(name);
     }
     if (body.group_name !== undefined) { updates.push("group_name = ?"); values.push(String(body.group_name).trim()); }
@@ -79,7 +83,16 @@ export async function PUT(request: Request) {
 
     updates.push("updated_at = datetime('now')");
     values.push(id);
-    db.prepare(`UPDATE categories SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+    // Transactions reference the category by name, so a rename must rewrite their history too,
+    // otherwise the renamed category loses all its past activity and carryover.
+    const apply = db.transaction(() => {
+      db.prepare(`UPDATE categories SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+      if (renameFrom && renameTo) {
+        const res = db.prepare("UPDATE transactions SET category = ? WHERE category = ?").run(renameTo, renameFrom);
+        console.info("[categories] Renamed", renameFrom, "->", renameTo, "rewrote", res.changes, "transactions");
+      }
+    });
+    apply();
 
     console.info("[categories] Updated id", id);
     eventBus.emit("data:updated", { source: "categories-updated" });
