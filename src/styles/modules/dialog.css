@@ -56,16 +56,39 @@
   }
 }
 
+/* Blur-fade in place, centered (no drift from a corner) */
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.98);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dialog-exit {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.98);
+    filter: blur(6px);
+  }
+}
+
 .dialog-content[data-open] {
-  animation: enter 100ms ease forwards;
-  --enter-opacity: 0;
-  --enter-scale: 0.95;
+  animation: dialog-enter 180ms ease forwards;
 }
 
 .dialog-content[data-closed] {
-  animation: exit 100ms ease forwards;
-  --exit-opacity: 0;
-  --exit-scale: 0.95;
+  animation: dialog-exit 140ms ease forwards;
 }
 
 .dialog-close {

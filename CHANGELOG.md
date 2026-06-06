@@ -13,6 +13,7 @@
 * Add a category inspector with inline-editable name, group and description, breakdown, target editing and hide
 * Show a save confirmation toast when editing a category name, group or description
 * Style the budget topbar as a darker frosted glass bar that stays readable while scrolling
+* Open dialogs with a centered blur fade instead of drifting in from the corner
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
