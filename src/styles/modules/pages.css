@@ -1186,6 +1186,21 @@
   gap: 0.5rem;
 }
 
+.insp-target-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.insp-target-amount {
+  flex: 1;
+  min-width: 0;
+}
+
+.insp-target-cadence {
+  width: 8rem;
+  flex-shrink: 0;
+}
+
 .insp-actions {
   display: flex;
   flex-wrap: wrap;

@@ -71,6 +71,25 @@ export function monthBudgetNumbers(
   return { income, readyToAssign: round(income - totalBudgetedThisMonth) };
 }
 
+export function daysInMonth(month: string): number {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+// Convert a target amount at a given cadence into the amount needed for the viewed month,
+// distributing per the cadence (a weekly target funds every week of the month, a yearly
+// target spreads across twelve months, etc).
+export function monthlyTargetEquivalent(amount: number, cadence: string, month: string): number {
+  const round = (n: number) => Math.round(n * 100) / 100;
+  switch (cadence) {
+    case "daily": return round(amount * daysInMonth(month));
+    case "weekly": return round(amount * (daysInMonth(month) / 7));
+    case "yearly": return round(amount / 12);
+    case "monthly":
+    default: return round(amount);
+  }
+}
+
 function ymOffset(monthYM: string, offset: number): string {
   const [y, m] = monthYM.split("-").map(Number);
   const d = new Date(y, m - 1 + offset, 1);

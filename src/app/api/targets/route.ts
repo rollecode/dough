@@ -10,8 +10,8 @@ export async function GET() {
 
     const db = getDb();
     const rows = db
-      .prepare("SELECT category_id, monthly_amount, snooze_until_month FROM category_targets")
-      .all() as { category_id: number; monthly_amount: number; snooze_until_month: string }[];
+      .prepare("SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, snooze_until_month FROM category_targets")
+      .all() as { category_id: number; monthly_amount: number; cadence: string; snooze_until_month: string }[];
 
     console.debug("[targets] Loaded", rows.length, "targets");
     return NextResponse.json({ targets: rows });
@@ -32,27 +32,31 @@ export async function PUT(request: Request) {
 
     const db = getDb();
     const existing = db
-      .prepare("SELECT id, monthly_amount, snooze_until_month FROM category_targets WHERE category_id = ?")
-      .get(category_id) as { id: number; monthly_amount: number; snooze_until_month: string } | undefined;
+      .prepare("SELECT id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, snooze_until_month FROM category_targets WHERE category_id = ?")
+      .get(category_id) as { id: number; monthly_amount: number; cadence: string; snooze_until_month: string } | undefined;
 
     const monthly = body.monthly_amount !== undefined
       ? (isFinite(Number(body.monthly_amount)) ? Math.round(Number(body.monthly_amount) * 100) / 100 : 0)
       : existing?.monthly_amount || 0;
+    const allowedCadence = ["daily", "weekly", "monthly", "yearly"];
+    const cadence = body.cadence !== undefined && allowedCadence.includes(String(body.cadence))
+      ? String(body.cadence)
+      : existing?.cadence || "monthly";
     const snooze = body.snooze_until_month !== undefined
       ? String(body.snooze_until_month || "")
       : existing?.snooze_until_month || "";
 
     if (existing) {
       db.prepare(
-        "UPDATE category_targets SET monthly_amount = ?, snooze_until_month = ?, updated_at = datetime('now') WHERE category_id = ?"
-      ).run(monthly, snooze, category_id);
+        "UPDATE category_targets SET monthly_amount = ?, cadence = ?, snooze_until_month = ?, updated_at = datetime('now') WHERE category_id = ?"
+      ).run(monthly, cadence, snooze, category_id);
     } else {
       db.prepare(
-        "INSERT INTO category_targets (category_id, monthly_amount, snooze_until_month) VALUES (?, ?, ?)"
-      ).run(category_id, monthly, snooze);
+        "INSERT INTO category_targets (category_id, monthly_amount, cadence, snooze_until_month) VALUES (?, ?, ?, ?)"
+      ).run(category_id, monthly, cadence, snooze);
     }
 
-    console.info("[targets] Set category", category_id, "monthly:", monthly, "snooze:", snooze);
+    console.info("[targets] Set category", category_id, "amount:", monthly, "cadence:", cadence, "snooze:", snooze);
     eventBus.emit("data:updated", { source: "targets-changed" });
     return NextResponse.json({ success: true });
   } catch (error) {

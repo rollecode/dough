@@ -307,6 +307,7 @@ function initializeDb(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       category_id INTEGER NOT NULL UNIQUE REFERENCES categories(id) ON DELETE CASCADE,
       monthly_amount REAL NOT NULL DEFAULT 0,
+      cadence TEXT NOT NULL DEFAULT 'monthly',
       snooze_until_month TEXT DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -432,6 +433,13 @@ function initializeDb(db: Database.Database) {
   if (catCols.length > 0 && !catCols.some((c) => c.name === "description")) {
     console.info("[db] Adding description column to categories");
     db.exec("ALTER TABLE categories ADD COLUMN description TEXT DEFAULT ''");
+  }
+
+  // Add cadence column to category_targets (daily/weekly/monthly/yearly) if missing
+  const targetCols = db.prepare("PRAGMA table_info(category_targets)").all() as { name: string }[];
+  if (targetCols.length > 0 && !targetCols.some((c) => c.name === "cadence")) {
+    console.info("[db] Adding cadence column to category_targets");
+    db.exec("ALTER TABLE category_targets ADD COLUMN cadence TEXT NOT NULL DEFAULT 'monthly'");
   }
 
   // Add min_amount/max_amount columns to payee_matches if missing

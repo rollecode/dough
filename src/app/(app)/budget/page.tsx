@@ -40,6 +40,8 @@ interface BudgetCategory {
   carryover: number;
   available: number;
   target_monthly: number;
+  target_amount: number;
+  target_cadence: string;
   snooze_until_month: string;
   target_active: boolean;
 }
@@ -90,6 +92,33 @@ function availEps(decimals: number): number {
   return decimals >= 2 ? 0.005 : 0.5 / Math.pow(10, decimals);
 }
 
+const CADENCES = ["daily", "weekly", "monthly", "yearly"] as const;
+
+function cadenceLabel(cadence: string, locale: string): string {
+  const fi: Record<string, string> = { daily: "Päivä", weekly: "Viikko", monthly: "Kuukausi", yearly: "Vuosi" };
+  const en: Record<string, string> = { daily: "Day", weekly: "Week", monthly: "Month", yearly: "Year" };
+  return (locale === "fi" ? fi : en)[cadence] || cadence;
+}
+
+function cadenceSuffix(cadence: string, locale: string): string {
+  const fi: Record<string, string> = { daily: "/ pv", weekly: "/ vko", monthly: "/ kk", yearly: "/ v" };
+  const en: Record<string, string> = { daily: "/ day", weekly: "/ wk", monthly: "/ mo", yearly: "/ yr" };
+  return (locale === "fi" ? fi : en)[cadence] || "";
+}
+
+// Monthly-equivalent of a target amount at a cadence (mirrors lib/budget-math).
+function targetMonthlyEq(amount: number, cadence: string, month: string): number {
+  const [y, m] = month.split("-").map(Number);
+  const dim = new Date(y, m, 0).getDate();
+  const round = (n: number) => Math.round(n * 100) / 100;
+  switch (cadence) {
+    case "daily": return round(amount * dim);
+    case "weekly": return round(amount * (dim / 7));
+    case "yearly": return round(amount / 12);
+    default: return round(amount);
+  }
+}
+
 export default function BudgetPage() {
   const { locale, fmt, decimals } = useLocale();
   const eps = availEps(decimals);
@@ -101,6 +130,7 @@ export default function BudgetPage() {
   const [catSaved, setCatSaved] = useState(false);
   const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
+  const [targetCadence, setTargetCadence] = useState<string>("monthly");
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveDir, setMoveDir] = useState<"in" | "out">("out");
   const [moveOther, setMoveOther] = useState<string>("");
@@ -319,7 +349,7 @@ export default function BudgetPage() {
       await fetch("/api/targets", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category_id: inspectorCat.id, monthly_amount: value }),
+        body: JSON.stringify({ category_id: inspectorCat.id, monthly_amount: value, cadence: targetCadence }),
       });
       setTargetEditing(false);
       setTargetDraft("");
@@ -790,8 +820,26 @@ export default function BudgetPage() {
                     <span className="insp-section-title">{locale === "fi" ? "Tavoite" : "Target"}</span>
                     {targetEditing ? (
                       <div className="insp-target-edit">
-                        <Input value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} placeholder="0.00" inputMode="decimal" autoFocus />
-                        <p className="settings-help">{locale === "fi" ? "Summa, joka pitää varata jemmaan tälle kuukausittain." : "Amount assigned here every month."}</p>
+                        <div className="insp-target-row">
+                          <Input value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} placeholder="0.00" inputMode="decimal" autoFocus className="insp-target-amount" />
+                          <Select value={targetCadence} onValueChange={(v) => v && setTargetCadence(v)}>
+                            <SelectTrigger className="insp-target-cadence"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {CADENCES.map((cad) => (
+                                <SelectItem key={cad} value={cad}>{cadenceLabel(cad, locale)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <p className="settings-help">
+                          {targetCadence === "monthly"
+                            ? (locale === "fi" ? "Summa, joka varataan tälle joka kuukausi." : "Amount assigned here every month.")
+                            : (() => {
+                                const amt = evalExpression(targetDraft) || 0;
+                                const eq = targetMonthlyEq(amt, targetCadence, month);
+                                return locale === "fi" ? `Jaetaan kuukausille: noin ${fmt(eq)} € / kk.` : `Spread across months: about ${fmt(eq)} € / mo.`;
+                              })()}
+                        </p>
                         <div className="insp-actions">
                           <Button type="button" size="sm" onClick={saveTarget}>{locale === "fi" ? "Tallenna" : "Save"}</Button>
                           {hasTarget && <Button type="button" variant="destructive" size="sm" onClick={() => clearTarget(c.id)}>{locale === "fi" ? "Poista" : "Clear"}</Button>}
@@ -802,10 +850,15 @@ export default function BudgetPage() {
                       <div className="insp-target">
                         <div className="budget-target-progress insp-target-bar"><span className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} /></div>
                         <p className="insp-target-text">
-                          {isSnoozed ? (locale === "fi" ? "Tauolla tässä kuussa" : "Paused this month") : <><F v={c.target_monthly} s=" €" /> {locale === "fi" ? "/ kk" : "/ mo"}</>}
+                          {isSnoozed ? (locale === "fi" ? "Tauolla tässä kuussa" : "Paused this month") : (
+                            <>
+                              <F v={c.target_amount} s=" €" /> {cadenceSuffix(c.target_cadence, locale)}
+                              {c.target_cadence !== "monthly" && <span className="text-muted"> · <F v={c.target_monthly} s=" €" /> {cadenceSuffix("monthly", locale)}</span>}
+                            </>
+                          )}
                         </p>
                         <div className="insp-actions">
-                          <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(c.target_monthly ? fmt(c.target_monthly) : ""); setTargetEditing(true); }}>{locale === "fi" ? "Muokkaa" : "Edit"}</Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(c.target_amount ? fmt(c.target_amount) : ""); setTargetCadence(c.target_cadence || "monthly"); setTargetEditing(true); }}>{locale === "fi" ? "Muokkaa" : "Edit"}</Button>
                           {isSnoozed ? (
                             <Button type="button" variant="outline" size="sm" onClick={() => unsnoozeTarget(c.id)}>{locale === "fi" ? "Jatka" : "Resume"}</Button>
                           ) : (
@@ -814,7 +867,7 @@ export default function BudgetPage() {
                         </div>
                       </div>
                     ) : (
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetCadence("monthly"); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
                     )}
                   </div>
 
