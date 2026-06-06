@@ -46,14 +46,18 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  // Load accounts for edit dialog
+  // Load accounts and categories for the edit dialog
   useEffect(() => {
     fetch("/api/ynab/accounts").then((r) => r.json()).then((data) => {
       if (data.accounts) setAllAccounts(data.accounts.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
+    }).catch(() => {});
+    fetch("/api/categories").then((r) => r.json()).then((data) => {
+      if (Array.isArray(data.categories)) setAllCategories(data.categories.filter((c: { is_active: number }) => c.is_active).map((c: { name: string }) => c.name));
     }).catch(() => {});
   }, []);
 
@@ -71,6 +75,7 @@ export default function TransactionsPage() {
           memo: editTx.memo || "",
           account_id: editTx.account_id,
           date: editTx.date,
+          category: editTx.category,
         }),
       });
       const result = await res.json();
@@ -241,6 +246,14 @@ export default function TransactionsPage() {
                 <select className="input" value={editTx.account_id} onChange={(e) => setEditTx({ ...editTx, account_id: e.target.value })}>
                   <option value="">{locale === "fi" ? "Valitse tili" : "Select account"}</option>
                   {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Kategoria" : "Category"}</Label>
+                <select className="input" value={editTx.category} onChange={(e) => setEditTx({ ...editTx, category: e.target.value })}>
+                  <option value="">{locale === "fi" ? "Ei kategoriaa" : "No category"}</option>
+                  {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {editTx.category && !allCategories.includes(editTx.category) && <option value={editTx.category}>{editTx.category}</option>}
                 </select>
               </div>
               <div className="form-field">

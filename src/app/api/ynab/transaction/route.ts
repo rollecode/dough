@@ -186,17 +186,18 @@ export async function PUT(request: Request) {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
     const body = await request.json();
-    const { transaction_id, amount, payee_name, memo, account_id, date } = body;
+    const { transaction_id, amount, payee_name, memo, account_id, date, category } = body;
     if (!transaction_id) return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
 
     // LOCAL MODE: update local row, adjust account balance by the delta
     if (getBudgetMode() === "local") {
       const { getDb } = await import("@/lib/db");
       const db = getDb();
-      const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string } | undefined;
+      const prev = db.prepare("SELECT amount, account_id, category FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string; category: string } | undefined;
       const signed = parseFloat(amount) * -1;
-      db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ? WHERE ynab_id = ?")
-        .run(signed, payee_name || "", memo || "", account_id || (prev?.account_id ?? ""), date || "", transaction_id);
+      const newCategory = category !== undefined ? category : (prev?.category ?? "");
+      db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ?, category = ? WHERE ynab_id = ?")
+        .run(signed, payee_name || "", memo || "", account_id || (prev?.account_id ?? ""), date || "", newCategory, transaction_id);
       if (prev) {
         // remove old amount from old account, add new to new account
         db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
@@ -221,6 +222,18 @@ export async function PUT(request: Request) {
     if (account_id) update.account_id = account_id;
     if (date) update.date = date;
 
+    // Resolve a chosen category name to YNAB's category id for the current month
+    if (category !== undefined) {
+      try {
+        const { getDb } = await import("@/lib/db");
+        const db = getDb();
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const found = db.prepare("SELECT ynab_id FROM ynab_categories WHERE month = ? AND name = ?").get(currentMonth, category) as { ynab_id: string } | undefined;
+        if (found?.ynab_id) update.category_id = found.ynab_id;
+      } catch (err) { console.warn("[ynab/transaction] Category resolve failed:", err); }
+    }
+
     const res = await fetch(`https://api.ynab.com/v1/budgets/${budgetId}/transactions/${transaction_id}`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -236,8 +249,14 @@ export async function PUT(request: Request) {
     // Update local SQLite
     try {
       const { getDb } = await import("@/lib/db");
-      getDb().prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ? WHERE ynab_id = ?")
-        .run(parseFloat(amount) * -1, payee_name || "", memo || "", account_id || "", date || "", transaction_id);
+      const db = getDb();
+      if (category !== undefined) {
+        db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ?, category = ? WHERE ynab_id = ?")
+          .run(parseFloat(amount) * -1, payee_name || "", memo || "", account_id || "", date || "", category, transaction_id);
+      } else {
+        db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ? WHERE ynab_id = ?")
+          .run(parseFloat(amount) * -1, payee_name || "", memo || "", account_id || "", date || "", transaction_id);
+      }
       console.info("[ynab/transaction] Local DB updated");
     } catch (err) {
       console.warn("[ynab/transaction] Local update failed:", err);
