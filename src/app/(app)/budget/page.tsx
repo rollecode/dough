@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -107,7 +107,9 @@ export default function BudgetPage() {
   const [moveDraft, setMoveDraft] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [localGroups, setLocalGroups] = useState<{ key: string; label: string; items: BudgetCategory[] }[]>([]);
-  const [bdrag, setBdrag] = useState<{ type: "row" | "group"; groupKey: string; index: number } | null>(null);
+  const [bdrag, setBdrag] = useState<{ type: "row" | "group"; id: number | string; fromGroup: string } | null>(null);
+  const [dropAt, setDropAt] = useState<{ groupKey: string; index: number } | null>(null);
+  const [dropGroupAt, setDropGroupAt] = useState<number | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [showSnoozed, setShowSnoozed] = useState(false);
   const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
@@ -148,15 +150,17 @@ export default function BudgetPage() {
     setLocalGroups([...map.values()]);
   }, [data, locale]);
 
-  // Drag-and-drop reorder inside the budget view: rows within a group, and whole groups
-  const persistRowOrder = (groups: typeof localGroups) => {
-    const order = groups.flatMap((g) => g.items.map((c) => c.id));
+  // Drag-and-drop reorder inside the budget view. The layout never reshuffles during a
+  // drag: the source row dims and a single dashed placeholder marks the drop position.
+  // The reorder (and any cross-group move) is committed only on drop.
+  const persistOrderAndGroups = (groups: typeof localGroups) => {
+    const items = groups.flatMap((g) => g.items.map((c) => ({ id: c.id, group_name: g.key })));
     fetch("/api/categories", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order }),
+      body: JSON.stringify({ items }),
     }).then(() => load(month)).catch(() => {});
-    console.info("[budget] Saved row order");
+    console.info("[budget] Saved row order and group membership");
   };
 
   const persistGroupOrder = (groups: typeof localGroups) => {
@@ -169,38 +173,90 @@ export default function BudgetPage() {
     console.info("[budget] Saved group order");
   };
 
-  const onRowDragStart = (groupKey: string, index: number) => setBdrag({ type: "row", groupKey, index });
-  const onRowDragOver = (e: React.DragEvent, groupKey: string, index: number) => {
-    if (!bdrag || bdrag.type !== "row" || bdrag.groupKey !== groupKey || bdrag.index === index) return;
-    e.preventDefault();
-    setLocalGroups((prev) => {
-      const next = prev.map((g) => (g.key === groupKey ? { ...g, items: [...g.items] } : g));
-      const g = next.find((x) => x.key === groupKey)!;
-      const [moved] = g.items.splice(bdrag.index, 1);
-      g.items.splice(index, 0, moved);
-      return next;
-    });
-    setBdrag({ ...bdrag, index });
+  const clearDrag = () => { setBdrag(null); setDropAt(null); setDropGroupAt(null); };
+
+  const onRowDragStart = (e: React.DragEvent, groupKey: string, id: number) => {
+    setBdrag({ type: "row", id, fromGroup: groupKey });
+    setDropAt(null);
+    try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(id)); } catch {}
   };
 
-  const onGroupDragStart = (index: number) => setBdrag({ type: "group", groupKey: "", index });
-  const onGroupDragOver = (e: React.DragEvent, index: number) => {
-    if (!bdrag || bdrag.type !== "group" || bdrag.index === index) return;
+  const onRowDragOver = (e: React.DragEvent, groupKey: string, rIdx: number) => {
+    if (!bdrag || bdrag.type !== "row") return;
     e.preventDefault();
-    setLocalGroups((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(bdrag.index, 1);
-      next.splice(index, 0, moved);
-      return next;
-    });
-    setBdrag({ ...bdrag, index });
+    e.stopPropagation();
+    try { e.dataTransfer.dropEffect = "move"; } catch {}
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const after = e.clientY > rect.top + rect.height / 2;
+    const index = rIdx + (after ? 1 : 0);
+    setDropAt((prev) => (prev && prev.groupKey === groupKey && prev.index === index ? prev : { groupKey, index }));
   };
 
-  const onBudgetDragEnd = () => {
+  // Hovering a group card but not a specific row (header, gaps, empty group): drop at the end.
+  const onGroupBodyDragOver = (e: React.DragEvent, groupKey: string, count: number) => {
+    if (!bdrag || bdrag.type !== "row") return;
+    e.preventDefault();
+    setDropAt((prev) => (prev && prev.groupKey === groupKey ? prev : { groupKey, index: count }));
+  };
+
+  const onGroupDragStart = (e: React.DragEvent, key: string) => {
+    setBdrag({ type: "group", id: key, fromGroup: key });
+    setDropGroupAt(null);
+    try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", key); } catch {}
+  };
+
+  const onGroupDragOver = (e: React.DragEvent, gIdx: number) => {
+    if (!bdrag || bdrag.type !== "group") return;
+    e.preventDefault();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const after = e.clientY > rect.top + rect.height / 2;
+    const index = gIdx + (after ? 1 : 0);
+    setDropGroupAt((prev) => (prev === index ? prev : index));
+  };
+
+  const commitRowDrop = () => {
+    if (!bdrag || bdrag.type !== "row" || !dropAt) return clearDrag();
+    const next = localGroups.map((g) => ({ ...g, items: [...g.items] }));
+    let dragged: BudgetCategory | undefined;
+    let removedBelowTarget = false;
+    for (const g of next) {
+      const i = g.items.findIndex((c) => c.id === bdrag.id);
+      if (i !== -1) {
+        dragged = g.items[i];
+        if (g.key === dropAt.groupKey && i < dropAt.index) removedBelowTarget = true;
+        g.items.splice(i, 1);
+        break;
+      }
+    }
+    const tg = next.find((g) => g.key === dropAt.groupKey);
+    if (!dragged || !tg) return clearDrag();
+    let idx = dropAt.index - (removedBelowTarget ? 1 : 0);
+    idx = Math.max(0, Math.min(idx, tg.items.length));
+    tg.items.splice(idx, 0, { ...dragged, group_name: tg.key });
+    setLocalGroups(next);
+    persistOrderAndGroups(next);
+    clearDrag();
+  };
+
+  const commitGroupDrop = () => {
+    if (!bdrag || bdrag.type !== "group" || dropGroupAt === null) return clearDrag();
+    const fromIdx = localGroups.findIndex((g) => g.key === bdrag.id);
+    if (fromIdx === -1) return clearDrag();
+    const next = [...localGroups];
+    const [moved] = next.splice(fromIdx, 1);
+    let toIdx = dropGroupAt - (fromIdx < dropGroupAt ? 1 : 0);
+    toIdx = Math.max(0, Math.min(toIdx, next.length));
+    next.splice(toIdx, 0, moved);
+    setLocalGroups(next);
+    persistGroupOrder(next);
+    clearDrag();
+  };
+
+  const onBudgetDrop = (e: React.DragEvent) => {
     if (!bdrag) return;
-    if (bdrag.type === "row") persistRowOrder(localGroups);
-    else persistGroupOrder(localGroups);
-    setBdrag(null);
+    e.preventDefault();
+    if (bdrag.type === "row") commitRowDrop();
+    else commitGroupDrop();
   };
 
   const saveBudgeted = async (catId: number, value: number) => {
@@ -427,7 +483,11 @@ export default function BudgetPage() {
         ))}
       </div>
 
-      <div className={`budget-table ${bdrag ? "is-reordering" : ""}`}>
+      <div
+        className={`budget-table ${bdrag ? "is-reordering" : ""}`}
+        onDragOver={bdrag ? (e) => e.preventDefault() : undefined}
+        onDrop={bdrag ? onBudgetDrop : undefined}
+      >
       <div className="budget-grid budget-table-header">
         <span>{locale === "fi" ? "Kategoria" : "Category"}</span>
         <span>{locale === "fi" ? "Budjetoitu" : "Assigned"}</span>
@@ -445,71 +505,75 @@ export default function BudgetPage() {
           ? items
           : items.filter((c) => (filter === "overspent" ? c.available < -0.005 : c.available > 0.005));
         if (!dragEnabled && visibleItems.length === 0) return null;
-        const draggingGroup = bdrag?.type === "group";
         const draggingRow = bdrag?.type === "row";
-        // Collapse to header-only: all groups while dragging a group, other groups while dragging a row
-        const collapsed = dragEnabled && (draggingGroup || (draggingRow && bdrag!.groupKey !== group.key));
-        const isGroupSource = draggingGroup && bdrag!.index === gIdx;
+        const isGroupGhost = bdrag?.type === "group" && bdrag.id === group.key;
+        const rowDropHere = draggingRow && dropAt?.groupKey === group.key;
         return (
-          <Card
-            key={group.key}
-            className={`list-card list-card-divider ${collapsed ? "is-collapsed" : ""} ${isGroupSource ? "is-drag-source" : ""}`}
-            onDragOver={dragEnabled ? (e) => onGroupDragOver(e, gIdx) : undefined}
-          >
-            <div
-              className="budget-grid budget-group-header"
-              draggable={dragEnabled}
-              onDragStart={dragEnabled ? () => onGroupDragStart(gIdx) : undefined}
-              onDragEnd={dragEnabled ? onBudgetDragEnd : undefined}
+          <Fragment key={group.key}>
+            {bdrag?.type === "group" && dropGroupAt === gIdx && <div className="budget-group-drop-line" aria-hidden="true" />}
+            <Card
+              className={`list-card list-card-divider ${isGroupGhost ? "is-drag-ghost" : ""}`}
+              onDragOver={dragEnabled ? (e) => (bdrag?.type === "group" ? onGroupDragOver(e, gIdx) : onGroupBodyDragOver(e, group.key, visibleItems.length)) : undefined}
             >
-              {dragEnabled && <span className="budget-grip budget-group-grip" aria-hidden="true"><GripVertical /></span>}
-              <span className="budget-group-name">{group.label}</span>
-              <span className="budget-num"><F v={groupBudgeted} /></span>
-              <span className="budget-num text-muted budget-col-activity"><F v={groupActivity} /></span>
-              <span className="budget-num">
-                <span className={`budget-pill ${groupAvailable > 0 ? "is-positive" : groupAvailable < 0 ? "is-negative" : "is-zero"}`}>
-                  <F v={groupAvailable} />
+              <div
+                className="budget-grid budget-group-header"
+                draggable={dragEnabled}
+                onDragStart={dragEnabled ? (e) => onGroupDragStart(e, group.key) : undefined}
+                onDragEnd={dragEnabled ? clearDrag : undefined}
+              >
+                {dragEnabled && <span className="budget-grip budget-group-grip" aria-hidden="true"><GripVertical /></span>}
+                <span className="budget-group-name">{group.label}</span>
+                <span className="budget-num"><F v={groupBudgeted} /></span>
+                <span className="budget-num text-muted budget-col-activity"><F v={groupActivity} /></span>
+                <span className="budget-num">
+                  <span className={`budget-pill ${groupAvailable > eps ? "is-positive" : groupAvailable < -eps ? "is-negative" : "is-zero"}`}>
+                    <F v={groupAvailable} />
+                  </span>
                 </span>
-              </span>
-            </div>
-            {visibleItems.map((c, rIdx) => {
-              const isRowSource = draggingRow && bdrag!.groupKey === group.key && bdrag!.index === rIdx;
-              return (
-                <div
-                  key={c.id}
-                  className={`budget-row-drag ${isRowSource ? "is-drag-source" : ""}`}
-                  onDragOver={dragEnabled ? (e) => onRowDragOver(e, group.key, rIdx) : undefined}
-                >
-                  {dragEnabled && (
-                    <button
-                      type="button"
-                      className="budget-grip budget-row-grip"
-                      draggable
-                      onDragStart={() => onRowDragStart(group.key, rIdx)}
-                      onDragEnd={onBudgetDragEnd}
-                      aria-label={locale === "fi" ? "Siirrä" : "Reorder"}
+              </div>
+              {visibleItems.map((c, rIdx) => {
+                const isRowGhost = draggingRow && bdrag!.id === c.id;
+                return (
+                  <Fragment key={c.id}>
+                    {rowDropHere && dropAt!.index === rIdx && <div className="budget-drop-line" aria-hidden="true" />}
+                    <div
+                      className={`budget-row-drag ${isRowGhost ? "is-drag-ghost" : ""}`}
+                      onDragOver={dragEnabled ? (e) => onRowDragOver(e, group.key, rIdx) : undefined}
                     >
-                      <GripVertical />
-                    </button>
-                  )}
-                  <BudgetRow
-                    cat={c}
-                    saving={savingId === c.id}
-                    onSave={(v) => saveBudgeted(c.id, v)}
-                    onOpen={() => setInspectorId(c.id)}
-                    fmt={fmt}
-                    month={month}
-                    locale={locale}
-                    siblings={data?.categories || []}
-                    readyToAssign={data?.readyToAssign || 0}
-                    onCover={(source, amount) => coverOverspend(c, source, amount)}
-                  />
-                </div>
-              );
-            })}
-          </Card>
+                      {dragEnabled && (
+                        <button
+                          type="button"
+                          className="budget-grip budget-row-grip"
+                          draggable
+                          onDragStart={(e) => onRowDragStart(e, group.key, c.id)}
+                          onDragEnd={clearDrag}
+                          aria-label={locale === "fi" ? "Siirrä" : "Reorder"}
+                        >
+                          <GripVertical />
+                        </button>
+                      )}
+                      <BudgetRow
+                        cat={c}
+                        saving={savingId === c.id}
+                        onSave={(v) => saveBudgeted(c.id, v)}
+                        onOpen={() => setInspectorId(c.id)}
+                        fmt={fmt}
+                        month={month}
+                        locale={locale}
+                        siblings={data?.categories || []}
+                        readyToAssign={data?.readyToAssign || 0}
+                        onCover={(source, amount) => coverOverspend(c, source, amount)}
+                      />
+                    </div>
+                  </Fragment>
+                );
+              })}
+              {rowDropHere && dropAt!.index >= visibleItems.length && <div className="budget-drop-line" aria-hidden="true" />}
+            </Card>
+          </Fragment>
         );
       })}
+      {bdrag?.type === "group" && dropGroupAt === localGroups.length && <div className="budget-group-drop-line" aria-hidden="true" />}
 
       {(() => {
         const snoozedCats = (data?.categories || []).filter((c) => c.is_active && c.snoozed);

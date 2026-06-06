@@ -14,6 +14,9 @@
 * Show a save confirmation toast when editing a category name, group or description
 * Style the budget topbar as a darker frosted glass bar that stays readable while scrolling
 * Open dialogs with a centered blur fade instead of drifting in from the corner
+* Rework budget drag-and-drop: the list no longer reshuffles mid-drag, a dashed placeholder marks the drop spot
+* Drag a category into another group to move it between groups
+* Use the rounding epsilon for the group total colour so it matches the rows
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view

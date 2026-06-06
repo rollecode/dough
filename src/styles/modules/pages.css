@@ -643,38 +643,41 @@
   cursor: grabbing;
 }
 
-/* Tighten the list and minimise groups while reordering so the drop target is easy to hit */
+/* While a drag is in progress, disable text selection so the pointer stays smooth */
 .budget-table.is-reordering {
-  gap: 0.375rem;
+  user-select: none;
 }
 
-.card.list-card.is-collapsed {
-  cursor: grab;
+/* The row/group being dragged stays in place but dims; the dashed line shows where it lands */
+.budget-row-drag.is-drag-ghost {
+  opacity: 0.35;
 }
 
-/* While reordering, collapsed groups hide their rows (kept in the DOM so the drag is not cancelled) */
-.card.list-card.is-collapsed .budget-row-drag {
-  display: none;
+.budget-row-drag.is-drag-ghost .budget-grip {
+  opacity: 0;
 }
 
-/* The dragged item shows as a dashed placeholder at its current drop position */
-.budget-row-drag.is-drag-source {
-  outline: 1.5px dashed color-mix(in srgb, var(--primary) 55%, transparent);
-  outline-offset: -3px;
+.card.list-card.is-drag-ghost {
+  opacity: 0.4;
+}
+
+/* Dashed placeholder that reserves space at the drop position (no layout jump) */
+.budget-drop-line {
+  height: 2.5rem;
+  margin: 0.125rem 0.75rem;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 60%, transparent);
   border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  pointer-events: none;
 }
 
-.budget-row-drag.is-drag-source > * {
-  opacity: 0.3;
-}
-
-.card.list-card.is-drag-source {
-  outline: 1.5px dashed color-mix(in srgb, var(--primary) 55%, transparent);
-  outline-offset: -2px;
-}
-
-.card.list-card.is-drag-source .budget-group-header {
-  opacity: 0.45;
+.budget-group-drop-line {
+  height: 3rem;
+  margin: 0.125rem 0;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 60%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  pointer-events: none;
 }
 
 .budget-group-name {
