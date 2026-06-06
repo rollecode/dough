@@ -42,33 +42,46 @@ export function monthBudgetNumbers(
   totalBudgetedThisMonth: number
 ): { income: number; readyToAssign: number } {
   const round = (n: number) => Math.round(n * 100) / 100;
+
+  // Money assigned in months further ahead than this view (and beyond YNAB's range) is already
+  // earmarked, so it lowers the single global Ready to Assign just like in YNAB. Subtract it once.
+  const latestYnab = (db.prepare("SELECT MAX(month) AS m FROM ynab_month_budget").get() as { m: string | null }).m || "";
+  const horizon = month > latestYnab ? month : latestYnab;
+  const futureCommitted = (db.prepare("SELECT COALESCE(SUM(budgeted), 0) AS v FROM monthly_category_budgets WHERE month > ?").get(horizon) as { v: number }).v || 0;
+
+  let income: number;
+  let base: number;
   const ynabMonth = db
     .prepare("SELECT income, budgeted, to_be_budgeted FROM ynab_month_budget WHERE month = ?")
     .get(month) as { income: number; budgeted: number; to_be_budgeted: number } | undefined;
   if (ynabMonth) {
     const localDivergence = round(totalBudgetedThisMonth - ynabMonth.budgeted);
-    return { income: round(ynabMonth.income), readyToAssign: round(ynabMonth.to_be_budgeted - localDivergence) };
-  }
-
-  const lastYnab = (db.prepare("SELECT MAX(month) AS m FROM ynab_month_budget WHERE month < ?").get(month) as { m: string | null }).m;
-  if (lastYnab) {
-    const anchor = db
-      .prepare("SELECT budgeted, to_be_budgeted FROM ynab_month_budget WHERE month = ?")
-      .get(lastYnab) as { budgeted: number; to_be_budgeted: number };
-    let rta = anchor.to_be_budgeted - (assignedForMonth(db, lastYnab) - anchor.budgeted);
-    let cursor = ymOffset(lastYnab, 1);
-    while (cursor <= month) {
-      const asg = cursor === month ? totalBudgetedThisMonth : assignedForMonth(db, cursor);
-      rta += incomeInflowForMonth(db, cursor) - asg;
-      cursor = ymOffset(cursor, 1);
+    income = round(ynabMonth.income);
+    base = ynabMonth.to_be_budgeted - localDivergence;
+  } else {
+    const lastYnab = (db.prepare("SELECT MAX(month) AS m FROM ynab_month_budget WHERE month < ?").get(month) as { m: string | null }).m;
+    if (lastYnab) {
+      const anchor = db
+        .prepare("SELECT budgeted, to_be_budgeted FROM ynab_month_budget WHERE month = ?")
+        .get(lastYnab) as { budgeted: number; to_be_budgeted: number };
+      let rta = anchor.to_be_budgeted - (assignedForMonth(db, lastYnab) - anchor.budgeted);
+      let cursor = ymOffset(lastYnab, 1);
+      while (cursor <= month) {
+        const asg = cursor === month ? totalBudgetedThisMonth : assignedForMonth(db, cursor);
+        rta += incomeInflowForMonth(db, cursor) - asg;
+        cursor = ymOffset(cursor, 1);
+      }
+      income = round(incomeInflowForMonth(db, month));
+      base = rta;
+    } else {
+      const txIncome = incomeInflowForMonth(db, month);
+      const expected = (db.prepare("SELECT COALESCE(SUM(amount), 0) AS v FROM income_sources WHERE is_active = 1").get() as { v: number }).v || 0;
+      income = round(Math.max(txIncome, expected));
+      base = income - totalBudgetedThisMonth;
     }
-    return { income: round(incomeInflowForMonth(db, month)), readyToAssign: round(rta) };
   }
 
-  const txIncome = incomeInflowForMonth(db, month);
-  const expected = (db.prepare("SELECT COALESCE(SUM(amount), 0) AS v FROM income_sources WHERE is_active = 1").get() as { v: number }).v || 0;
-  const income = round(Math.max(txIncome, expected));
-  return { income, readyToAssign: round(income - totalBudgetedThisMonth) };
+  return { income, readyToAssign: round(base - futureCommitted) };
 }
 
 export function daysInMonth(month: string): number {
@@ -88,6 +101,47 @@ export function monthlyTargetEquivalent(amount: number, cadence: string, month: 
     case "monthly":
     default: return round(amount);
   }
+}
+
+// Age of Money (YNAB): average, over the last 10 outflows, of how old the money was when spent.
+// Each outflow is FIFO-matched against earlier inflows (oldest money spent first); when an outflow
+// draws from several inflow dates its age is the amount-weighted average. Transfers, starting
+// balances and reconciliations are excluded. Returns null when there are no outflows yet.
+export function ageOfMoney(db: ReturnType<typeof getDb>): number | null {
+  const rows = db
+    .prepare(
+      "SELECT date, amount FROM transactions WHERE payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' ORDER BY date ASC, id ASC"
+    )
+    .all() as { date: string; amount: number }[];
+
+  const buckets: { date: string; remaining: number }[] = [];
+  const ages: number[] = [];
+  const dayDiff = (from: string, to: string) => Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 86400000));
+
+  for (const r of rows) {
+    if (r.amount > 0) {
+      buckets.push({ date: r.date, remaining: r.amount });
+    } else if (r.amount < 0) {
+      let need = -r.amount;
+      let weighted = 0;
+      let covered = 0;
+      while (need > 0.0001 && buckets.length > 0) {
+        const b = buckets[0];
+        const take = Math.min(b.remaining, need);
+        weighted += take * dayDiff(b.date, r.date);
+        covered += take;
+        b.remaining -= take;
+        need -= take;
+        if (b.remaining <= 0.0001) buckets.shift();
+      }
+      // Money spent that no inflow covers (spending ahead of income) ages at 0 days
+      ages.push(covered > 0 ? weighted / covered : 0);
+    }
+  }
+
+  if (ages.length === 0) return null;
+  const last10 = ages.slice(-10);
+  return Math.round(last10.reduce((s, a) => s + a, 0) / last10.length);
 }
 
 function ymOffset(monthYM: string, offset: number): string {

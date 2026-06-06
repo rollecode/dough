@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
-import { monthBudgetNumbers, monthlyTargetEquivalent } from "@/lib/budget-math";
+import { monthBudgetNumbers, monthlyTargetEquivalent, ageOfMoney } from "@/lib/budget-math";
 
 interface CategoryRow {
   id: number;
@@ -178,6 +178,7 @@ export async function GET(request: Request) {
       income: combinedIncome,
       totalBudgeted: Math.round(totalBudgeted * 100) / 100,
       readyToAssign,
+      ageOfMoney: ageOfMoney(db),
     });
   } catch (error) {
     console.error("[budget] GET error:", error);
