@@ -158,20 +158,40 @@ export async function GET(request: Request) {
       };
     });
 
-    // Income side: YNAB cache fallback + expected sources, same model the dashboard uses
-    const ynabCache = db.prepare("SELECT data FROM ynab_cache WHERE id = 1").get() as { data: string } | undefined;
-    let realIncome = 0;
-    if (ynabCache) {
-      try { realIncome = JSON.parse(ynabCache.data).monthBudget?.income ?? 0; } catch {}
-    }
-    const expectedRows = db.prepare("SELECT COALESCE(SUM(amount), 0) AS v FROM income_sources WHERE is_active = 1").get() as { v: number };
-    const expectedIncome = expectedRows.v || 0;
-    const combinedIncome = Math.max(realIncome, expectedIncome);
-
+    // Income & Ready-to-Assign, per the viewed month.
+    // In YNAB mode we trust YNAB's own figures for that month: it computes Ready-to-Assign
+    // cumulatively (prior-month leftover rolls forward, with all its rules). Computing it
+    // from local data alone is wrong here because local assigned history is only seeded for
+    // recent months while income history goes back further, which would inflate it massively.
+    // We adjust YNAB's number only by any divergence the user introduced by editing this
+    // month's assigned amounts locally. In local mode (no YNAB month) we use a per-month
+    // model: inflows tagged to Ready to Assign, with recurring income sources as a floor.
     const totalBudgeted = rows.reduce((s, r) => s + r.budgeted, 0);
-    const readyToAssign = Math.round((combinedIncome - totalBudgeted) * 100) / 100;
+    const ynabMonth = db
+      .prepare("SELECT income, budgeted, to_be_budgeted FROM ynab_month_budget WHERE month = ?")
+      .get(month) as { income: number; budgeted: number; to_be_budgeted: number } | undefined;
 
-    console.debug("[budget] Month", month, "categories", rows.length, "income", combinedIncome, "budgeted", totalBudgeted);
+    let combinedIncome: number;
+    let readyToAssign: number;
+    if (ynabMonth) {
+      combinedIncome = Math.round(ynabMonth.income * 100) / 100;
+      const localDivergence = Math.round((totalBudgeted - ynabMonth.budgeted) * 100) / 100;
+      readyToAssign = Math.round((ynabMonth.to_be_budgeted - localDivergence) * 100) / 100;
+    } else {
+      const start = `${month}-01`;
+      const [yy, mm] = month.split("-").map(Number);
+      const end = `${month}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}`;
+      const txIncome = (db
+        .prepare(
+          "SELECT COALESCE(SUM(amount), 0) AS v FROM transactions WHERE amount > 0 AND (category = 'Inflow: Ready to Assign' OR category LIKE 'Inflow%') AND date >= ? AND date <= ?"
+        )
+        .get(start, end) as { v: number }).v || 0;
+      const expectedIncome = (db.prepare("SELECT COALESCE(SUM(amount), 0) AS v FROM income_sources WHERE is_active = 1").get() as { v: number }).v || 0;
+      combinedIncome = Math.round(Math.max(txIncome, expectedIncome) * 100) / 100;
+      readyToAssign = Math.round((combinedIncome - totalBudgeted) * 100) / 100;
+    }
+
+    console.debug("[budget] Month", month, "categories", rows.length, "income", combinedIncome, "budgeted", totalBudgeted, "rta", readyToAssign, "mode", ynabMonth ? "ynab" : "local");
 
     return NextResponse.json({
       month,

@@ -20,6 +20,8 @@
 * Count refunds and other inflows toward a category so available reflects them like YNAB
 * Rewrite a category's transaction history when it is renamed so its activity is not lost
 * Cap move money and cover overspending at the source category's available balance
+* Base Ready to Assign on the viewed month so prior-month leftover carries forward instead of vanishing
+* Use YNAB's own per-month Ready to Assign and income, adjusted for local assignment edits; fall back to a per-month income model without YNAB
 * Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
