@@ -106,6 +106,40 @@ systemctl --user enable dough
 systemctl --user start dough
 ```
 
+### Periodic Synci sync (systemd timer)
+
+Synci sync is idempotent (it skips anything already imported or added manually), so it is safe to
+run on a timer. Set a `cron_secret` household setting, then install a service + timer that polls it:
+
+```bash
+# ~/.config/systemd/user/dough-synci.service
+[Unit]
+Description=Dough Synci sync
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -fsS -X POST http://127.0.0.1:3001/api/synci/sync -H "X-Cron-Secret: YOUR_CRON_SECRET"
+```
+
+```bash
+# ~/.config/systemd/user/dough-synci.timer
+[Unit]
+Description=Run Dough Synci sync every 30 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+systemctl --user enable --now dough-synci.timer
+systemctl --user list-timers dough-synci.timer   # verify it is scheduled
+```
+
 ### Backups
 
 The SQLite database lives at `data/dough.db`. Back it up regularly:

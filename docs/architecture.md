@@ -135,14 +135,16 @@ Claude CLI invoked via `spawn` with Opus model. Features:
 
 ### Synci integration
 
-Polls Synci REST API every 30 minutes via systemd timer:
+Polls Synci REST API every 30 minutes via systemd timer (see setup.md). Per mapped bank account:
 
-1. Fetches transactions for mapped bank accounts
-2. Matches positive amounts against income source patterns
-3. Creates real YNAB transaction with proper ID
-4. Updates local account balance
-5. Marks income as received in monthly_matches
-6. Deduplicates via synci_processed table
+1. Fetches transactions for the account
+2. Attributes each to the account it actually arrived on (the polled account's mapping wins over an income source's configured account)
+3. Local mode: imports every transaction (income and expense); YNAB mode: income only (YNAB imports the rest from the bank)
+4. Skips anything already added manually (same account, amount and date) so it never duplicates
+5. Auto-categorizes freshly imported expenses with the fast AI path (shared categorizer)
+6. Auto-pairs opposite-sign equal-magnitude transactions on different accounts within 2 days as transfers
+7. Matches positive amounts against income source patterns; marks income received in monthly_matches
+8. Updates local account balances; deduplicates re-imports via the synci_processed table
 
 ### Authentication flow
 
