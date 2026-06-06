@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon } from "lucide-react";
 import { F } from "@/components/ui/f";
 import {
   Sheet,
@@ -34,6 +34,7 @@ interface BudgetCategory {
   group_name: string;
   description: string;
   is_active: number;
+  snoozed: number;
   budgeted: number;
   activity: number;
   carryover: number;
@@ -108,6 +109,7 @@ export default function BudgetPage() {
   const [localGroups, setLocalGroups] = useState<{ key: string; label: string; items: BudgetCategory[] }[]>([]);
   const [bdrag, setBdrag] = useState<{ type: "row" | "group"; groupKey: string; index: number } | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [showSnoozed, setShowSnoozed] = useState(false);
   const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
   const addCatRef = useRef<HTMLFormElement>(null);
 
@@ -138,7 +140,7 @@ export default function BudgetPage() {
     if (!data?.categories) { setLocalGroups([]); return; }
     const map = new Map<string, { key: string; label: string; items: BudgetCategory[] }>();
     for (const c of data.categories) {
-      if (!c.is_active) continue;
+      if (!c.is_active || c.snoozed) continue;
       const key = c.group_name || "";
       if (!map.has(key)) map.set(key, { key, label: key || (locale === "fi" ? "Muut" : "Other"), items: [] });
       map.get(key)!.items.push(c);
@@ -354,6 +356,19 @@ export default function BudgetPage() {
     }
   };
 
+  const snoozeCategory = async (id: number, on: boolean) => {
+    try {
+      await fetch("/api/budget/snooze", {
+        method: on ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category_id: id, month }),
+      });
+      load(month);
+    } catch (err) {
+      console.error("[budget] Snooze category error:", err);
+    }
+  };
+
   if (loading && !data) {
     return <div className="page-loading"><Loader2 className="page-loading-spinner animate-spin" /></div>;
   }
@@ -495,6 +510,26 @@ export default function BudgetPage() {
           </Card>
         );
       })}
+
+      {(() => {
+        const snoozedCats = (data?.categories || []).filter((c) => c.is_active && c.snoozed);
+        if (snoozedCats.length === 0) return null;
+        return (
+          <Card className="list-card list-card-divider">
+            <button type="button" className="budget-hidden-toggle" onClick={() => setShowSnoozed((s) => !s)}>
+              <ChevronDown className={`budget-hidden-chevron ${showSnoozed ? "is-open" : ""}`} />
+              <span>{locale === "fi" ? "Torkutetut tälle kuulle" : "Snoozed this month"}</span>
+              <span className="budget-hidden-count">{snoozedCats.length}</span>
+            </button>
+            {showSnoozed && snoozedCats.map((c) => (
+              <button key={c.id} type="button" className="budget-hidden-row" onClick={() => setInspectorId(c.id)}>
+                <span className="budget-hidden-name">{c.name}</span>
+                {c.group_name && <span className="budget-hidden-group">{c.group_name}</span>}
+              </button>
+            ))}
+          </Card>
+        );
+      })()}
 
       {(() => {
         const hiddenCats = (data?.categories || []).filter((c) => !c.is_active);
@@ -683,6 +718,9 @@ export default function BudgetPage() {
                   })()}
 
                   <div className="insp-section insp-section-end">
+                    <Button type="button" variant="ghost" size="sm" className="insp-hide" onClick={() => snoozeCategory(c.id, !c.snoozed)}>
+                      <Moon className="icon-sm" />{c.snoozed ? (locale === "fi" ? "Poista torkku tältä kuulta" : "Unsnooze this month") : (locale === "fi" ? "Torkuta kategoria tälle kuulle" : "Snooze for this month")}
+                    </Button>
                     <Button type="button" variant="ghost" size="sm" className="insp-hide" onClick={() => toggleActive(c)}>
                       {c.is_active ? <><EyeOff className="icon-sm" />{locale === "fi" ? "Piilota kategoria" : "Hide category"}</> : <><Eye className="icon-sm" />{locale === "fi" ? "Näytä kategoria" : "Unhide category"}</>}
                     </Button>

@@ -312,6 +312,13 @@ function initializeDb(db: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS category_snoozes (
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      month TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (category_id, month)
+    );
+
     CREATE TABLE IF NOT EXISTS ticker_cache (
       symbol TEXT PRIMARY KEY,
       name TEXT DEFAULT '',

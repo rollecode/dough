@@ -11,6 +11,7 @@
 * Manage debts and investments on their own pages without YNAB: add them, edit balance, interest and contribution
 * Add a YNAB-style budget page with monthly allocations, carryover, targets and per-month snooze
 * Add a category inspector with inline-editable name, group and description, breakdown, target editing and hide
+* Snooze a category for the month into a collapsible snoozed group; its target stops counting that month
 * Add move money and cover overspending between categories
 * Add drag-and-drop reorder for categories and whole groups in the budget view
 * Make the budget page usable on small mobile screens (320-540px)

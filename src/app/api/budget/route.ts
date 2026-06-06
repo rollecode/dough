@@ -125,6 +125,9 @@ export async function GET(request: Request) {
       .all() as { category_id: number; monthly_amount: number; snooze_until_month: string }[];
     const targetMap = new Map(targets.map((t) => [t.category_id, t]));
 
+    const snoozedRows = db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[];
+    const snoozedSet = new Set(snoozedRows.map((r) => r.category_id));
+
     const rows = cats.map((c) => {
       const b = budgeted.get(c.id) || 0;
       const a = activity.get(c.name) || 0;
@@ -133,13 +136,16 @@ export async function GET(request: Request) {
       const t = targetMap.get(c.id);
       const target_monthly = t?.monthly_amount || 0;
       const snooze_until_month = t?.snooze_until_month || "";
-      const target_active = target_monthly > 0 && (!snooze_until_month || snooze_until_month < month);
+      const snoozed = snoozedSet.has(c.id);
+      // A snoozed-for-the-month category never nudges its target
+      const target_active = target_monthly > 0 && !snoozed && (!snooze_until_month || snooze_until_month < month);
       return {
         id: c.id,
         name: c.name,
         group_name: c.group_name,
         description: c.description || "",
         is_active: c.is_active,
+        snoozed: snoozed ? 1 : 0,
         budgeted: Math.round(b * 100) / 100,
         activity: Math.round(a * 100) / 100,
         carryover: carry,
