@@ -39,6 +39,7 @@
 * Show split transactions as one grouped row with the category breakdown; splits survive YNAB re-sync
 * Synci: attribute income to the account it actually arrived on, not the income source's configured account
 * Synci: skip importing a transaction that was already added manually (same account, amount and date)
+* Synci: auto-categorize freshly imported expenses with the fast AI path, sharing one categorizer with manual add
 * Make the AI model configurable per task in settings, tiered by demand
 * Route categorizing through fast, cheap Gemini 2.5 Flash when a key is set (thinking disabled, ~0.4s), falling back to Haiku via the CLI
 * Default demanding tasks (Dougie chat, receipt vision) to Claude Opus via the CLI, covered by the subscription

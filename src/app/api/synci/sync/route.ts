@@ -69,6 +69,7 @@ export async function POST(request: Request) {
 
     let totalMatched = 0;
     let totalImported = 0;
+    const toCategorize: { id: string; payee: string }[] = []; // newly imported expenses for AI categorizing
 
     for (const synciAccountId of mappedAccountIds) {
       console.info("[synci/sync] Polling account", synciAccountId, "mode:", mode);
@@ -126,6 +127,7 @@ export async function POST(request: Request) {
             db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?")
               .run(amount, localAccountId);
             totalImported++;
+            if (amount < 0) toCategorize.push({ id: synciTxId, payee });
             console.info("[synci/sync] Imported", payee, amount, "to account", localAccountId);
           }
           // Income-pattern matching for inflows so income sources get marked received
@@ -267,6 +269,25 @@ export async function POST(request: Request) {
         }
       }
       if (transfersPaired > 0) console.info("[synci/sync] Auto-paired", transfersPaired, "transfers");
+    }
+
+    // AI complement: categorize freshly imported expenses that Synci left uncategorized (skip
+    // anything that turned out to be a transfer). Best-effort, never blocks the sync result.
+    let categorized = 0;
+    if (mode === "local" && toCategorize.length > 0) {
+      const catNames = (db.prepare("SELECT name FROM categories WHERE is_active = 1").all() as { name: string }[]).map((c) => c.name);
+      if (catNames.length > 0) {
+        const { categorizePayee } = await import("@/lib/ai/categorize");
+        for (const item of toCategorize) {
+          const row = db.prepare("SELECT category, payee FROM transactions WHERE ynab_id = ?").get(item.id) as { category: string; payee: string } | undefined;
+          if (!row || row.category || row.payee.startsWith("Transfer")) continue;
+          try {
+            const cat = await categorizePayee(item.payee, catNames);
+            if (cat) { db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(cat, item.id); categorized++; }
+          } catch (err) { console.warn("[synci/sync] categorize failed for", item.payee, err); }
+        }
+        if (categorized > 0) console.info("[synci/sync] AI-categorized", categorized, "imported expenses");
+      }
     }
 
     // Update last sync time

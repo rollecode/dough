@@ -3,60 +3,11 @@ import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
-import { getAiModel, isGeminiModel, getGeminiKey } from "@/lib/ai/model";
-import { geminiText } from "@/lib/ai/gemini";
-import { spawn } from "child_process";
+import { categorizePayee } from "@/lib/ai/categorize";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-async function aiCategorize(payeeName: string, categories: string[]): Promise<string | null> {
-  const claudePath = process.env.CLAUDE_PATH || "claude";
-  const model = getAiModel("categorize");
-  const prompt = `Given the payee "${payeeName}", which category fits best from this list? Reply with ONLY the exact category name, nothing else.\n\nCategories:\n${categories.join("\n")}`;
-
-  // Routine/daily task: prefer the fast, cheap Gemini path when configured with a key.
-  if (isGeminiModel(model)) {
-    const key = getGeminiKey();
-    if (key) {
-      console.debug("[ynab/transaction] AI categorizing via", model, ":", payeeName);
-      const out = await geminiText(prompt, key, model);
-      const match = out && categories.find((c) => c.toLowerCase() === out.toLowerCase());
-      if (match) { console.info("[ynab/transaction] Gemini categorized as:", match); return match; }
-      console.debug("[ynab/transaction] Gemini returned unusable result, falling back to CLI:", out);
-    } else {
-      console.debug("[ynab/transaction] Gemini selected but no key; falling back to Haiku CLI");
-    }
-  }
-  // CLI path (Claude subscription). For a Gemini selection with no key, fall back to fast Haiku.
-  const cliModel = isGeminiModel(model) ? "haiku" : model;
-
-  try {
-    console.debug("[ynab/transaction] AI categorizing:", payeeName, "with CLI", cliModel);
-    const result = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", cliModel, "-"], { timeout: 30000 });
-      let stdout = "";
-      proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-      proc.on("close", (code: number) => {
-        if (code === 0 && stdout.trim()) resolve(stdout.trim());
-        else reject(new Error("AI categorization failed"));
-      });
-      proc.on("error", reject);
-      proc.stdin.write(prompt);
-      proc.stdin.end();
-    });
-
-    const match = categories.find((c) => c.toLowerCase() === result.toLowerCase());
-    if (match) {
-      console.info("[ynab/transaction] AI categorized as:", match);
-      return match;
-    }
-    console.debug("[ynab/transaction] AI returned unknown category:", result);
-    return null;
-  } catch (err) {
-    console.warn("[ynab/transaction] AI categorization error:", err);
-    return null;
-  }
-}
+const aiCategorize = categorizePayee;
 
 export async function POST(request: Request) {
   try {
