@@ -1084,6 +1084,10 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   const [coverOpen, setCoverOpen] = useState(false);
   const [moveOutOpen, setMoveOutOpen] = useState(false);
   const [moveOutAmount, setMoveOutAmount] = useState("");
+  const availCellRef = useRef<HTMLSpanElement>(null);
+  const [dropUp, setDropUp] = useState(false);
+  // Open the popover upward when there isn't room for it below (last rows near the viewport bottom)
+  const decideDrop = () => { const r = availCellRef.current?.getBoundingClientRect(); setDropUp(!!r && window.innerHeight - r.bottom < 300); };
   const [focused, setFocused] = useState(false);
   const [actOpen, setActOpen] = useState(false);
   const [actTxns, setActTxns] = useState<{ id: string; date: string; payee: string; amount: number; memo: string | null }[] | null>(null);
@@ -1255,10 +1259,10 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           <F v={0} />
         )}
       </span>
-      <span className="budget-num budget-avail-cell">
+      <span className="budget-num budget-avail-cell" ref={availCellRef}>
         {cat.available < -eps ? (
           <>
-            <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => setCoverOpen((o) => !o)} aria-label={locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"} aria-haspopup="menu" aria-expanded={coverOpen}>
+            <button type="button" className="budget-pill is-negative budget-pill-btn" onClick={() => { if (!coverOpen) decideDrop(); setCoverOpen((o) => !o); }} aria-label={locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"} aria-haspopup="menu" aria-expanded={coverOpen}>
               <F v={cat.available} />
             </button>
             {coverOpen && (() => {
@@ -1267,7 +1271,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
               return (
                 <>
                   <div className="budget-calc-backdrop" onClick={() => setCoverOpen(false)} />
-                  <div className="budget-cover-popover">
+                  <div className={`budget-cover-popover ${dropUp ? "is-up" : ""}`}>
                     <div className="budget-cover-title">
                       {locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"} <span className="budget-cover-amt"><F v={amount} s=" €" /></span>
                     </div>
@@ -1295,7 +1299,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           </>
         ) : cat.available > eps ? (
           <>
-            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { setMoveOutAmount(fmt(cat.available)); setMoveOutOpen((o) => !o); }} aria-label={locale === "fi" ? "Siirrä rahaa kategoriaan" : "Move money to a category"} aria-haspopup="menu" aria-expanded={moveOutOpen}>
+            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { if (!moveOutOpen) decideDrop(); setMoveOutAmount(fmt(cat.available)); setMoveOutOpen((o) => !o); }} aria-label={locale === "fi" ? "Siirrä rahaa kategoriaan" : "Move money to a category"} aria-haspopup="menu" aria-expanded={moveOutOpen}>
               <F v={cat.available} />
             </button>
             {moveOutOpen && (() => {
@@ -1304,7 +1308,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
               return (
                 <>
                   <div className="budget-calc-backdrop" onClick={() => setMoveOutOpen(false)} />
-                  <div className="budget-cover-popover">
+                  <div className={`budget-cover-popover ${dropUp ? "is-up" : ""}`}>
                     <div className="budget-cover-title">{locale === "fi" ? "Siirrä kategoriaan:" : "Move to category:"}</div>
                     <Input className="budget-moveout-amount" value={moveOutAmount} onChange={(e) => setMoveOutAmount(e.target.value)} inputMode="decimal" placeholder="0.00" aria-label={locale === "fi" ? "Summa" : "Amount"} />
                     <div className="budget-cover-list">

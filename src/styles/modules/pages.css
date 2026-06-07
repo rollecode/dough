@@ -463,6 +463,12 @@
   height: 2rem;
 }
 
+/* Flip the popover above the trigger when there is no room below */
+.budget-cover-popover.is-up {
+  top: auto;
+  bottom: calc(100% + 0.25rem);
+}
+
 .budget-cover-popover {
   position: absolute;
   top: calc(100% + 0.25rem);
