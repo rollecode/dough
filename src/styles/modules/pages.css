@@ -714,6 +714,14 @@
   .budget-grip { display: none; }
 }
 
+/* Keep the budget readable on wide screens: cap the column so the name field doesn't stretch
+   into a huge empty gap. Topbar, filters, table and chart all share this width. */
+.budget-page {
+  max-width: 56rem;
+  margin-inline: auto;
+  width: 100%;
+}
+
 /* Shared 4-column grid: name | assigned | activity | available */
 .budget-grid {
   display: grid;

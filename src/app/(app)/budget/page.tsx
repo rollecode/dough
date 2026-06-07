@@ -568,7 +568,7 @@ export default function BudgetPage() {
   }
 
   return (
-    <div className="page-stack">
+    <div className="page-stack budget-page">
       <div className="budget-topbar">
         <div className="budget-monthnav">
           <button type="button" className="budget-monthnav-arrow" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Previous month">
