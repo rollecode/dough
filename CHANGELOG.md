@@ -4,6 +4,7 @@
 * Hide the YNAB sync button live when YNAB is disconnected, without needing a refresh
 * Fix native select dropdown options being white on white in dark mode
 * Rename the auto-assign button to "Budjetoi automaattisesti" in Finnish
+* Move the Age of Money chart to the dashboard as a single instance
 * Add automatic local data mode that uses Dough's own data when YNAB is disconnected and YNAB when connected
 * AI features (chat, summaries, debt suggestion) work without YNAB by assembling context from local data
 * Hide YNAB sync buttons and the "synced from YNAB" labels when YNAB is disconnected
