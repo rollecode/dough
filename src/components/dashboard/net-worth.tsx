@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useLocale } from "@/lib/locale-context";
 import { F } from "@/components/ui/f";
-import { TrendingDown, Landmark, PiggyBank } from "lucide-react";
+import { TrendingDown, Landmark, PiggyBank, Clock } from "lucide-react";
 
 interface Account {
   id: string;
@@ -17,7 +18,12 @@ interface NetWorthProps {
 }
 
 export function NetWorth({ accounts }: NetWorthProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const [ageOfMoney, setAgeOfMoney] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/age-of-money").then((r) => r.json()).then((d) => { if (typeof d.ageOfMoney === "number") setAgeOfMoney(d.ageOfMoney); }).catch(() => {});
+  }, []);
 
   const investments = accounts.filter((a) => a.type === "otherAsset");
   const debts = accounts.filter((a) => a.type === "otherDebt");
@@ -73,6 +79,20 @@ export function NetWorth({ accounts }: NetWorthProps) {
             </div>
           </div>
         </Card>
+
+        {ageOfMoney != null && (
+          <Card className="net-worth-card" title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
+            <div className="net-worth-card-row">
+              <div className="net-worth-card-icon" data-color="primary">
+                <Clock />
+              </div>
+              <div>
+                <p className="net-worth-card-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</p>
+                <p className="net-worth-card-value">{ageOfMoney} {locale === "fi" ? "pv" : "days"}</p>
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       {investments.length > 0 && (

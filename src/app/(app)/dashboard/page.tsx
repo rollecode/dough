@@ -16,7 +16,6 @@ import { NetWorth } from "@/components/dashboard/net-worth";
 import { EntryReminder } from "@/components/dashboard/entry-reminder";
 import { PersonalGreeting } from "@/components/dashboard/personal-greeting";
 import { SpendingFlow } from "@/components/dashboard/spending-flow";
-import { AgeOfMoneyChart } from "@/components/dashboard/age-of-money-chart";
 import { SavingsStreak } from "@/components/dashboard/savings-streak";
 import { SpendingHeatmap } from "@/components/dashboard/spending-heatmap";
 import { SpendingTrends } from "@/components/dashboard/spending-trends";
@@ -667,8 +666,6 @@ export default function DashboardPage() {
       </div>
 
       <NetWorth accounts={data.summary.accounts} />
-
-      <AgeOfMoneyChart />
     </div>
   );
 }
