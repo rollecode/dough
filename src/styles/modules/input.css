@@ -54,6 +54,14 @@
 
 .dark .input {
   background-color: color-mix(in srgb, var(--input) 30%, transparent);
+  /* So native dropdown option lists (and pickers) render dark with light text, not white-on-white */
+  color-scheme: dark;
+}
+
+/* Native select options: explicit colours so the open dropdown is always readable */
+select.input option {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
 }
 
 /* Native date/time pickers follow the theme so the calendar icon is not black on dark */

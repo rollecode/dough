@@ -609,7 +609,7 @@ export default function BudgetPage() {
         ))}
         <div className="budget-autoassign-wrap">
           <button type="button" className="budget-filter budget-autoassign-btn" onClick={() => setAutoOpen((o) => !o)}>
-            <Sparkles className="icon-xs" />{locale === "fi" ? "Automaatti" : "Auto-assign"}
+            <Sparkles className="icon-xs" />{locale === "fi" ? "Budjetoi automaattisesti" : "Auto-assign"}
           </button>
           {autoOpen && (
             <>

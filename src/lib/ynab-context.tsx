@@ -130,6 +130,19 @@ export function YnabProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Re-read household settings to learn whether YNAB is connected. Cheap (no YNAB API call),
+  // so it is safe to run on settings changes — this is what hides the Sync button the moment
+  // YNAB is disconnected, without needing a page refresh.
+  const checkConnection = useCallback(async () => {
+    try {
+      const d = await (await fetch("/api/household")).json();
+      if (d.settings?.saving_rate) setSavingRate(parseFloat(d.settings.saving_rate));
+      setConnected(!!(d.settings?.ynab_connected && d.settings?.ynab_budget_id));
+    } catch (err) {
+      console.error("[ynab-context] Failed to check connection:", err);
+    }
+  }, []);
+
   useEffect(() => {
     console.debug("[ynab-context] Loading cached data + checking connection");
 
@@ -140,33 +153,20 @@ export function YnabProvider({ children }: { children: ReactNode }) {
         if (cached.success && cached.data) {
           console.info("[ynab-context] Loaded cached data from", cached.data.syncedAt);
           setData(cached.data);
-          setLoading(false);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
 
-    fetch("/api/household")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.settings?.saving_rate) {
-          setSavingRate(parseFloat(d.settings.saving_rate));
-        }
-        if (d.settings?.ynab_connected && d.settings?.ynab_budget_id) {
-          setConnected(true);
-          setLoading(false);
-        } else {
-          console.debug("[ynab-context] YNAB not connected or no budget ID");
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.error("[ynab-context] Failed to check connection:", err);
-        setLoading(false);
-      });
-  }, [sync]);
+    checkConnection();
+  }, [checkConnection]);
 
-  // SSE: don't auto re-sync on events (causes YNAB rate limiting)
-  // Users should manually sync via the sync button
+  // Re-check connection when settings change (e.g. YNAB connected/disconnected) so YNAB-only
+  // controls appear or disappear live. We deliberately do NOT auto-sync on events (rate limits).
+  useEvent("data:updated", useCallback((d: unknown) => {
+    const source = (d as { source?: string })?.source;
+    if (source === "settings-changed" || source === "ynab-sync") checkConnection();
+  }, [checkConnection]));
 
   return (
     <YnabContext.Provider value={{ data, loading, error, connected, savingRate, sync, refresh }}>
