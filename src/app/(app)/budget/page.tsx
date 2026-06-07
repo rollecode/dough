@@ -148,6 +148,7 @@ export default function BudgetPage() {
   const [showSnoozed, setShowSnoozed] = useState(false);
   const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
   const [autoOpen, setAutoOpen] = useState(false);
+  const [autoAmounts, setAutoAmounts] = useState<{ underfunded: number; last_assigned: number; last_spent: number } | null>(null);
   const addCatRef = useRef<HTMLFormElement>(null);
 
   const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
@@ -522,6 +523,17 @@ export default function BudgetPage() {
     }
   };
 
+  // Preview how much each auto-assign mode would assign (already capped at Ready to Assign)
+  const loadAutoAmounts = async () => {
+    setAutoAmounts(null);
+    try {
+      const d = await (await fetch(`/api/budget/auto-assign?month=${month}`)).json();
+      setAutoAmounts({ underfunded: d.underfunded ?? 0, last_assigned: d.last_assigned ?? 0, last_spent: d.last_spent ?? 0 });
+    } catch {
+      setAutoAmounts({ underfunded: 0, last_assigned: 0, last_spent: 0 });
+    }
+  };
+
   // Auto-assign (YNAB Quick Budget): fund to targets, copy last month's assigned, or last month's spending
   const autoAssign = async (mode: "underfunded" | "last_assigned" | "last_spent") => {
     try {
@@ -616,16 +628,27 @@ export default function BudgetPage() {
           </button>
         ))}
         <div className="budget-autoassign-wrap">
-          <button type="button" className="budget-filter budget-autoassign-btn" onClick={() => setAutoOpen((o) => !o)}>
+          <button type="button" className="budget-filter budget-autoassign-btn" onClick={() => { const open = !autoOpen; setAutoOpen(open); if (open) loadAutoAmounts(); }}>
             <Sparkles className="icon-xs" />{locale === "fi" ? "Budjetoi automaattisesti" : "Auto-assign"}
           </button>
           {autoOpen && (
             <>
               <div className="budget-autoassign-backdrop" onClick={() => setAutoOpen(false)} />
               <div className="budget-autoassign-menu">
-                <button type="button" onClick={() => autoAssign("underfunded")}>{locale === "fi" ? "Täytä tavoitteisiin" : "Fund to targets"}</button>
-                <button type="button" onClick={() => autoAssign("last_assigned")}>{locale === "fi" ? "Kuten viime kuussa" : "Assigned last month"}</button>
-                <button type="button" onClick={() => autoAssign("last_spent")}>{locale === "fi" ? "Viime kuun toteuma" : "Spent last month"}</button>
+                {([
+                  ["underfunded", locale === "fi" ? "Tavoitteet täyteen" : "Fund to targets"],
+                  ["last_assigned", locale === "fi" ? "Kuten viime kuussa" : "Assigned last month"],
+                  ["last_spent", locale === "fi" ? "Viime kuun toteuma" : "Spent last month"],
+                ] as const).map(([mode, label]) => {
+                  const amt = autoAmounts?.[mode] ?? null;
+                  const disabled = amt !== null && amt <= 0;
+                  return (
+                    <button key={mode} type="button" disabled={disabled} onClick={() => autoAssign(mode)}>
+                      <span>{label}</span>
+                      <span className="budget-autoassign-amt">{amt !== null ? <F v={amt} s=" €" /> : "…"}</span>
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}

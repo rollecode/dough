@@ -379,6 +379,10 @@
 }
 
 .budget-autoassign-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   text-align: left;
   padding: 0.5rem 0.625rem;
   border: none;
@@ -389,8 +393,18 @@
   cursor: pointer;
 }
 
-.budget-autoassign-menu button:hover {
+.budget-autoassign-menu button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--muted) 50%, transparent);
+}
+
+.budget-autoassign-menu button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.budget-autoassign-amt {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Cover-overspending popout anchored to the red available amount */
