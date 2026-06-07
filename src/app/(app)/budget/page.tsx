@@ -419,6 +419,16 @@ export default function BudgetPage() {
     }
   };
 
+  // Move available money OUT of a category to another category, or back to Ready to Assign
+  const moveOut = async (cat: BudgetCategory, dest: number | "rta", amount: number) => {
+    if (!(amount > 0)) return;
+    if (dest === "rta") {
+      await saveBudgeted(cat.id, Math.round((cat.budgeted - amount) * 100) / 100);
+    } else {
+      await moveMoney(cat.id, dest, amount);
+    }
+  };
+
   const snoozeTarget = async (catId: number) => {
     try {
       await fetch("/api/targets", {
@@ -722,6 +732,7 @@ export default function BudgetPage() {
                         siblings={data?.categories || []}
                         readyToAssign={data?.readyToAssign || 0}
                         onCover={(source, amount) => coverOverspend(c, source, amount)}
+                        onMoveOut={(dest, amount) => moveOut(c, dest, amount)}
                       />
                     </div>
                   </Fragment>
@@ -1025,7 +1036,7 @@ export default function BudgetPage() {
   );
 }
 
-function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, readyToAssign, onCover }: {
+function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, readyToAssign, onCover, onMoveOut }: {
   cat: BudgetCategory;
   saving: boolean;
   onSave: (value: number) => void;
@@ -1036,11 +1047,14 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   siblings: BudgetCategory[];
   readyToAssign: number;
   onCover: (source: number | "rta", amount: number) => void;
+  onMoveOut: (dest: number | "rta", amount: number) => void;
 }) {
   const [draft, setDraft] = useState<string>(cat.budgeted ? fmt(cat.budgeted) : "");
   const [invalid, setInvalid] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
+  const [moveOutOpen, setMoveOutOpen] = useState(false);
+  const [moveOutAmount, setMoveOutAmount] = useState("");
   const [focused, setFocused] = useState(false);
   const [actOpen, setActOpen] = useState(false);
   const [actTxns, setActTxns] = useState<{ id: string; date: string; payee: string; amount: number; memo: string | null }[] | null>(null);
@@ -1244,6 +1258,36 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                       {readyToAssign <= 0.005 && sources.length === 0 && (
                         <p className="budget-cover-empty">{locale === "fi" ? "Ei rahaa katettavaksi" : "No money available to cover"}</p>
                       )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </>
+        ) : cat.available > eps ? (
+          <>
+            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { setMoveOutAmount(fmt(cat.available)); setMoveOutOpen((o) => !o); }} aria-label={locale === "fi" ? "Siirrä rahaa kategoriaan" : "Move money to a category"} aria-haspopup="menu" aria-expanded={moveOutOpen}>
+              <F v={cat.available} />
+            </button>
+            {moveOutOpen && (() => {
+              const dests = siblings.filter((o) => o.is_active && o.id !== cat.id);
+              const amt = evalExpression(moveOutAmount) ?? 0;
+              return (
+                <>
+                  <div className="budget-calc-backdrop" onClick={() => setMoveOutOpen(false)} />
+                  <div className="budget-cover-popover">
+                    <div className="budget-cover-title">{locale === "fi" ? "Siirrä kategoriaan:" : "Move to category:"}</div>
+                    <Input className="budget-moveout-amount" value={moveOutAmount} onChange={(e) => setMoveOutAmount(e.target.value)} inputMode="decimal" placeholder="0.00" aria-label={locale === "fi" ? "Summa" : "Amount"} />
+                    <div className="budget-cover-list">
+                      <button type="button" className="budget-cover-item" onClick={() => { if (amt > 0) onMoveOut("rta", amt); setMoveOutOpen(false); }}>
+                        <span className="budget-cover-name">{locale === "fi" ? "Budjetoimatta" : "Ready to assign"}</span>
+                      </button>
+                      {dests.map((o) => (
+                        <button key={o.id} type="button" className="budget-cover-item" onClick={() => { if (amt > 0) onMoveOut(o.id, amt); setMoveOutOpen(false); }}>
+                          <span className="budget-cover-name">{o.name}</span>
+                          <span className="budget-cover-src"><F v={o.available} s=" €" /></span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </>

@@ -409,6 +409,11 @@
   filter: brightness(1.15);
 }
 
+.budget-moveout-amount {
+  margin: 0.375rem 0 0.5rem;
+  height: 2rem;
+}
+
 .budget-cover-popover {
   position: absolute;
   top: calc(100% + 0.25rem);
