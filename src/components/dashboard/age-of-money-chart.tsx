@@ -11,15 +11,28 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 export function AgeOfMoneyChart() {
   const { locale } = useLocale();
   const [history, setHistory] = useState<{ month: string; age: number }[]>([]);
+  const [current, setCurrent] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/age-of-money")
       .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d.history)) setHistory(d.history); })
+      .then((d) => { if (Array.isArray(d.history)) setHistory(d.history); if (typeof d.ageOfMoney === "number") setCurrent(d.ageOfMoney); })
       .catch(() => {});
   }, []);
 
-  if (history.length < 2) return null;
+  // Without enough history for a chart (e.g. local mode), still show the current figure as a stat
+  if (history.length < 2) {
+    if (current == null) return null;
+    return (
+      <Card className="list-card budget-aom-chart">
+        <div className="budget-aom-chart-head">
+          <span className="insp-section-title">{locale === "fi" ? "Rahan ikä" : "Age of money"}</span>
+          <span className="budget-aom-stat">{current} {locale === "fi" ? "pv" : "days"}</span>
+        </div>
+        <p className="settings-help">{locale === "fi" ? "Arvio: kauanko rahasi riittää nykyisellä kulutuksella." : "Estimate: how long your money lasts at the current spending rate."}</p>
+      </Card>
+    );
+  }
 
   const monthLabel = (m: string) => { const [y, mm] = m.split("-"); return `${parseInt(mm, 10)}/${y.slice(2)}`; };
   const hist = history.map((h) => ({ ...h, label: monthLabel(h.month) }));

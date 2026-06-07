@@ -84,6 +84,19 @@ export function monthBudgetNumbers(
   return { income, readyToAssign: round(base - futureCommitted) };
 }
 
+// "How long your money lasts": cash on hand divided by recent average daily spending. A reliable
+// local proxy for Age of Money when YNAB's own figure isn't available (YNAB's exact FIFO method
+// can't be faithfully reproduced from local data). Returns null when there's no spending to gauge.
+export function moneyLastsDays(db: ReturnType<typeof getDb>): number | null {
+  const cash = (db.prepare("SELECT COALESCE(SUM(balance), 0) AS v FROM ynab_accounts WHERE type IN ('checking','savings') AND closed = 0").get() as { v: number }).v || 0;
+  const spent = (db
+    .prepare("SELECT COALESCE(SUM(-amount), 0) AS v FROM transactions WHERE amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' AND date >= date('now', '-30 days')")
+    .get() as { v: number }).v || 0;
+  if (spent <= 0 || cash <= 0) return null;
+  const perDay = spent / 30;
+  return Math.max(0, Math.round(cash / perDay));
+}
+
 export function daysInMonth(month: string): number {
   const [y, m] = month.split("-").map(Number);
   return new Date(y, m, 0).getDate();

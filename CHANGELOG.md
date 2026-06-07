@@ -10,6 +10,7 @@
 * Make the Budjetoimatta chip itself open the Assign dropdown (with amounts), YNAB-style
 * Fix the horizontal scrollbar in the budget cover and move popovers
 * Flip the budget cover and move popovers upward when there's no room below
+* Show a local "money lasts X days" figure (cash on hand divided by recent daily spend) when YNAB's age of money is unavailable, so it works without YNAB
 * Add automatic local data mode that uses Dough's own data when YNAB is disconnected and YNAB when connected
 * AI features (chat, summaries, debt suggestion) work without YNAB by assembling context from local data
 * Hide YNAB sync buttons and the "synced from YNAB" labels when YNAB is disconnected

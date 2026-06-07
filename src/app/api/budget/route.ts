@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
-import { monthBudgetNumbers, monthlyTargetEquivalent } from "@/lib/budget-math";
+import { monthBudgetNumbers, monthlyTargetEquivalent, moneyLastsDays } from "@/lib/budget-math";
 
 interface CategoryRow {
   id: number;
@@ -174,7 +174,8 @@ export async function GET(request: Request) {
     // a naive local FIFO cannot). Fall back to the most recent month that has it.
     const aomForMonth = db.prepare("SELECT age_of_money AS v FROM ynab_month_budget WHERE month = ? AND age_of_money IS NOT NULL").get(month) as { v: number } | undefined;
     const aomLatest = aomForMonth ? undefined : (db.prepare("SELECT age_of_money AS v FROM ynab_month_budget WHERE age_of_money IS NOT NULL ORDER BY month DESC LIMIT 1").get() as { v: number } | undefined);
-    const ageOfMoney = aomForMonth?.v ?? aomLatest?.v ?? null;
+    // Prefer YNAB's own age of money; otherwise fall back to a local "money lasts X days" runway
+    const ageOfMoney = aomForMonth?.v ?? aomLatest?.v ?? moneyLastsDays(db);
     const ageOfMoneyHistory = db.prepare("SELECT month, age_of_money AS age FROM ynab_month_budget WHERE age_of_money IS NOT NULL ORDER BY month ASC").all() as { month: string; age: number }[];
 
     console.debug("[budget] Month", month, "categories", rows.length, "income", combinedIncome, "budgeted", totalBudgeted, "rta", readyToAssign, "aom", ageOfMoney);

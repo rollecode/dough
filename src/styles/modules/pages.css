@@ -290,6 +290,13 @@
   font-size: 0.75rem;
 }
 
+.budget-aom-stat {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--chart-3, #f59e0b);
+  font-variant-numeric: tabular-nums;
+}
+
 .budget-ready-box.is-positive {
   background: color-mix(in srgb, var(--positive) 16%, transparent);
   color: var(--positive);
