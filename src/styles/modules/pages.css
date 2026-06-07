@@ -253,13 +253,19 @@
 
 .budget-ready-box {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.625rem;
   line-height: 1.1;
-  padding: 0.5rem 0.8rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.8rem;
   border-radius: 0.75rem;
   white-space: nowrap;
+}
+
+.budget-ready-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .budget-aom-box {
@@ -327,32 +333,31 @@
   opacity: 0.8;
 }
 
-/* Budjetoimatta chip + a visible "Budjetoi" Assign button beside it (YNAB-style) */
+/* The "Budjetoi" Assign button sits inside the state-coloured Budjetoimatta box (YNAB-style),
+   as a translucent button in the same colour family (currentColor = the box's text colour) */
 .budget-ready-wrap {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: inline-flex;
 }
 
 .budget-assign-trigger {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.4375rem 0.75rem;
-  border: none;
-  border-radius: 0.625rem;
-  background: var(--primary);
-  color: #fff;
+  padding: 0.3125rem 0.5rem 0.3125rem 0.625rem;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: opacity 150ms;
+  transition: background-color 150ms;
 }
 
 .budget-assign-trigger:hover {
-  opacity: 0.9;
+  background: color-mix(in srgb, currentColor 24%, transparent);
 }
 
 .budget-assign-trigger svg {
