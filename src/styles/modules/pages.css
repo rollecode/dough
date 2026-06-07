@@ -2410,6 +2410,7 @@
 /* Text colors used across pages */
 .text-positive { color: var(--positive); white-space: nowrap; }
 .text-negative { color: var(--negative); white-space: nowrap; }
+.text-warning { color: #eab308; white-space: nowrap; }
 .text-chart-3 { color: var(--chart-3); white-space: nowrap; }
 .text-foreground { color: var(--foreground); }
 .text-muted { color: var(--muted-foreground); }

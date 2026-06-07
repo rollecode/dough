@@ -14,12 +14,6 @@
   border-color: transparent;
 }
 
-@media (min-width: 1024px) {
-  .card.net-worth-hero {
-    grid-column: span 1;
-  }
-}
-
 .net-worth-hero-label {
   font-size: 0.8125rem;
   font-weight: 500;

@@ -80,19 +80,22 @@ export function NetWorth({ accounts }: NetWorthProps) {
           </div>
         </Card>
 
-        {ageOfMoney != null && (
-          <Card className="net-worth-card" title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
-            <div className="net-worth-card-row">
-              <div className="net-worth-card-icon" data-color="primary">
-                <Clock />
+        {ageOfMoney != null && (() => {
+          const tone = ageOfMoney >= 14 ? "text-positive" : ageOfMoney >= 7 ? "text-warning" : "text-negative";
+          return (
+            <Card className="net-worth-card" title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
+              <div className="net-worth-card-row">
+                <div className="net-worth-card-icon" data-color="primary">
+                  <Clock />
+                </div>
+                <div>
+                  <p className="net-worth-card-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</p>
+                  <p className={`net-worth-card-value ${tone}`}>{ageOfMoney} {locale === "fi" ? "pv" : "days"}</p>
+                </div>
               </div>
-              <div>
-                <p className="net-worth-card-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</p>
-                <p className="net-worth-card-value">{ageOfMoney} {locale === "fi" ? "pv" : "days"}</p>
-              </div>
-            </div>
-          </Card>
-        )}
+            </Card>
+          );
+        })()}
       </div>
 
       {investments.length > 0 && (
