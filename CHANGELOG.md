@@ -11,6 +11,9 @@
 * Fix the horizontal scrollbar in the budget cover and move popovers
 * Flip the budget cover and move popovers upward when there's no room below
 * Show a local "money lasts X days" figure (cash on hand divided by recent daily spend) when YNAB's age of money is unavailable, so it works without YNAB
+* Show Age of Money as a card in the dashboard net worth grid instead of a separate chart
+* Add a visible Budjetoi button beside the Budjetoimatta chip instead of a faint chevron
+* Show a pointer cursor on clickable available values
 * Add automatic local data mode that uses Dough's own data when YNAB is disconnected and YNAB when connected
 * AI features (chat, summaries, debt suggestion) work without YNAB by assembling context from local data
 * Hide YNAB sync buttons and the "synced from YNAB" labels when YNAB is disconnected

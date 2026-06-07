@@ -595,18 +595,19 @@ export default function BudgetPage() {
           return (
             <div className="budget-center">
               <div className="budget-ready-wrap">
+                <div className={`budget-ready-box ${state}`}>
+                  <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+                  <span className="budget-ready-label">{label}</span>
+                </div>
                 <button
                   type="button"
-                  className={`budget-ready-box ${state} budget-ready-btn`}
+                  className="budget-assign-trigger"
                   onClick={() => { const open = !autoOpen; setAutoOpen(open); if (open) loadAutoAmounts(); }}
                   aria-haspopup="menu"
                   aria-expanded={autoOpen}
                 >
-                  <span className="budget-ready-col">
-                    <span className="budget-ready-value"><F v={rta} s=" €" /></span>
-                    <span className="budget-ready-label">{label}</span>
-                  </span>
-                  <ChevronDown className="budget-ready-caret" />
+                  {locale === "fi" ? "Budjetoi" : "Assign"}
+                  <ChevronDown className="icon-xs" />
                 </button>
                 {autoOpen && (
                   <>

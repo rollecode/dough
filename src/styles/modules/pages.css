@@ -327,38 +327,42 @@
   opacity: 0.8;
 }
 
-/* The Budjetoimatta chip doubles as the Assign trigger (YNAB-style) */
+/* Budjetoimatta chip + a visible "Budjetoi" Assign button beside it (YNAB-style) */
 .budget-ready-wrap {
   position: relative;
-}
-
-.budget-ready-btn {
-  flex-direction: row;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.budget-assign-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4375rem 0.75rem;
   border: none;
-  font: inherit;
+  border-radius: 0.625rem;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+  transition: opacity 150ms;
 }
 
-.budget-ready-col {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.1;
+.budget-assign-trigger:hover {
+  opacity: 0.9;
 }
 
-.budget-ready-caret {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  opacity: 0.7;
+.budget-assign-trigger svg {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .budget-assign-menu {
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
+  left: auto;
+  right: 0;
   min-width: 15rem;
 }
 
@@ -452,6 +456,10 @@
 /* Cover-overspending popout anchored to the red available amount */
 .budget-avail-cell {
   position: relative;
+}
+
+.budget-avail-cell button {
+  cursor: pointer;
 }
 
 .budget-pill-btn {
