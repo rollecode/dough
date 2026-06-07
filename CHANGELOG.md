@@ -1,5 +1,6 @@
 ### 2.12.0: 2026-06-05
 
+* Run the dev server on port 3030 by default to avoid colliding with Mastodon on port 3000
 * Add automatic local data mode that uses Dough's own data when YNAB is disconnected and YNAB when connected
 * AI features (chat, summaries, debt suggestion) work without YNAB by assembling context from local data
 * Hide YNAB sync buttons and the "synced from YNAB" labels when YNAB is disconnected
