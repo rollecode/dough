@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2 } from "lucide-react";
 import { F } from "@/components/ui/f";
 import {
   Sheet,
@@ -594,12 +594,44 @@ export default function BudgetPage() {
             : (locale === "fi" ? "Budjetoimatta" : "Ready to assign");
           return (
             <div className="budget-center">
-              <div className={`budget-ready-box ${state}`}>
-                <span className="budget-ready-value"><F v={rta} s=" €" /></span>
-                <span className="budget-ready-label">{label}</span>
+              <div className="budget-ready-wrap">
+                <button
+                  type="button"
+                  className={`budget-ready-box ${state} budget-ready-btn`}
+                  onClick={() => { const open = !autoOpen; setAutoOpen(open); if (open) loadAutoAmounts(); }}
+                  aria-haspopup="menu"
+                  aria-expanded={autoOpen}
+                >
+                  <span className="budget-ready-col">
+                    <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+                    <span className="budget-ready-label">{label}</span>
+                  </span>
+                  <ChevronDown className="budget-ready-caret" />
+                </button>
+                {autoOpen && (
+                  <>
+                    <div className="budget-autoassign-backdrop" onClick={() => setAutoOpen(false)} />
+                    <div className="budget-autoassign-menu budget-assign-menu">
+                      {([
+                        ["underfunded", locale === "fi" ? "Tavoitteet täyteen" : "Fund to targets"],
+                        ["last_assigned", locale === "fi" ? "Kuten viime kuussa" : "Assigned last month"],
+                        ["last_spent", locale === "fi" ? "Viime kuun toteuma" : "Spent last month"],
+                      ] as const).map(([mode, lbl]) => {
+                        const amt = autoAmounts?.[mode] ?? null;
+                        const disabled = amt !== null && amt <= 0;
+                        return (
+                          <button key={mode} type="button" disabled={disabled} onClick={() => autoAssign(mode)}>
+                            <span>{lbl}</span>
+                            <span className="budget-autoassign-amt">{amt !== null ? <F v={amt} s=" €" /> : "…"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
               {data?.ageOfMoney != null && (
-                <div className="budget-aom-box" title={locale === "fi" ? "Aika rahan saamisesta sen käyttämiseen" : "Time from receiving money to spending it"}>
+                <div className="budget-aom-box" title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
                   <span className="budget-ready-value">{data.ageOfMoney} {locale === "fi" ? "pv" : "days"}</span>
                   <span className="budget-ready-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</span>
                 </div>
@@ -627,32 +659,6 @@ export default function BudgetPage() {
             {lbl}
           </button>
         ))}
-        <div className="budget-autoassign-wrap">
-          <button type="button" className="budget-filter budget-autoassign-btn" onClick={() => { const open = !autoOpen; setAutoOpen(open); if (open) loadAutoAmounts(); }}>
-            <Sparkles className="icon-xs" />{locale === "fi" ? "Budjetoi automaattisesti" : "Auto-assign"}
-          </button>
-          {autoOpen && (
-            <>
-              <div className="budget-autoassign-backdrop" onClick={() => setAutoOpen(false)} />
-              <div className="budget-autoassign-menu">
-                {([
-                  ["underfunded", locale === "fi" ? "Tavoitteet täyteen" : "Fund to targets"],
-                  ["last_assigned", locale === "fi" ? "Kuten viime kuussa" : "Assigned last month"],
-                  ["last_spent", locale === "fi" ? "Viime kuun toteuma" : "Spent last month"],
-                ] as const).map(([mode, label]) => {
-                  const amt = autoAmounts?.[mode] ?? null;
-                  const disabled = amt !== null && amt <= 0;
-                  return (
-                    <button key={mode} type="button" disabled={disabled} onClick={() => autoAssign(mode)}>
-                      <span>{label}</span>
-                      <span className="budget-autoassign-amt">{amt !== null ? <F v={amt} s=" €" /> : "…"}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
       </div>
 
       <div

@@ -320,6 +320,41 @@
   opacity: 0.8;
 }
 
+/* The Budjetoimatta chip doubles as the Assign trigger (YNAB-style) */
+.budget-ready-wrap {
+  position: relative;
+}
+
+.budget-ready-btn {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.budget-ready-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+
+.budget-ready-caret {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.budget-assign-menu {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  min-width: 15rem;
+}
+
 /* Filter bar: All / Overspent / Money available */
 .budget-filterbar {
   display: flex;
@@ -458,6 +493,7 @@
   flex-direction: column;
   max-height: 16rem;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .budget-cover-item {
@@ -481,6 +517,8 @@
 }
 
 .budget-cover-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
