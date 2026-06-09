@@ -321,6 +321,17 @@ function initializeDb(db: Database.Database) {
       PRIMARY KEY (category_id, month)
     );
 
+    -- Opening balance anchor: the carry-in available for a category as of the first
+    -- month of local history. Lets the carryover walk start with the balance a
+    -- category had accumulated in YNAB before the synced window, so a cutover keeps
+    -- savings/buffer balances exact instead of starting them from zero.
+    CREATE TABLE IF NOT EXISTS category_opening_balances (
+      category_id INTEGER PRIMARY KEY REFERENCES categories(id) ON DELETE CASCADE,
+      anchor_month TEXT NOT NULL,
+      balance REAL NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS ticker_cache (
       symbol TEXT PRIMARY KEY,
       name TEXT DEFAULT '',
@@ -629,6 +640,8 @@ function initializeDb(db: Database.Database) {
     backfillCategoryGroups(db);
     // Seed local monthly assigned amounts from YNAB so the budget page is not all-zero after a cutover
     seedMonthlyBudgetsFromYnab(db, false);
+    // Seed opening balance anchors so accumulated balances (savings, buffers) survive a cutover
+    seedOpeningBalancesFromYnab(db);
   } catch (err) {
     console.warn("[db] categories seed:", err);
   }
@@ -685,6 +698,41 @@ export function seedMonthlyBudgetsFromYnab(db: Database.Database, overwrite = fa
     return res.changes;
   } catch (err) {
     console.warn("[db] seedMonthlyBudgetsFromYnab:", err);
+    return 0;
+  }
+}
+
+// Seed each category's opening balance anchor from the YNAB mirror so a cutover keeps
+// balances that accumulated before the synced window (savings buffers, sinking funds)
+// exact. YNAB's reported balance for the earliest synced month already encodes all prior
+// history, so the carry-in to that month is balance - budgeted - activity (activity is
+// stored negative). The carryover walk then starts at that month with this carry instead
+// of zero. Idempotent: re-run on every sync to keep the anchor current.
+export function seedOpeningBalancesFromYnab(db: Database.Database): number {
+  try {
+    const res = db
+      .prepare(
+        `INSERT INTO category_opening_balances (category_id, anchor_month, balance, updated_at)
+         SELECT c.id, e.first_month,
+                ROUND(yc.balance - yc.budgeted - yc.activity, 2),
+                datetime('now')
+         FROM categories c
+         JOIN (
+           SELECT name, MIN(month) AS first_month
+           FROM ynab_categories
+           GROUP BY name
+         ) e ON e.name = c.name
+         JOIN ynab_categories yc ON yc.name = c.name AND yc.month = e.first_month
+         ON CONFLICT(category_id) DO UPDATE SET
+           anchor_month = excluded.anchor_month,
+           balance = excluded.balance,
+           updated_at = datetime('now')`
+      )
+      .run();
+    if (res.changes > 0) console.info("[db] Seeded opening balances from YNAB:", res.changes, "categories");
+    return res.changes;
+  } catch (err) {
+    console.warn("[db] seedOpeningBalancesFromYnab:", err);
     return 0;
   }
 }

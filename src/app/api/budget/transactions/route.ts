@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
 
 interface TxRow {
   id: string;
@@ -11,8 +12,8 @@ interface TxRow {
 }
 
 // Transactions that make up a category's activity (Toteuma) for a given month.
-// Mirrors the activity computation in /api/budget: outflows only, excluding transfers,
-// starting balances and reconciliations.
+// Mirrors the activity computation in /api/budget: outflows, counting off-budget transfers
+// (investing, debt paydown) but not budget-internal transfers between on-budget accounts.
 export async function GET(request: Request) {
   try {
     const user = await getSession();
@@ -34,8 +35,7 @@ export async function GET(request: Request) {
     const rows = db
       .prepare(
         "SELECT id, date, payee, amount, memo FROM transactions " +
-          "WHERE category = ? AND date >= ? AND date <= ? AND amount < 0 " +
-          "AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' " +
+          "WHERE category = ? AND date >= ? AND date <= ? AND amount < 0 AND " + CATEGORY_ACTIVITY_PREDICATE + " " +
           "ORDER BY date DESC, id DESC"
       )
       .all(category, start, end) as TxRow[];

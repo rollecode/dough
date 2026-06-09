@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { eventBus } from "@/lib/event-bus";
-import { availableForCategory, monthlyTargetEquivalent, monthBudgetNumbers, assignedForMonth } from "@/lib/budget-math";
+import { availableForCategory, monthlyTargetEquivalent, monthBudgetNumbers, assignedForMonth, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -51,7 +51,7 @@ function computeAutoAssign(db: ReturnType<typeof getDb>, month: string, mode: Mo
     } else {
       // last_spent: assign each category what it spent last month, net of what's already assigned
       const spent = db.prepare(
-        "SELECT category, ROUND(SUM(-amount), 2) AS v FROM transactions WHERE date >= ? AND date <= ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' GROUP BY category"
+        "SELECT category, ROUND(SUM(-amount), 2) AS v FROM transactions WHERE date >= ? AND date <= ? AND " + CATEGORY_ACTIVITY_PREDICATE + " GROUP BY category"
       ).all(start, end) as { category: string; v: number }[];
       const spentMap = new Map(spent.map((r) => [r.category, r.v || 0]));
       for (const c of cats) {

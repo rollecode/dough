@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
-import { monthBudgetNumbers, monthlyTargetEquivalent, moneyLastsDays } from "@/lib/budget-math";
+import { monthBudgetNumbers, monthlyTargetEquivalent, moneyLastsDays, walkCategory, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
 
 interface CategoryRow {
   id: number;
@@ -24,12 +24,6 @@ interface ActivityRow {
   total: number;
 }
 
-function ym(monthYM: string, offset: number): string {
-  const [y, m] = monthYM.split("-").map(Number);
-  const d = new Date(y, m - 1 + offset, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 // Sum of activity (negative outflows treated as positive activity amount) per category for a given month
 function activityForMonth(db: ReturnType<typeof getDb>, month: string): Map<string, number> {
   const start = `${month}-01`;
@@ -38,10 +32,11 @@ function activityForMonth(db: ReturnType<typeof getDb>, month: string): Map<stri
   const end = `${month}-${String(lastDay).padStart(2, "0")}`;
   // Net activity: outflows minus inflows (a refund to a category reduces its spending,
   // matching YNAB). Stored as a positive "spent" figure, so it can go negative on a net refund.
+  // Uses the shared predicate so off-budget transfers (investing, debt paydown) count as activity.
   const rows = db
     .prepare(
       "SELECT category, ROUND(SUM(-amount), 2) AS total " +
-        "FROM transactions WHERE date >= ? AND date <= ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' GROUP BY category"
+        "FROM transactions WHERE date >= ? AND date <= ? AND " + CATEGORY_ACTIVITY_PREDICATE + " GROUP BY category"
     )
     .all(start, end) as ActivityRow[];
   const map = new Map<string, number>();
@@ -58,42 +53,11 @@ function budgetedForMonth(db: ReturnType<typeof getDb>, month: string): Map<numb
   return map;
 }
 
-// Carryover = sum over all prior months of max(0, budgeted - activity)
-// (positive available rolls forward, negative does not drag — YNAB default)
+// Carryover = the available balance that rolls into `month` (positive rolls forward, negative
+// resets to 0 — YNAB default). Delegates to the shared bulk-query walk so a multi-year history
+// replays without a query per month.
 function carryoverThrough(db: ReturnType<typeof getDb>, categoryId: number, categoryName: string, month: string): number {
-  // Walk back month by month until no earlier budget rows or activity exist for this category
-  const firstBudgetRow = db
-    .prepare("SELECT MIN(month) AS m FROM monthly_category_budgets WHERE category_id = ?")
-    .get(categoryId) as { m: string | null };
-  const firstActivityRow = db
-    .prepare(
-      "SELECT MIN(substr(date, 1, 7)) AS m FROM transactions WHERE category = ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%'"
-    )
-    .get(categoryName) as { m: string | null };
-  let start = firstBudgetRow.m || firstActivityRow.m;
-  if (!start) return 0;
-  if (firstBudgetRow.m && firstActivityRow.m && firstActivityRow.m < firstBudgetRow.m) start = firstActivityRow.m;
-
-  let carry = 0;
-  let cursor = start;
-  while (cursor < month) {
-    const b = (db
-      .prepare("SELECT COALESCE(budgeted, 0) AS v FROM monthly_category_budgets WHERE month = ? AND category_id = ?")
-      .get(cursor, categoryId) as { v: number } | undefined)?.v || 0;
-    const aStart = `${cursor}-01`;
-    const [yy, mm] = cursor.split("-").map(Number);
-    const aEnd = `${cursor}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}`;
-    const a = (db
-      .prepare(
-        "SELECT ROUND(SUM(-amount), 2) AS v " +
-          "FROM transactions WHERE category = ? AND date >= ? AND date <= ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%'"
-      )
-      .get(categoryName, aStart, aEnd) as { v: number | null }).v || 0;
-    const available = carry + b - a;
-    carry = available > 0 ? available : 0;
-    cursor = ym(cursor, 1);
-  }
-  return Math.round(carry * 100) / 100;
+  return walkCategory(db, categoryId, categoryName, month).carryInto;
 }
 
 export async function GET(request: Request) {

@@ -1,3 +1,14 @@
+### 2.13.0: 2026-06-09
+
+* Import full YNAB history on the first sync (every month and transaction) so budget progress compares across years
+* Persist per-category detail for every past month, not only the current one
+* Store all accounts including closed ones with their real on-budget flag
+* Seed each category's opening balance at cutover so accumulated savings and buffers stay exact in local mode
+* Count transfers to off-budget accounts (investing, debt paydown) as category activity, matching YNAB
+* Count categorised reconciliation and balance adjustments as category activity, matching YNAB
+* Replay multi-year carryover with two bulk queries per category so the budget page stays fast
+* Make local mode match YNAB to the cent for Ready to Assign, income and every category balance
+
 ### 2.12.0: 2026-06-05
 
 * Run the dev server on port 3030 by default to avoid colliding with Mastodon on port 3000

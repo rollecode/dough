@@ -95,21 +95,28 @@ docs/                     # Documentation
 - `monthly_snapshots` — monthly income/expenses/categories for trends
 - `ai_summaries` — cached AI summaries per locale (shared across users)
 - `synci_processed` — tracks processed Synci transaction IDs
-- `ynab_accounts` — cached YNAB accounts with closed status
+- `categories` — local budget categories with group, order and description
+- `monthly_category_budgets` — assigned amount per category per month
+- `category_targets` — per-category target amount and cadence (day/week/month/year)
+- `category_snoozes` — per-month snooze of a category's target
+- `category_opening_balances` — per-category carry-in balance at the first local month (cutover anchor)
+- `ynab_accounts` — cached accounts (all, incl. closed) with type and on-budget flag
 - `ynab_categories` — cached YNAB categories per month
 - `ynab_month_budget` — cached YNAB month budget data
 - `ticker_cache` — cached stock/fund ticker data
 
 ### Data flow
 
-1. YNAB sync fetches accounts, transactions (10 months), month budget
-2. Data persisted to local SQLite tables
-3. Auto-match runs against payee patterns
-4. Deleted YNAB transactions removed from local DB
-5. Closed accounts marked in ynab_accounts
-6. Net worth and monthly snapshots saved
-7. SSE broadcasts `sync:complete` and `data:updated` to all clients
-8. Dashboards, heatmap, and chat re-fetch from local DB
+1. YNAB sync fetches accounts, transactions and the month budget. The first sync imports the full history (every month and transaction back to the budget's first month) so years of progress can be compared; later syncs only need a recent window since older months never change
+2. Per-month category detail (budgeted, activity, balance) is persisted for every month, not just the current one
+3. All accounts are persisted including closed ones, each with YNAB's real on-budget flag (needed to classify transfers)
+4. Data persisted to local SQLite tables
+5. Auto-match runs against payee patterns
+6. Deleted YNAB transactions removed from local DB (current month only)
+7. Net worth and monthly snapshots saved
+8. Local categories, monthly budgets and opening balances are seeded from the YNAB mirror so a cutover to local mode is seamless
+9. SSE broadcasts `sync:complete` and `data:updated` to all clients
+10. Dashboards, heatmap, and chat re-fetch from local DB
 
 ### Budget calculation
 
@@ -122,6 +129,16 @@ Segment-based cash flow simulation (`src/lib/daily-budget.ts`):
 5. Daily budget = tightest segment's pool / days
 6. Must-pay priority items always subtracted regardless of auto mode
 7. Non-priority items optionally included based on settings
+
+### Budget carryover and parity
+
+The budget page mirrors YNAB's category balances in local mode (`src/lib/budget-math.ts`):
+
+1. A category's available balance is replayed month by month: `available = carry-in + budgeted - activity`, where positive available rolls forward and negative resets to zero (YNAB default)
+2. The replay reads all months in two bulk queries per category (budgeted by month, activity by month) rather than a query per month, so a multi-year history stays fast
+3. Activity is every transaction in the category except transfers between on-budget accounts. A transfer to an off-budget (tracking) account, such as investing or paying down a debt, counts as activity; categorised reconciliation and balance adjustments count too. The counterparty is the account named after `Transfer : `, matched to `ynab_accounts.on_budget`
+4. `category_opening_balances` holds each category's carry-in as of the first local month, seeded from the YNAB mirror at cutover. When a sync only imported a shallow window, this keeps accumulated savings and buffers exact without replaying months that were never imported. With full history imported, the anchor sits at the budget's first month and is effectively zero
+5. Ready to Assign, income and Age of Money come from `monthBudgetNumbers` and the `ynab_month_budget` mirror, independent of the per-category replay
 
 ### AI integration
 

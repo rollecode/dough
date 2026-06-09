@@ -10,9 +10,31 @@ function ym(monthYM: string, offset: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-const ACTIVITY_BY_CAT =
-  "SELECT ROUND(SUM(-amount), 2) AS v FROM transactions WHERE category = ? AND date >= ? AND date <= ? " +
-  "AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%'";
+// A category's activity is every transaction in that category EXCEPT transfers between on-budget
+// accounts (budget-internal moves that neither spend nor save). A transfer to an OFF-budget
+// (tracking) account — investing, debt paydown — IS activity, and so are reconciliation/balance
+// adjustments categorised to it, matching YNAB. The counterparty account is the name after
+// "Transfer : " (11 chars), matched to ynab_accounts; an unknown counterparty counts as activity.
+export const CATEGORY_ACTIVITY_PREDICATE =
+  "(payee NOT LIKE 'Transfer%' OR EXISTS (SELECT 1 FROM ynab_accounts a WHERE a.name = SUBSTR(payee, 12) AND a.on_budget = 0))";
+
+// Opening balance anchor for a category: the carry-in available as of anchor_month, seeded
+// from YNAB at cutover (see seedOpeningBalancesFromYnab). When present, the carryover walk
+// starts at anchor_month with this balance instead of zero, so balances accumulated before
+// the synced window are preserved. Returns null when no anchor exists (e.g. local-only category).
+export function getOpeningAnchor(
+  db: ReturnType<typeof getDb>,
+  categoryId: number
+): { month: string; balance: number } | null {
+  try {
+    const row = db
+      .prepare("SELECT anchor_month AS month, balance FROM category_opening_balances WHERE category_id = ?")
+      .get(categoryId) as { month: string; balance: number } | undefined;
+    return row ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Actual income for a month = inflows tagged to Ready to Assign (refunds to spending
 // categories are NOT income; they reduce that category's activity instead).
@@ -122,6 +144,54 @@ function ymOffset(monthYM: string, offset: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Per-month budgeted + activity for one category, fetched in two bulk queries instead of one
+// pair per month, so a multi-year carryover replay stays fast. activity uses
+// CATEGORY_ACTIVITY_PREDICATE (normal spending + off-budget transfers).
+const BUDGET_BY_MONTH = "SELECT month, COALESCE(budgeted,0) AS b FROM monthly_category_budgets WHERE category_id = ? ORDER BY month";
+const ACTIVITY_BY_MONTH =
+  "SELECT substr(date,1,7) AS month, ROUND(SUM(-amount),2) AS a FROM transactions WHERE category = ? AND " +
+  CATEGORY_ACTIVITY_PREDICATE + " GROUP BY substr(date,1,7)";
+
+// Replay a category's monthly budgeted/activity to get its available at `month` and the carry
+// that rolled into `month`. Positive available rolls forward, negative resets to 0 (YNAB default).
+// An opening anchor, when present, starts the walk at its month with the carry-in balance so
+// pre-cutover history (for shallow syncs) is preserved without replaying it.
+export function walkCategory(
+  db: ReturnType<typeof getDb>,
+  categoryId: number,
+  categoryName: string,
+  month: string
+): { availableAt: number; carryInto: number } {
+  const budRows = db.prepare(BUDGET_BY_MONTH).all(categoryId) as { month: string; b: number }[];
+  const actRows = db.prepare(ACTIVITY_BY_MONTH).all(categoryName) as { month: string; a: number }[];
+  const bMap = new Map(budRows.map((r) => [r.month, r.b]));
+  const aMap = new Map(actRows.map((r) => [r.month, r.a]));
+
+  const firstBudget = budRows.length ? budRows[0].month : null;
+  let firstActivity: string | null = null;
+  for (const r of actRows) if (firstActivity === null || r.month < firstActivity) firstActivity = r.month;
+  let start = firstBudget || firstActivity;
+  if (!start) return { availableAt: 0, carryInto: 0 };
+  if (firstBudget && firstActivity && firstActivity < firstBudget) start = firstActivity;
+
+  let carry = 0;
+  let cursor = start;
+  const anchor = getOpeningAnchor(db, categoryId);
+  if (anchor && anchor.month <= month) {
+    cursor = anchor.month;
+    carry = anchor.balance;
+  }
+  while (cursor <= month) {
+    const b = bMap.get(cursor) || 0;
+    const a = aMap.get(cursor) || 0;
+    const available = Math.round((carry + b - a) * 100) / 100;
+    if (cursor === month) return { availableAt: available, carryInto: carry };
+    carry = available > 0 ? available : 0;
+    cursor = ym(cursor, 1);
+  }
+  return { availableAt: Math.round(carry * 100) / 100, carryInto: carry };
+}
+
 // Available balance for one category in a given month.
 export function availableForCategory(
   db: ReturnType<typeof getDb>,
@@ -129,33 +199,5 @@ export function availableForCategory(
   categoryName: string,
   month: string
 ): number {
-  const firstBudget = (db
-    .prepare("SELECT MIN(month) AS m FROM monthly_category_budgets WHERE category_id = ?")
-    .get(categoryId) as { m: string | null }).m;
-  const firstActivity = (db
-    .prepare(
-      "SELECT MIN(substr(date,1,7)) AS m FROM transactions WHERE category = ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%'"
-    )
-    .get(categoryName) as { m: string | null }).m;
-  let start = firstBudget || firstActivity;
-  if (!start) return 0;
-  if (firstBudget && firstActivity && firstActivity < firstBudget) start = firstActivity;
-
-  const budgetStmt = db.prepare("SELECT COALESCE(budgeted,0) AS v FROM monthly_category_budgets WHERE month = ? AND category_id = ?");
-  const activityStmt = db.prepare(ACTIVITY_BY_CAT);
-
-  let carry = 0;
-  let cursor = start;
-  while (cursor <= month) {
-    const b = (budgetStmt.get(cursor, categoryId) as { v: number }).v || 0;
-    const aStart = `${cursor}-01`;
-    const [yy, mm] = cursor.split("-").map(Number);
-    const aEnd = `${cursor}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}`;
-    const a = (activityStmt.get(categoryName, aStart, aEnd) as { v: number | null }).v || 0;
-    const available = Math.round((carry + b - a) * 100) / 100;
-    if (cursor === month) return available;
-    carry = available > 0 ? available : 0;
-    cursor = ym(cursor, 1);
-  }
-  return Math.round(carry * 100) / 100;
+  return walkCategory(db, categoryId, categoryName, month).availableAt;
 }
