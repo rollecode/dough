@@ -314,7 +314,7 @@
 }
 
 .budget-ready-box.is-zero {
-  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  background: color-mix(in srgb, #1f1d31 85%, transparent);
   color: var(--muted-foreground);
 }
 
