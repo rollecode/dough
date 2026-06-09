@@ -8,6 +8,7 @@
 * Count categorised reconciliation and balance adjustments as category activity, matching YNAB
 * Replay multi-year carryover with two bulk queries per category so the budget page stays fast
 * Make local mode match YNAB to the cent for Ready to Assign, income and every category balance
+* Give the budget Assign button a roomier padding
 
 ### 2.12.0: 2026-06-05
 
