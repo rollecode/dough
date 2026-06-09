@@ -1031,6 +1031,13 @@
   caret-color: transparent;
 }
 
+/* The amount is select-all-on-click and the caret is hidden, so the selection highlight is
+   the edit affordance - make it clearly visible in the accent colour. */
+.budget-budgeted-input::selection {
+  background: var(--primary);
+  color: #fff;
+}
+
 /* room for the in-input calculator icon when focused */
 .budget-budgeted-input.is-focused {
   padding-left: 1.625rem;

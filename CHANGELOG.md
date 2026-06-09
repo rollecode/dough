@@ -12,6 +12,7 @@
 * Add an uncovered-overspending box to the budget topbar with a red Cover button, covering all overspending from unbudgeted money or sending you to the overspent filter
 * Close the budget Assign and Cover menus on an outside click (a backdrop trapped by the topbar blur never received the click)
 * Make the all-budgeted Ready to Assign box more visible with a solid dark background
+* Select the whole amount on every click in a category's assigned field, with a clearly coloured selection highlight
 
 ### 2.12.0: 2026-06-05
 

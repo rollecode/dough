@@ -1249,6 +1249,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           value={draft}
           onChange={(e) => { setDraft(e.target.value); setInvalid(false); }}
           onFocus={(e) => { setFocused(true); e.target.select(); }}
+          onClick={(e) => (e.target as HTMLInputElement).select()}
           onBlur={() => { if (!calcOpen) { setFocused(false); commit(); } }}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           type="text"
