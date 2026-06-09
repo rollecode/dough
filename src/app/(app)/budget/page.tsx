@@ -149,7 +149,10 @@ export default function BudgetPage() {
   const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
   const [autoOpen, setAutoOpen] = useState(false);
   const [autoAmounts, setAutoAmounts] = useState<{ underfunded: number; last_assigned: number; last_spent: number } | null>(null);
+  const [coverAllOpen, setCoverAllOpen] = useState(false);
   const addCatRef = useRef<HTMLFormElement>(null);
+  const autoWrapRef = useRef<HTMLDivElement>(null);
+  const coverWrapRef = useRef<HTMLDivElement>(null);
 
   const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
   const closeInspector = () => {
@@ -183,6 +186,20 @@ export default function BudgetPage() {
   }, []);
 
   useEffect(() => { load(month); }, [load, month]);
+
+  // Close the topbar Assign / Cover menus on an outside click. A fixed-position backdrop does
+  // not work here because the topbar's backdrop-filter makes it the containing block, trapping
+  // the backdrop inside the bar; a document listener closes reliably regardless of stacking.
+  useEffect(() => {
+    if (!autoOpen && !coverAllOpen) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (autoOpen && autoWrapRef.current && !autoWrapRef.current.contains(t)) setAutoOpen(false);
+      if (coverAllOpen && coverWrapRef.current && !coverWrapRef.current.contains(t)) setCoverAllOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [autoOpen, coverAllOpen]);
 
   // Build the grouped, ordered structure the budget view renders (and drags)
   useEffect(() => {
@@ -420,6 +437,24 @@ export default function BudgetPage() {
     }
   };
 
+  // Cover every overspent category from Ready to Assign at once (raise each one's assigned by
+  // its overspend). Only offered when RTA covers the whole overage, so it never over-assigns.
+  const coverAllFromRta = async () => {
+    setCoverAllOpen(false);
+    const overspent = (data?.categories || []).filter((c) => c.available < -eps);
+    for (const c of overspent) {
+      const amount = Math.round(-c.available * 100) / 100;
+      if (amount > 0) {
+        await fetch("/api/budget", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ month, category_id: c.id, budgeted: Math.round((c.budgeted + amount) * 100) / 100 }),
+        });
+      }
+    }
+    load(month);
+  };
+
   // Move available money OUT of a category to another category, or back to Ready to Assign
   const moveOut = async (cat: BudgetCategory, dest: number | "rta", amount: number) => {
     if (!(amount > 0)) return;
@@ -592,9 +627,11 @@ export default function BudgetPage() {
             : state === "is-negative"
             ? (locale === "fi" ? "Liikaa budjetoitu" : "Over-assigned")
             : (locale === "fi" ? "Budjetoimatta" : "Ready to assign");
+          // Total uncovered overspending = sum of negative category availables (shown as positive)
+          const overspentR = Math.round((data?.categories || []).reduce((s, c) => s + (c.available < -eps ? -c.available : 0), 0) * 100) / 100;
           return (
             <div className="budget-center">
-              <div className="budget-ready-wrap">
+              <div className="budget-ready-wrap" ref={autoWrapRef}>
                 <div className={`budget-ready-box ${state}`}>
                   <span className="budget-ready-col">
                     <span className="budget-ready-value"><F v={rta} s=" €" /></span>
@@ -612,31 +649,62 @@ export default function BudgetPage() {
                   </button>
                 </div>
                 {autoOpen && (
-                  <>
-                    <div className="budget-autoassign-backdrop" onClick={() => setAutoOpen(false)} />
-                    <div className="budget-autoassign-menu budget-assign-menu">
-                      {([
-                        ["underfunded", locale === "fi" ? "Tavoitteet täyteen" : "Fund to targets"],
-                        ["last_assigned", locale === "fi" ? "Kuten viime kuussa" : "Assigned last month"],
-                        ["last_spent", locale === "fi" ? "Viime kuun toteuma" : "Spent last month"],
-                      ] as const).map(([mode, lbl]) => {
-                        const amt = autoAmounts?.[mode] ?? null;
-                        const disabled = amt !== null && amt <= 0;
-                        return (
-                          <button key={mode} type="button" disabled={disabled} onClick={() => autoAssign(mode)}>
-                            <span>{lbl}</span>
-                            <span className="budget-autoassign-amt">{amt !== null ? <F v={amt} s=" €" /> : "…"}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
+                  <div className="budget-autoassign-menu budget-assign-menu">
+                    {([
+                      ["underfunded", locale === "fi" ? "Tavoitteet täyteen" : "Fund to targets"],
+                      ["last_assigned", locale === "fi" ? "Kuten viime kuussa" : "Assigned last month"],
+                      ["last_spent", locale === "fi" ? "Viime kuun toteuma" : "Spent last month"],
+                    ] as const).map(([mode, lbl]) => {
+                      const amt = autoAmounts?.[mode] ?? null;
+                      const disabled = amt !== null && amt <= 0;
+                      return (
+                        <button key={mode} type="button" disabled={disabled} onClick={() => autoAssign(mode)}>
+                          <span>{lbl}</span>
+                          <span className="budget-autoassign-amt">{amt !== null ? <F v={amt} s=" €" /> : "…"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
               {data?.ageOfMoney != null && (
                 <div className="budget-aom-box" title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
                   <span className="budget-ready-value">{data.ageOfMoney} {locale === "fi" ? "pv" : "days"}</span>
                   <span className="budget-ready-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</span>
+                </div>
+              )}
+              {overspentR > eps && (
+                <div className="budget-ready-wrap" ref={coverWrapRef}>
+                  <div className="budget-ready-box is-negative">
+                    <span className="budget-ready-col">
+                      <span className="budget-ready-value"><F v={overspentR} s=" €" /></span>
+                      <span className="budget-ready-label">{locale === "fi" ? "Kattamatta" : "Uncovered"}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="budget-assign-trigger"
+                      onClick={() => setCoverAllOpen((o) => !o)}
+                      aria-haspopup="menu"
+                      aria-expanded={coverAllOpen}
+                    >
+                      {locale === "fi" ? "Kata" : "Cover"}
+                      <ChevronDown className="icon-xs" />
+                    </button>
+                  </div>
+                  {coverAllOpen && (
+                    <div className="budget-autoassign-menu budget-assign-menu">
+                      <div className="budget-assign-menu-title">{locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"}</div>
+                      {rta >= overspentR - eps && (
+                        <button type="button" onClick={coverAllFromRta}>
+                          <span>{locale === "fi" ? "Budjetoimaton raha" : "Unbudgeted money"}</span>
+                          <span className="budget-autoassign-amt"><F v={overspentR} s=" €" /></span>
+                        </button>
+                      )}
+                      <button type="button" onClick={() => { setFilter("overspent"); setCoverAllOpen(false); }}>
+                        <span>{locale === "fi" ? "Erikseen" : "Separately"}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

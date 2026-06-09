@@ -9,6 +9,8 @@
 * Replay multi-year carryover with two bulk queries per category so the budget page stays fast
 * Make local mode match YNAB to the cent for Ready to Assign, income and every category balance
 * Give the budget Assign button a roomier padding
+* Add an uncovered-overspending box to the budget topbar with a red Cover button, covering all overspending from unbudgeted money or sending you to the overspent filter
+* Close the budget Assign and Cover menus on an outside click (a backdrop trapped by the topbar blur never received the click)
 
 ### 2.12.0: 2026-06-05
 
