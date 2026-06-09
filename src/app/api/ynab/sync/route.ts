@@ -114,21 +114,32 @@ export async function POST(request: Request) {
     }
 
     // Import dynamically to avoid issues when ynab isn't configured
-    const { getBudgetSummary, getTransactions, getMonthBudget } = await import("@/lib/ynab/client");
+    const { getBudgetSummary, getTransactions, getMonthBudget, getBudgetMonths } = await import("@/lib/ynab/client");
+    const { getDb: getCoverageDb } = await import("@/lib/db");
 
     const now = new Date();
     const sinceDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-    // Fetch 10 months of transactions for heatmap history
-    const heatmapSince = new Date(now.getFullYear(), now.getMonth() - 9, 1);
-    const heatmapSinceDate = `${heatmapSince.getFullYear()}-${String(heatmapSince.getMonth() + 1).padStart(2, "0")}-01`;
 
-    console.info("[api/ynab/sync] Fetching YNAB data since", sinceDate, "heatmap since", heatmapSinceDate);
+    // Full-history import: on the first sync pull every month YNAB has so years of budget
+    // progress can be compared, then fall back to a recent window since older months never
+    // change. Coverage is judged by the earliest non-Synci/non-split transaction already local.
+    const months = await getBudgetMonths(budgetId, token);
+    const firstMonth = months.length ? months[0].month : sinceDate;
+    const earliestLocal = (getCoverageDb()
+      .prepare("SELECT MIN(date) AS d FROM transactions WHERE ynab_id NOT LIKE 'synci_%' AND ynab_id NOT LIKE 'split_%'")
+      .get() as { d: string | null }).d;
+    const tenBack = new Date(now.getFullYear(), now.getMonth() - 9, 1);
+    const incrementalSince = `${tenBack.getFullYear()}-${String(tenBack.getMonth() + 1).padStart(2, "0")}-01`;
+    const needFullHistory = !earliestLocal || earliestLocal.slice(0, 7) > firstMonth.slice(0, 7);
+    const historySince = needFullHistory ? firstMonth : incrementalSince;
+
+    console.info("[api/ynab/sync] Fetching YNAB data since", sinceDate, needFullHistory ? `(full history from ${firstMonth})` : `(incremental from ${incrementalSince})`);
 
     const [summary, transactions, monthBudget, heatmapTransactions] = await Promise.all([
       getBudgetSummary(budgetId, token),
       getTransactions(budgetId, sinceDate, token),
       getMonthBudget(budgetId, undefined, token),
-      getTransactions(budgetId, heatmapSinceDate, token),
+      getTransactions(budgetId, historySince, token),
     ]);
 
     // Update last sync time in household settings
@@ -180,30 +191,43 @@ export async function POST(request: Request) {
       `).run(snapMonth, snapIncome, snapExpenses, JSON.stringify(snapCategories), snapSavingGoal);
       console.info("[api/ynab/sync] Monthly snapshot saved for", snapMonth);
 
-      // Backfill up to 12 previous months: monthly snapshots (for the dashboard) and the
-      // ynab_month_budget row including YNAB's own age_of_money (for the age-of-money chart).
-      // Skip a month only when both are already present, so existing installs gain age_of_money.
+      // Backfill every prior month YNAB has (deep history) so budget progress can be compared
+      // over years: month totals + age of money, per-category detail, and the dashboard snapshot.
+      // A month is skipped only once fully imported (snapshot + age of money + category rows),
+      // so the first sync fills everything and later syncs stay cheap.
       const upsertPastMonthBudget = snapDb.prepare(`
         INSERT INTO ynab_month_budget (month, income, budgeted, activity, to_be_budgeted, age_of_money, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
         ON CONFLICT(month) DO UPDATE SET income=excluded.income, budgeted=excluded.budgeted, activity=excluded.activity, to_be_budgeted=excluded.to_be_budgeted, age_of_money=excluded.age_of_money, updated_at=datetime('now')
       `);
-      for (let offset = 1; offset <= 12; offset++) {
-        const pastDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-        const pastMonth = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, "0")}`;
+      const upsertPastCat = snapDb.prepare(`
+        INSERT INTO ynab_categories (ynab_id, month, name, group_name, budgeted, activity, balance, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(month, name) DO UPDATE SET ynab_id=excluded.ynab_id, group_name=excluded.group_name, budgeted=excluded.budgeted, activity=excluded.activity, balance=excluded.balance, updated_at=datetime('now')
+      `);
+      const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      let backfilled = 0;
+      for (const mo of months) {
+        const pastMonth = mo.month.slice(0, 7); // YYYY-MM
+        if (pastMonth >= currentMonthStr) continue; // current/future handled in the main persist block
         const snapExists = snapDb.prepare("SELECT id FROM monthly_snapshots WHERE month = ?").get(pastMonth);
         const aomRow = snapDb.prepare("SELECT age_of_money FROM ynab_month_budget WHERE month = ?").get(pastMonth) as { age_of_money: number | null } | undefined;
         const haveAom = !!aomRow && aomRow.age_of_money != null;
-        if (snapExists && haveAom) continue;
+        const catCount = (snapDb.prepare("SELECT COUNT(*) AS n FROM ynab_categories WHERE month = ?").get(pastMonth) as { n: number }).n;
+        if (snapExists && haveAom && catCount > 0) continue;
 
         console.info("[api/ynab/sync] Backfilling month data for", pastMonth);
         try {
-          const pastSinceDate = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, "0")}-01`;
+          const pastSinceDate = `${pastMonth}-01`;
           const pastBudget = await getMonthBudget(budgetId, pastSinceDate, token);
           upsertPastMonthBudget.run(pastMonth, pastBudget.income, pastBudget.budgeted, pastBudget.activity, pastBudget.toBeBudgeted, pastBudget.ageOfMoney ?? null);
+          const pastCatTx = snapDb.transaction(() => {
+            for (const c of pastBudget.categories) {
+              upsertPastCat.run(c.id || "", pastMonth, c.name, c.group || "", c.budgeted, c.activity, c.balance);
+            }
+          });
+          pastCatTx();
           if (!snapExists) {
-            const pastIncome = pastBudget.income;
-            const pastExpenses = Math.abs(pastBudget.activity);
             const pastCategories = pastBudget.categories
               .filter((c: any) => c.activity < 0 && c.name !== "Inflow: Ready to Assign")
               .sort((a: any, b: any) => a.activity - b.activity)
@@ -212,13 +236,15 @@ export async function POST(request: Request) {
             snapDb.prepare(`
               INSERT INTO monthly_snapshots (month, income, expenses, categories_json, saving_goal)
               VALUES (?, ?, ?, ?, 0)
-            `).run(pastMonth, pastIncome, pastExpenses, JSON.stringify(pastCategories));
+            `).run(pastMonth, pastBudget.income, Math.abs(pastBudget.activity), JSON.stringify(pastCategories));
           }
-          console.info("[api/ynab/sync] Backfilled", pastMonth, "age of money:", pastBudget.ageOfMoney);
+          backfilled++;
+          console.info("[api/ynab/sync] Backfilled", pastMonth, "categories:", pastBudget.categories.length, "age of money:", pastBudget.ageOfMoney);
         } catch (backfillErr) {
           console.warn("[api/ynab/sync] Failed to backfill", pastMonth, backfillErr);
         }
       }
+      if (backfilled > 0) console.info("[api/ynab/sync] Deep backfill complete:", backfilled, "months");
     } catch (err) {
       console.error("[api/ynab/sync] Monthly snapshot error:", err);
     }
@@ -241,26 +267,23 @@ export async function POST(request: Request) {
       const { getDb: getPersistDb } = await import("@/lib/db");
       const pdb = getPersistDb();
 
-      // Upsert accounts
+      // Upsert every account (incl. closed) with YNAB's real on_budget flag, so a transfer's
+      // counterparty can be classified as on- or off-budget when computing category activity.
       const upsertAccount = pdb.prepare(`
         INSERT INTO ynab_accounts (id, name, type, balance, cleared_balance, on_budget, closed, updated_at)
-        VALUES (?, ?, ?, ?, ?, 1, 0, datetime('now'))
-        ON CONFLICT(id) DO UPDATE SET name=excluded.name, type=excluded.type, balance=excluded.balance, cleared_balance=excluded.cleared_balance, closed=0, updated_at=datetime('now')
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(id) DO UPDATE SET name=excluded.name, type=excluded.type, balance=excluded.balance, cleared_balance=excluded.cleared_balance, on_budget=excluded.on_budget, closed=excluded.closed, updated_at=datetime('now')
       `);
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const allAccts: any[] = (summary as any).allAccounts ?? summary.accounts.map((a: any) => ({ ...a, onBudget: 1, closed: 0 }));
       const accountTx = pdb.transaction(() => {
-        for (const a of summary.accounts) {
-          upsertAccount.run(a.id, a.name, a.type, a.balance, a.clearedBalance);
+        for (const a of allAccts) {
+          upsertAccount.run(a.id, a.name, a.type, a.balance, a.clearedBalance, a.onBudget ?? 1, a.closed ?? 0);
         }
       });
       accountTx();
-
-      // Mark closed accounts
-      if (summary.closedAccountIds?.length > 0) {
-        const markClosed = pdb.prepare("UPDATE ynab_accounts SET closed = 1, updated_at = datetime('now') WHERE id = ?");
-        for (const id of summary.closedAccountIds) markClosed.run(id);
-        console.info("[api/ynab/sync] Marked", summary.closedAccountIds.length, "accounts as closed");
-      }
-      console.info("[api/ynab/sync] Persisted", summary.accounts.length, "accounts");
+      const closedCount = allAccts.filter((a) => a.closed).length;
+      console.info("[api/ynab/sync] Persisted", allAccts.length, "accounts (", closedCount, "closed )");
 
       // Upsert transactions. Locally-split parents (split_group set) are left untouched so a
       // Dough-side split is not reset to YNAB's single category on the next sync.
@@ -290,7 +313,7 @@ export async function POST(request: Request) {
         }
       }
       if (deleted > 0) console.info("[api/ynab/sync] Deleted", deleted, "removed transactions");
-      console.info("[api/ynab/sync] Persisted", heatmapTransactions.length, "transactions (10 months)");
+      console.info("[api/ynab/sync] Persisted", heatmapTransactions.length, "transactions since", historySince);
 
       // Upsert month budget + categories
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -314,9 +337,10 @@ export async function POST(request: Request) {
       console.info("[api/ynab/sync] Persisted month budget and", monthBudget.categories.length, "categories for", currentMonth);
 
       // Propagate YNAB category groups and assigned amounts onto the local budget tables
-      const { backfillCategoryGroups, seedMonthlyBudgetsFromYnab } = await import("@/lib/db");
+      const { backfillCategoryGroups, seedMonthlyBudgetsFromYnab, seedOpeningBalancesFromYnab } = await import("@/lib/db");
       backfillCategoryGroups(pdb);
       seedMonthlyBudgetsFromYnab(pdb, true);
+      seedOpeningBalancesFromYnab(pdb);
 
       console.info("[api/ynab/sync] All relational data persisted to SQLite");
     } catch (err) {

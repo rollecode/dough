@@ -59,6 +59,18 @@ export async function getBudgetSummary(budgetId: string, token: string) {
       balance: ((a.cleared_balance ?? 0) + (a.uncleared_balance ?? 0)) / 1000,
       clearedBalance: (a.cleared_balance ?? 0) / 1000,
     })),
+    // Every non-deleted account incl. closed ones, with YNAB's real on_budget flag. Needed so a
+    // transfer's counterparty can be classified: a transfer to an off-budget (tracking) account
+    // is category outflow, while a transfer between on-budget accounts is not.
+    allAccounts: allAccounts.map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      balance: ((a.cleared_balance ?? 0) + (a.uncleared_balance ?? 0)) / 1000,
+      clearedBalance: (a.cleared_balance ?? 0) / 1000,
+      onBudget: a.on_budget ? 1 : 0,
+      closed: a.closed ? 1 : 0,
+    })),
     closedAccountIds: allAccounts.filter((a: any) => a.closed).map((a: any) => a.id) as string[],
     categories,
   };
@@ -92,6 +104,28 @@ export async function getTransactions(
     cleared: t.cleared,
     account_id: t.account_id,
   }));
+}
+
+// List every month YNAB has for the budget (oldest first), with the month-level totals.
+// Used to deep-import full history so progress can be compared over years. Categories are
+// not included here (YNAB omits them from the list endpoint); fetch per month via getMonthBudget.
+export async function getBudgetMonths(budgetId: string, token: string) {
+  if (!token) throw new Error("YNAB token required");
+  console.info("[ynab] Fetching month list for", budgetId);
+  const data = await ynabFetch(`/budgets/${budgetId}/months`, token);
+  const months = (data.months ?? [])
+    .filter((m: any) => !m.deleted)
+    .map((m: any) => ({
+      month: m.month, // YYYY-MM-01
+      income: (m.income ?? 0) / 1000,
+      budgeted: (m.budgeted ?? 0) / 1000,
+      activity: (m.activity ?? 0) / 1000,
+      toBeBudgeted: (m.to_be_budgeted ?? 0) / 1000,
+      ageOfMoney: m.age_of_money ?? null,
+    }))
+    .sort((a: any, b: any) => a.month.localeCompare(b.month));
+  console.info("[ynab] Budget has", months.length, "months", months.length ? `(${months[0].month} .. ${months[months.length - 1].month})` : "");
+  return months as { month: string; income: number; budgeted: number; activity: number; toBeBudgeted: number; ageOfMoney: number | null }[];
 }
 
 export async function getMonthBudget(budgetId: string, month?: string, token?: string) {
