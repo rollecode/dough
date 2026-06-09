@@ -1251,7 +1251,17 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           onFocus={(e) => { setFocused(true); e.target.select(); }}
           onClick={(e) => (e.target as HTMLInputElement).select()}
           onBlur={() => { if (!calcOpen) { setFocused(false); commit(); } }}
-          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); return; }
+            // Operators append to the existing number (build an expression like 50+10) instead of
+            // replacing the select-all-on-click selection with just the operator.
+            if (e.key === "+" || e.key === "-" || e.key === "*" || e.key === "/") {
+              e.preventDefault();
+              const k = e.key;
+              setDraft((d) => d + k);
+              setInvalid(false);
+            }
+          }}
           type="text"
           inputMode="decimal"
           placeholder="0"

@@ -13,6 +13,7 @@
 * Close the budget Assign and Cover menus on an outside click (a backdrop trapped by the topbar blur never received the click)
 * Make the all-budgeted Ready to Assign box more visible with a solid dark background
 * Select the whole amount on every click in a category's assigned field, with a clearly coloured selection highlight
+* Append operators to the existing amount when typing + - * / in a category field, so calculator expressions like 50+10 build correctly instead of replacing the number
 
 ### 2.12.0: 2026-06-05
 
