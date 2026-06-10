@@ -52,6 +52,37 @@ interface DebtData {
   monthlyPayment: number;
   notes: string;
   isPriority: number;
+  history?: { month: string; balance: number }[];
+}
+
+// Compact actual-balance history sparkline for one debt.
+function DebtSparkline({ data, uid }: { data: { month: string; balance: number }[]; uid: string }) {
+  const { fmt } = useLocale();
+  return (
+    <div className="debt-spark">
+      <ResponsiveContainer width="100%" height={56}>
+        <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`debt-${uid}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f87171" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#f87171" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <Tooltip
+            content={({ active, payload, label }) =>
+              active && payload?.length ? (
+                <div className="chart-tooltip">
+                  <p className="chart-tooltip-label">{String(label)}</p>
+                  <p className="chart-tooltip-value text-foreground">{fmt(Number(payload[0].value))} €</p>
+                </div>
+              ) : null
+            }
+          />
+          <Area type="monotone" dataKey="balance" stroke="#f87171" strokeWidth={1.5} fill={`url(#debt-${uid})`} dot={false} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 function calculatePayoff(debts: DebtData[], extraPayment: number, sortFn: (a: DebtData, b: DebtData) => number) {
@@ -371,6 +402,9 @@ export default function DebtsPage() {
                 </div>
                 <GripVertical className="drag-handle" />
               </div>
+              {debt.history && debt.history.length > 1 && (
+                <DebtSparkline data={debt.history} uid={debt.id.replace(/[^a-zA-Z0-9]/g, "")} />
+              )}
               <div className="list-edit-row">
                 <div className="list-edit-field">
                   <Label className="list-edit-label">{locale === "fi" ? "Saldo €" : "Balance €"}</Label>

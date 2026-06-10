@@ -5,6 +5,29 @@ import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 
+// Reconstruct a debt's balance over the last 12 months from its transactions and current balance.
+// balance(month-end) = current - sum(transactions booked after that month-end). Returned as a
+// positive amount (debt owed). Empty when the account has no transactions to chart.
+function debtHistory(db: ReturnType<typeof getDb>, accountId: string, currentRaw: number) {
+  const txns = db
+    .prepare("SELECT date, amount FROM transactions WHERE account_id = ? ORDER BY date")
+    .all(accountId) as { date: string; amount: number }[];
+  if (txns.length === 0) return [] as { month: string; balance: number }[];
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const now = new Date();
+  const points: { month: string; balance: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); // last day of that month
+    const monthEnd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const after = txns.filter((t) => t.date > monthEnd).reduce((s, t) => s + t.amount, 0);
+    points.push({
+      month: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`,
+      balance: Math.round(Math.abs(currentRaw - after) * 100) / 100,
+    });
+  }
+  return points;
+}
+
 export async function GET() {
   try {
     const user = await getSession();
@@ -60,6 +83,7 @@ export async function GET() {
         notes: override?.notes ?? "",
         sortOrder: override?.sort_order ?? 999,
         isPriority: override?.is_priority ?? 0,
+        history: debtHistory(db, a.id, a.balance),
       };
     });
 
