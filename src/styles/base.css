@@ -26,6 +26,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  /* Guard against accidental horizontal scroll at the page scroller level, so inner sticky
+     elements (the budget topbar) keep working - an overflow on an inner ancestor would break them. */
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
