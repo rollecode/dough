@@ -107,15 +107,15 @@ export async function POST(request: Request) {
         if (mode === "local") {
           const localAccountId = accountMapping[synciAccountId] || "";
           const importDate = txDate || now.toISOString().slice(0, 10);
-          // Skip if a matching transaction was already added by hand (same account, amount and
-          // date), so Synci never duplicates something entered manually. Keeps repeated syncs safe.
-          const manualDup = localAccountId
-            ? db.prepare(
-                "SELECT 1 FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND date = ? AND ynab_id NOT LIKE 'synci_%' LIMIT 1"
-              ).get(localAccountId, amount, importDate)
-            : undefined;
+          // Skip if this transaction is already present from YNAB or a manual entry, matched by
+          // amount + date but NOT account. Synci attributes a transaction to the bank account it
+          // polled, while YNAB may hold the same transaction on a different account; matching on
+          // account would miss those and double-count, corrupting balances after a YNAB cutover.
+          const manualDup = db.prepare(
+            "SELECT 1 FROM transactions WHERE ROUND(amount, 2) = ROUND(?, 2) AND date = ? AND ynab_id NOT LIKE 'synci_%' LIMIT 1"
+          ).get(amount, importDate);
           if (manualDup) {
-            console.info("[synci/sync] Skipping duplicate of a manual entry:", payee, amount, "on", importDate);
+            console.info("[synci/sync] Skipping duplicate of an existing transaction:", payee, amount, "on", importDate);
             db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
             continue;
           }
