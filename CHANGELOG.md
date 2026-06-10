@@ -1,3 +1,11 @@
+### 2.13.4: 2026-06-11
+
+* Fix the budget columns on mobile by declaring the grid mobile-first, so the hidden activity column no longer leaves an empty track
+* Restore the sticky budget topbar on mobile by moving the horizontal-overflow guard off the sticky element's ancestor onto the page scroller
+* Compact the budget topbar boxes on small phones so they fit
+* Add a per-debt actual balance history chart on the debts page
+* Keep a debt's name and its must-pay toggle on one line instead of dropping the icon to its own row
+
 ### 2.13.3: 2026-06-11
 
 * Stop the app flashing default English before the user's language loads by holding render until the locale is known, showing a loading skeleton
