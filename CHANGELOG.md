@@ -1,3 +1,7 @@
+### 2.13.1: 2026-06-10
+
+* In local mode, count a Synci-imported inflow as income only when it matches a household income source, so company money passing through a personal account is not counted as household income
+
 ### 2.13.0: 2026-06-09
 
 * Import full YNAB history on the first sync (every month and transaction) so budget progress compares across years

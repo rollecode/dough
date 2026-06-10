@@ -160,7 +160,7 @@ Polls Synci REST API every 30 minutes via systemd timer (see setup.md). Per mapp
 4. Skips anything already added manually (same account, amount and date) so it never duplicates
 5. Auto-categorizes freshly imported expenses with the fast AI path (shared categorizer)
 6. Auto-pairs opposite-sign equal-magnitude transactions on different accounts within 2 days as transfers
-7. Matches positive amounts against income source patterns; marks income received in monthly_matches
+7. Inflows are categorised to Ready to Assign (counted as income) only when they match a household income source; unrecognised inflows, such as company money passing through a personal account, are imported for balance accuracy but not counted as household income. Marks income received in monthly_matches
 8. Updates local account balances; deduplicates re-imports via the synci_processed table
 
 ### Authentication flow

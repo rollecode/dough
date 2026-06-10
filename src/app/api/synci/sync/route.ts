@@ -119,31 +119,42 @@ export async function POST(request: Request) {
             db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
             continue;
           }
-          if (localAccountId && firstUser) {
-            db.prepare(`
-              INSERT OR IGNORE INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
-              VALUES (?, ?, ?, ?, ?, '', 'Synci', ?, 1, 'cleared')
-            `).run(firstUser.id, synciTxId, importDate, amount, payee, localAccountId);
-            db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?")
-              .run(amount, localAccountId);
-            totalImported++;
-            if (amount < 0) toCategorize.push({ id: synciTxId, payee });
-            console.info("[synci/sync] Imported", payee, amount, "to account", localAccountId);
-          }
-          // Income-pattern matching for inflows so income sources get marked received
+          // Recognise household income by pattern. A matched inflow is categorised to Ready to
+          // Assign so it counts toward the budget; an unrecognised inflow (e.g. company money
+          // passing through a personal account) stays uncategorised and is NOT counted as income,
+          // mirroring how YNAB mode only imports pattern-matched income.
+          let incomeCategory = "";
+          let matchedSourceId: number | null = null;
           if (amount > 0) {
             for (const pattern of patterns) {
               const matcher = patternToMatcher(pattern.payee_pattern);
               if (!matcher(payee)) continue;
               if (pattern.min_amount > 0 && amount < pattern.min_amount) continue;
               if (pattern.max_amount > 0 && amount > pattern.max_amount) continue;
-              db.prepare(`INSERT OR IGNORE INTO monthly_matches (source_type, source_id, month, ynab_transaction_id, amount) VALUES (?, ?, ?, ?, ?)`)
-                .run("income", pattern.source_id, matchMonth, synciTxId, amount);
-              db.prepare(`INSERT INTO income_amount_history (income_id, amount, month) VALUES (?, ?, ?) ON CONFLICT(income_id, month) DO UPDATE SET amount = excluded.amount`)
-                .run(pattern.source_id, amount, matchMonth);
-              totalMatched++;
+              incomeCategory = "Inflow: Ready to Assign";
+              matchedSourceId = pattern.source_id;
               break;
             }
+          }
+          if (localAccountId && firstUser) {
+            db.prepare(`
+              INSERT OR IGNORE INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
+              VALUES (?, ?, ?, ?, ?, ?, 'Synci', ?, 1, 'cleared')
+            `).run(firstUser.id, synciTxId, importDate, amount, payee, incomeCategory, localAccountId);
+            db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?")
+              .run(amount, localAccountId);
+            totalImported++;
+            // Only unrecognised outflows need AI categorising; matched income is already placed.
+            if (amount < 0) toCategorize.push({ id: synciTxId, payee });
+            console.info("[synci/sync] Imported", payee, amount, incomeCategory ? "(income)" : "", "to account", localAccountId);
+          }
+          // Mark a matched income source as received this month
+          if (matchedSourceId != null) {
+            db.prepare(`INSERT OR IGNORE INTO monthly_matches (source_type, source_id, month, ynab_transaction_id, amount) VALUES (?, ?, ?, ?, ?)`)
+              .run("income", matchedSourceId, matchMonth, synciTxId, amount);
+            db.prepare(`INSERT INTO income_amount_history (income_id, amount, month) VALUES (?, ?, ?) ON CONFLICT(income_id, month) DO UPDATE SET amount = excluded.amount`)
+              .run(matchedSourceId, amount, matchMonth);
+            totalMatched++;
           }
           db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
           continue;
