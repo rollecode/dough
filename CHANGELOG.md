@@ -1,6 +1,7 @@
 ### 2.13.1: 2026-06-10
 
 * In local mode, count a Synci-imported inflow as income only when it matches a household income source, so company money passing through a personal account is not counted as household income
+* Fix a stray "0" showing on a paused subscription card and dim the whole inactive card to 40% opacity
 * Give the budget Assign button a roomier padding
 * Add an uncovered-overspending box to the budget topbar with a red Cover button, covering all overspending from unbudgeted money or sending you to the overspent filter
 * Close the budget Assign and Cover menus on an outside click (a backdrop trapped by the topbar blur never received the click)

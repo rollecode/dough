@@ -70,6 +70,16 @@
   opacity: 0.4;
 }
 
+/* A deactivated subscription dims the whole card. The card-level opacity already covers the
+   name, so cancel its own dimming to avoid compounding it to a barely-visible 0.16. */
+.subscription-card.is-inactive {
+  opacity: 0.4;
+}
+
+.subscription-card.is-inactive .subscription-card-name.is-inactive {
+  opacity: 1;
+}
+
 .subscription-card-meta {
   font-size: 0.6875rem;
   color: var(--muted-foreground);

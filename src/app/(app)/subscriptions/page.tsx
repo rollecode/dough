@@ -234,7 +234,7 @@ export default function SubscriptionsPage() {
           {[...subscriptions].sort((a, b) => a.due_day - b.due_day).map((sub) => (
             <div
               key={sub.id}
-              className="subscription-card"
+              className={`subscription-card ${!sub.is_active ? "is-inactive" : ""}`}
               style={{ backgroundColor: sub.brand_color + "1a", borderColor: sub.brand_color + "33" }}
               onClick={() => { setEditTarget(sub); setEditOpen(true); }}
             >
@@ -245,8 +245,8 @@ export default function SubscriptionsPage() {
                 <div className="subscription-card-info">
                   <div className="list-item-name-row">
                     <p className={`subscription-card-name ${!sub.is_active ? "is-inactive" : ""}`}>{sub.name}</p>
-                    {sub.is_paid && <Badge className="badge-matched"><Check className="icon-xs" />{locale === "fi" ? "Maksettu" : "Paid"}</Badge>}
-                    {sub.is_overdue && <Badge variant="destructive">{locale === "fi" ? "Myöhässä" : "Overdue"}</Badge>}
+                    {!!sub.is_paid && <Badge className="badge-matched"><Check className="icon-xs" />{locale === "fi" ? "Maksettu" : "Paid"}</Badge>}
+                    {!!sub.is_overdue && <Badge variant="destructive">{locale === "fi" ? "Myöhässä" : "Overdue"}</Badge>}
                     <button type="button" className={`priority-toggle ${sub.is_priority ? "is-priority" : ""}`} onClick={(e) => { e.stopPropagation(); togglePriority(sub.id, sub.is_priority); }} title={locale === "fi" ? (sub.is_priority ? "Pakollinen" : "Merkitse pakolliseksi") : (sub.is_priority ? "Must-pay" : "Mark as must-pay")}>
                       <AlertCircle />
                     </button>
