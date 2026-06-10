@@ -1,3 +1,8 @@
+### 2.13.3: 2026-06-11
+
+* Stop the app flashing default English before the user's language loads by holding render until the locale is known, showing a loading skeleton
+* Autocomplete the payee field on a new transaction from existing payees
+
 ### 2.13.2: 2026-06-11
 
 * Fix Synci double-counting transactions after a YNAB cutover by matching duplicates on amount and date rather than account, since Synci and YNAB can hold the same transaction on different accounts
