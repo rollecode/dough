@@ -30,10 +30,12 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
   const [batchTransactions, setBatchTransactions] = useState<{ payee: string; amount: string; date: string; account_id: string; account_name: string }[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
+  const [payees, setPayees] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     console.debug("[add-expense] Loading accounts");
+    fetch("/api/payees").then((r) => r.json()).then((d) => { if (Array.isArray(d.payees)) setPayees(d.payees); }).catch(() => {});
     Promise.all([
       fetch("/api/profile").then((r) => r.json()),
       fetch("/api/ynab/accounts").then((r) => r.json()).catch(() => ({ accounts: [] })),
@@ -223,7 +225,10 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
               )}
               <div className="form-field">
                 <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
-                <Input value={addPayee} onChange={(e) => setAddPayee(e.target.value)} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
+                <Input value={addPayee} onChange={(e) => setAddPayee(e.target.value)} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} list="payee-suggestions" autoComplete="off" />
+                <datalist id="payee-suggestions">
+                  {payees.map((p) => <option key={p} value={p} />)}
+                </datalist>
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
