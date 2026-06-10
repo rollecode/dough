@@ -1,6 +1,12 @@
 ### 2.13.1: 2026-06-10
 
 * In local mode, count a Synci-imported inflow as income only when it matches a household income source, so company money passing through a personal account is not counted as household income
+* Give the budget Assign button a roomier padding
+* Add an uncovered-overspending box to the budget topbar with a red Cover button, covering all overspending from unbudgeted money or sending you to the overspent filter
+* Close the budget Assign and Cover menus on an outside click (a backdrop trapped by the topbar blur never received the click)
+* Make the all-budgeted Ready to Assign box more visible with a solid dark background
+* Select the whole amount on every click in a category's assigned field, with a clearly coloured selection highlight
+* Append operators to the existing amount when typing + - * / in a category field, so calculator expressions like 50+10 build correctly instead of replacing the number
 
 ### 2.13.0: 2026-06-09
 
@@ -12,12 +18,6 @@
 * Count categorised reconciliation and balance adjustments as category activity, matching YNAB
 * Replay multi-year carryover with two bulk queries per category so the budget page stays fast
 * Make local mode match YNAB to the cent for Ready to Assign, income and every category balance
-* Give the budget Assign button a roomier padding
-* Add an uncovered-overspending box to the budget topbar with a red Cover button, covering all overspending from unbudgeted money or sending you to the overspent filter
-* Close the budget Assign and Cover menus on an outside click (a backdrop trapped by the topbar blur never received the click)
-* Make the all-budgeted Ready to Assign box more visible with a solid dark background
-* Select the whole amount on every click in a category's assigned field, with a clearly coloured selection highlight
-* Append operators to the existing amount when typing + - * / in a category field, so calculator expressions like 50+10 build correctly instead of replacing the number
 
 ### 2.12.0: 2026-06-05
 
