@@ -251,7 +251,13 @@ export default function TransactionsPage() {
                   {txIsTransfer && <Badge variant="secondary">{locale === "fi" ? "Siirto" : "Transfer"}</Badge>}
                   {tx.isSplit && <Badge variant="secondary">{locale === "fi" ? "Jaettu" : "Split"}</Badge>}
                 </div>
-                <p className="list-item-meta">{tx.isSplit && tx.parts ? tx.parts.map((p) => p.category || (locale === "fi" ? "Ei kategoriaa" : "No category")).join(" · ") : tx.category}</p>
+                <p className="list-item-meta">{(() => {
+                  const acct = allAccounts.find((a) => a.id === tx.account_id)?.name || "";
+                  const cat = tx.isSplit && tx.parts
+                    ? tx.parts.map((p) => p.category || (locale === "fi" ? "Ei kategoriaa" : "No category")).join(" · ")
+                    : tx.category;
+                  return [acct, cat].filter(Boolean).join(" · ");
+                })()}</p>
               </div>
               <div className="list-item-amount">
                 <p className="list-item-amount-value" data-positive={tx.amount >= 0 || undefined}>
