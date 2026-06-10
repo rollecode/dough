@@ -24,6 +24,7 @@
 @import "./modules/scroll-area.css";
 @import "./modules/separator.css";
 @import "./modules/label.css";
+@import "./modules/skeleton.css";
 
 /* Component modules */
 @import "./modules/chart.css";

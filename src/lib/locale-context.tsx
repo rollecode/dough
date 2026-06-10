@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { en } from "./i18n/en";
 import { fi } from "./i18n/fi";
 import type { Locale } from "./i18n";
+import { AppLoading } from "@/components/layout/app-loading";
 
 type TranslationObj = typeof en;
 
@@ -81,6 +82,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [privacyMode, setPrivacyModeState] = useState(false);
   const [dateFormat, setDateFormatState] = useState("d.m.yyyy");
   const [timeFormat, setTimeFormatState] = useState("24h");
+  // Gate render until the locale is known so the UI never flashes default English first.
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     console.debug("[locale] Fetching user locale and settings");
@@ -102,7 +105,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       }
       if (s?.date_format) setDateFormatState(String(s.date_format));
       if (s?.time_format) setTimeFormatState(String(s.time_format));
-    }).catch((err) => console.error("[locale] Failed to load settings:", err));
+    }).catch((err) => console.error("[locale] Failed to load settings:", err))
+      .finally(() => setReady(true));
   }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
@@ -142,7 +146,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale, t, decimals, setDecimals, fmt, mask, privacyMode, setPrivacyMode, dateFormat, setDateFormat, timeFormat, setTimeFormat, fmtDate, fmtTime }}>
-      {children}
+      {ready ? children : <AppLoading />}
     </LocaleContext.Provider>
   );
 }

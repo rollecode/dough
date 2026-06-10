@@ -1,0 +1,61 @@
+/* Module: skeleton — shimmering loading placeholders */
+
+.skeleton {
+  display: block;
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, var(--muted) 45%, transparent);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--foreground) 8%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -150% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+/* Full-page loading skeleton shown until the locale is ready */
+.app-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+  max-width: 64rem;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.app-loading-title {
+  height: 2rem;
+  width: 12rem;
+}
+
+.app-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .app-loading-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.app-loading-card {
+  height: 5.5rem;
+}
+
+.app-loading-block {
+  height: 9rem;
+}
