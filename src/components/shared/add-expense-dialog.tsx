@@ -10,6 +10,8 @@ import { useLocale } from "@/lib/locale-context";
 import { useYnab } from "@/lib/ynab-context";
 import { titleCasePayee } from "@/lib/text-utils";
 import { PayeeInput } from "@/components/shared/payee-input";
+import { CategoryPicker } from "@/components/shared/category-picker";
+import { DateField } from "@/components/ui/date-field";
 
 // Human label for a duplicate candidate's date: today / tomorrow / d.m.yyyy.
 function dayLabel(iso: string, locale: string): string {
@@ -29,11 +31,15 @@ interface AddExpenseDialogProps {
 }
 
 export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) {
-  const { locale } = useLocale();
+  const { locale, fmt } = useLocale();
   const { refresh } = useYnab();
   const [addAmount, setAddAmount] = useState("");
   const [addPayee, setAddPayee] = useState("");
   const [addMemo, setAddMemo] = useState("");
+  const [addCategory, setAddCategory] = useState("");
+  const [addDate, setAddDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [catGuessing, setCatGuessing] = useState(false);
+  const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
   const [addLoading, setAddLoading] = useState(false);
   const [linkedAccountId, setLinkedAccountId] = useState("");
   const [linkedAccountName, setLinkedAccountName] = useState("");
@@ -50,6 +56,10 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
   useEffect(() => {
     console.debug("[add-expense] Loading accounts");
     fetch("/api/payees").then((r) => r.json()).then((d) => { if (Array.isArray(d.payees)) setPayees(d.payees); }).catch(() => {});
+    const ym = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    fetch(`/api/budget?month=${ym}`).then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.categories)) setBudgetCats(d.categories.filter((c: { is_active: number }) => c.is_active).map((c: { name: string; group_name: string; available: number }) => ({ name: c.name, group_name: c.group_name, available: c.available })));
+    }).catch(() => {});
     Promise.all([
       fetch("/api/profile").then((r) => r.json()),
       fetch("/api/ynab/accounts").then((r) => r.json()).catch(() => ({ accounts: [] })),
@@ -80,6 +90,20 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
         setLinkedAccountName(data.account_name || "");
       }
     } catch { /* ignore */ }
+  };
+
+  // Ask the AI for a likely category so the user can review/correct it before saving. Only fills
+  // an empty pick (a manual choice is never overwritten).
+  const guessCategory = async (payee: string) => {
+    if (!payee.trim()) return;
+    setCatGuessing(true);
+    try {
+      const res = await fetch(`/api/categorize?payee=${encodeURIComponent(payee)}`);
+      const d = await res.json();
+      if (d.category) setAddCategory((cur) => cur || d.category);
+    } catch { /* ignore */ } finally {
+      setCatGuessing(false);
+    }
   };
 
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,8 +161,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
       const amountNum = Math.abs(parseFloat(addAmount.replace(",", ".")));
       if (isFinite(amountNum) && amountNum > 0) {
         try {
-          const today = new Date().toISOString().slice(0, 10);
-          const res = await fetch(`/api/transactions/check-duplicate?amount=${amountNum}&date=${today}`);
+          const res = await fetch(`/api/transactions/check-duplicate?amount=${amountNum}&date=${addDate}`);
           const d = await res.json();
           if (Array.isArray(d.duplicates) && d.duplicates.length > 0) {
             console.info("[add-expense] Possible duplicate(s):", d.duplicates.length);
@@ -158,11 +181,13 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
           amount: addAmount.replace(",", "."),
           payee_name: addPayee,
           memo: addMemo || undefined,
+          category: addCategory || undefined,
+          date: addDate,
         }),
       });
       if (res.ok) {
         onOpenChange(false);
-        setAddAmount(""); setAddPayee(""); setAddMemo("");
+        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10));
         setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
         refresh();
       }
@@ -251,16 +276,30 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
             </>
           ) : (
             <>
-              {linkedAccountName && (
-                <p className="settings-help">{locale === "fi" ? "Tili" : "Account"}: {linkedAccountName}</p>
-              )}
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Tili" : "Account"}</Label>
+                <select className="input" value={linkedAccountId} onChange={(e) => { setLinkedAccountId(e.target.value); const a = allAccounts.find((x) => x.id === e.target.value); setLinkedAccountName(a?.name || ""); }}>
+                  <option value="">{locale === "fi" ? "Valitse tili" : "Select account"}</option>
+                  {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
                 <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
               </div>
+              <div className="form-grid-2">
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
+                  <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); }} onFocus={() => guessCategory(addPayee)} placeholder="0.00" />
+                </div>
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>
+                  <DateField value={addDate} onChange={(v) => { setAddDate(v); setDupCandidates([]); }} />
+                </div>
+              </div>
               <div className="form-field">
-                <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
-                <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); }} placeholder="0.00" />
+                <Label>{locale === "fi" ? "Kategoria" : "Category"}{catGuessing ? ` · ${locale === "fi" ? "arvataan…" : "guessing…"}` : ""}</Label>
+                <CategoryPicker value={addCategory} onChange={setAddCategory} categories={budgetCats} fmt={fmt} placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"} noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"} searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"} />
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>

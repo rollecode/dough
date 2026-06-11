@@ -28,12 +28,13 @@ import {
 } from "lucide-react";
 import { AddExpenseDialog } from "@/components/shared/add-expense-dialog";
 import { PayeeInput } from "@/components/shared/payee-input";
+import { CategoryPicker } from "@/components/shared/category-picker";
 import { F } from "@/components/ui/f";
 
 type FilterType = "all" | "income" | "expenses" | "transfers";
 
 export default function TransactionsPage() {
-  const { t, locale } = useLocale();
+  const { t, locale, fmt } = useLocale();
   const { data, loading, connected, sync, refresh } = useYnab();
 
   // SSE: refresh when transactions are added
@@ -47,7 +48,7 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
-  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
   const [payees, setPayees] = useState<string[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -60,11 +61,16 @@ export default function TransactionsPage() {
     fetch("/api/ynab/accounts").then((r) => r.json()).then((data) => {
       if (data.accounts) setAllAccounts(data.accounts.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
     }).catch(() => {});
-    fetch("/api/categories").then((r) => r.json()).then((data) => {
-      if (Array.isArray(data.categories)) setAllCategories(data.categories.filter((c: { is_active: number }) => c.is_active).map((c: { name: string }) => c.name));
-    }).catch(() => {});
     fetch("/api/payees").then((r) => r.json()).then((data) => {
       if (Array.isArray(data.payees)) setPayees(data.payees);
+    }).catch(() => {});
+    // Budget categories with their available amounts, for the category picker.
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    fetch(`/api/budget?month=${ym}`).then((r) => r.json()).then((data) => {
+      if (Array.isArray(data.categories)) {
+        setBudgetCats(data.categories.filter((c: { is_active: number }) => c.is_active).map((c: { name: string; group_name: string; available: number }) => ({ name: c.name, group_name: c.group_name, available: c.available })));
+      }
     }).catch(() => {});
   }, []);
 
@@ -294,13 +300,15 @@ export default function TransactionsPage() {
                 <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
                 <PayeeInput value={editTx.payee} onChange={(v) => setEditTx({ ...editTx, payee: v })} payees={payees} />
               </div>
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Summa" : "Amount"}</Label>
-                <Input type="number" step="0.01" value={Math.abs(editTx.amount)} onChange={(e) => setEditTx({ ...editTx, amount: editTx.amount < 0 ? -Math.abs(parseFloat(e.target.value) || 0) : Math.abs(parseFloat(e.target.value) || 0) })} />
-              </div>
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>
-                <DateField value={editTx.date} onChange={(v) => setEditTx({ ...editTx, date: v })} />
+              <div className="form-grid-2">
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Summa" : "Amount"}</Label>
+                  <Input type="number" step="0.01" value={Math.abs(editTx.amount)} onChange={(e) => setEditTx({ ...editTx, amount: editTx.amount < 0 ? -Math.abs(parseFloat(e.target.value) || 0) : Math.abs(parseFloat(e.target.value) || 0) })} />
+                </div>
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>
+                  <DateField value={editTx.date} onChange={(v) => setEditTx({ ...editTx, date: v })} />
+                </div>
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Tili" : "Account"}</Label>
@@ -317,11 +325,15 @@ export default function TransactionsPage() {
                       {locale === "fi" ? "Jaa kategorioihin" : "Split into categories"}
                     </button>
                   </div>
-                  <select className="input" value={editTx.category} onChange={(e) => setEditTx({ ...editTx, category: e.target.value })}>
-                    <option value="">{locale === "fi" ? "Ei kategoriaa" : "No category"}</option>
-                    {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                    {editTx.category && !allCategories.includes(editTx.category) && <option value={editTx.category}>{editTx.category}</option>}
-                  </select>
+                  <CategoryPicker
+                    value={editTx.category}
+                    onChange={(v) => setEditTx({ ...editTx, category: v })}
+                    categories={budgetCats}
+                    fmt={fmt}
+                    placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
+                    noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
+                    searchPlaceholder={locale === "fi" ? "Hae..." : "Search..."}
+                  />
                 </div>
               ) : (() => {
                 const total = Math.round(Math.abs(editTx.amount) * 100) / 100;
@@ -337,11 +349,15 @@ export default function TransactionsPage() {
                     </div>
                     {splitLines.map((line, i) => (
                       <div className="tx-split-line" key={i}>
-                        <select className="input" value={line.category} onChange={(e) => setSplitLines(splitLines.map((l, j) => j === i ? { ...l, category: e.target.value } : l))}>
-                          <option value="">{locale === "fi" ? "Ei kategoriaa" : "No category"}</option>
-                          {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-                          {line.category && !allCategories.includes(line.category) && <option value={line.category}>{line.category}</option>}
-                        </select>
+                        <CategoryPicker
+                          value={line.category}
+                          onChange={(v) => setSplitLines(splitLines.map((l, j) => j === i ? { ...l, category: v } : l))}
+                          categories={budgetCats}
+                          fmt={fmt}
+                          placeholder={locale === "fi" ? "Valitse" : "Select"}
+                          noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
+                          searchPlaceholder={locale === "fi" ? "Hae..." : "Search..."}
+                        />
                         <Input className="tx-split-amount" type="number" step="0.01" inputMode="decimal" placeholder="0.00" value={line.amount} onChange={(e) => setSplitLines(splitLines.map((l, j) => j === i ? { ...l, amount: e.target.value } : l))} />
                         {splitLines.length > 2 && <button type="button" className="tx-split-remove" onClick={() => setSplitLines(splitLines.filter((_, j) => j !== i))} aria-label="Remove line">×</button>}
                       </div>

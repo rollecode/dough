@@ -80,6 +80,99 @@
   gap: 0.5rem;
 }
 
+/* Budget-aware category picker (add/edit transaction modals) */
+.cat-picker {
+  position: relative;
+}
+
+.cat-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cat-picker-placeholder {
+  color: var(--muted-foreground);
+}
+
+.cat-picker-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  padding: 4px;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.cat-picker-search {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.cat-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.cat-picker-group {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0.625rem 0.25rem;
+}
+
+.cat-picker-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.625rem;
+  border: none;
+  background: none;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.cat-picker-option.is-active,
+.cat-picker-option:hover {
+  background: var(--accent);
+}
+
+.cat-picker-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-picker-amt {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.cat-picker-amt.is-pos { color: var(--positive); }
+.cat-picker-amt.is-neg { color: var(--negative); }
+
 /* Payee autocomplete: custom suggestions dropdown (replaces native <datalist>, which never
    rendered on mobile). The list is anchored below the input. */
 .payee-autocomplete {
@@ -408,6 +501,16 @@
 .budget-ready-box.is-zero {
   background: color-mix(in srgb, #1f1d31 85%, transparent);
   color: var(--muted-foreground);
+}
+
+/* The uncovered box doubles as a shortcut to the overspent filter */
+.budget-ready-box.is-clickable {
+  cursor: pointer;
+  transition: filter 150ms;
+}
+
+.budget-ready-box.is-clickable:hover {
+  filter: brightness(1.12);
 }
 
 .budget-ready-value {
@@ -796,7 +899,7 @@
   .budget-ready-box { padding: 0.375rem 0.375rem 0.375rem 0.5rem; gap: 0.375rem; border-radius: 0.625rem; }
   .budget-aom-box { padding: 0.375rem 0.5rem; border-radius: 0.625rem; }
   .budget-center .budget-ready-value { font-size: 1rem; }
-  .budget-center .budget-ready-label { font-size: 0.625rem; margin-top: 0.125rem; }
+  .budget-center .budget-ready-label { font-size: 0.75rem; margin-top: 0.125rem; }
   .budget-assign-trigger { padding: 0.4rem 0.4rem; font-size: 0.75rem; }
   .budget-monthnav-label {
     width: auto;
@@ -1240,6 +1343,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 
 .budget-pill.is-positive {
@@ -1960,7 +2064,7 @@
 .metric-card-value-3xl.is-positive { color: var(--positive); }
 
 .list-item-amount-date {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted-foreground);
 }
 
@@ -2077,7 +2181,7 @@
 
 .chart-range-btn {
   padding: 0.25rem 0.5rem;
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--muted-foreground);
@@ -2270,7 +2374,7 @@
 }
 
 .account-badge {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 0.0625rem 0.4375rem;
   border-radius: 9999px;

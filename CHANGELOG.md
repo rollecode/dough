@@ -1,3 +1,14 @@
+### 2.16.0: 2026-06-11
+
+* Set the muted text colour to #828196 and raise all 10px font sizes to 12px for readability
+* Add a grouped, budget-aware category picker showing each category's available amount to the add and edit transaction modals, replacing the plain dropdown
+* Show the AI-guessed category in the add-expense modal so a wrong guess can be corrected before saving
+* Let an expense be added to any account, with the linked account preselected
+* Put the amount and date fields side by side and align the add and edit modals
+* Make the uncovered box switch to the overspent filter on click, while the Cover button still opens its menu
+* Base a filtered budget group header's totals on the rows actually shown, so it no longer displays a misleading available amount
+* Show a pointer cursor on the available pills
+
 ### 2.15.1: 2026-06-11
 
 * Fix Synci import filing a transaction on the polled account instead of its real account, which put one person's spending on another's account - attribute by the transaction's own account

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
     const body = await request.json();
-    const { account_id, amount, payee_name, memo, category_id, date } = body;
+    const { account_id, amount, payee_name, memo, category_id, category, date } = body;
 
     if (!account_id || !amount || !payee_name) {
       return NextResponse.json({ error: "Account, amount and payee required" }, { status: 400 });
@@ -29,9 +29,11 @@ export async function POST(request: Request) {
       const txDate = date || new Date().toISOString().slice(0, 10);
       const id = `local_${randomUUID()}`;
 
-      // Auto-categorize against local categories if none given
+      // Category: an explicit name (reviewed in the modal) wins, then a category_id, then an AI guess.
       let categoryName = "";
-      if (category_id) {
+      if (typeof category === "string" && category) {
+        categoryName = category;
+      } else if (category_id) {
         const c = db.prepare("SELECT name FROM categories WHERE id = ?").get(category_id) as { name: string } | undefined;
         categoryName = c?.name || "";
       } else {
@@ -76,7 +78,8 @@ export async function POST(request: Request) {
         const categoryNames = cats.map((c) => c.name);
 
         if (categoryNames.length > 0) {
-          const aiCategory = await aiCategorize(payee_name, categoryNames);
+          // A category name reviewed in the modal wins; otherwise fall back to an AI guess.
+          const aiCategory = (typeof category === "string" && category) ? category : await aiCategorize(payee_name, categoryNames);
           if (aiCategory) {
             const found = db.prepare("SELECT ynab_id FROM ynab_categories WHERE month = ? AND name = ?").get(currentMonth, aiCategory) as { ynab_id: string } | undefined;
             if (found?.ynab_id) {
