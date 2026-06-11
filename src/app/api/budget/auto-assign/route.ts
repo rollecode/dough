@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { eventBus } from "@/lib/event-bus";
-import { availableForCategory, monthlyTargetEquivalent, monthBudgetNumbers, assignedForMonth, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
+import { availableForCategory, monthlyTargetEquivalent, byDateMonthlyTarget, monthBudgetNumbers, assignedForMonth, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -26,14 +26,19 @@ function computeAutoAssign(db: ReturnType<typeof getDb>, month: string, mode: Mo
   // Per-mode "desired" amount each category should receive this month
   const desired = new Map<number, number>();
   if (mode === "underfunded") {
-    const targets = db.prepare("SELECT category_id, monthly_amount, COALESCE(cadence,'monthly') AS cadence, snooze_until_month FROM category_targets").all() as { category_id: number; monthly_amount: number; cadence: string; snooze_until_month: string }[];
+    const targets = db.prepare("SELECT category_id, monthly_amount, COALESCE(cadence,'monthly') AS cadence, COALESCE(target_date,'') AS target_date, snooze_until_month FROM category_targets").all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
     const tMap = new Map(targets.map((t) => [t.category_id, t]));
     const snoozed = new Set((db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[]).map((r) => r.category_id));
     for (const c of cats) {
       const t = tMap.get(c.id);
       if (!t || t.monthly_amount <= 0 || snoozed.has(c.id)) continue;
       if (t.snooze_until_month && t.snooze_until_month >= month) continue;
-      const need = round(monthlyTargetEquivalent(t.monthly_amount, t.cadence, month) - availableForCategory(db, c.id, c.name, month));
+      const available = availableForCategory(db, c.id, c.name, month);
+      // by_date: fund this month's share of what is still missing toward the goal. Other
+      // cadences refill the category up to their per-month equivalent.
+      const need = t.cadence === "by_date" && t.target_date
+        ? byDateMonthlyTarget(t.monthly_amount, available, month, t.target_date)
+        : round(monthlyTargetEquivalent(t.monthly_amount, t.cadence, month) - available);
       if (need > 0.005) desired.set(c.id, need);
     }
   } else {

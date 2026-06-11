@@ -1,3 +1,12 @@
+### 2.14.0: 2026-06-11
+
+* Add a save-by-date target type: set a goal amount and a date, and the monthly need is the amount still missing spread across the months left until that date
+* Fix the horizontal scrollbar on the dashboard by bounding the chart grid tracks and chart wrapper so charts shrink to fit, instead of clipping the overflow
+* Show the payee (Saaja) suggestions on mobile by replacing the native datalist with a custom dropdown, in both the add-expense and edit-transaction forms
+* Keep the sticky budget topbar below the app top bar across iOS Safari toolbar states by deriving its offset from the app top bar height including the safe area
+* Show hidden and snoozed categories only under the Kaikki filter, not in the overspent or money-available views
+* Add a notice dot on the Budjetti nav item that stays until no category is overspent, refreshing live as you assign money
+
 ### 2.13.6: 2026-06-11
 
 * Budget topbar on mobile: drop the side padding, keep the boxes on one line, and sit below the app top bar instead of behind it

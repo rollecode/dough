@@ -57,6 +57,7 @@ export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy }: Sideb
   const [collapsed, setCollapsed] = useState(false);
   const [unreadChat, setUnreadChat] = useState(0);
   const [unreadTx, setUnreadTx] = useState(0);
+  const [overspent, setOverspent] = useState(0);
   const [myUserId, setMyUserId] = useState<number | null>(null);
   const { t, locale } = useLocale();
 
@@ -66,6 +67,15 @@ export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy }: Sideb
       if (d.user?.id) setMyUserId(d.user.id);
     }).catch(() => {});
   }, []);
+
+  // Budget alerts (overspent categories) — a state, not an unread feed, so it is fetched once
+  // and refreshed only when data changes (it is heavier than the cheap unread COUNT queries).
+  const loadBudgetAlerts = useCallback(() => {
+    fetch("/api/budget/alerts").then((r) => r.json()).then((d) => {
+      setOverspent(d.overspent || 0);
+    }).catch(() => {});
+  }, []);
+  useEffect(() => { loadBudgetAlerts(); }, [loadBudgetAlerts]);
 
   // Initial unread check + reset when navigating to page
   useEffect(() => {
@@ -107,7 +117,9 @@ export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy }: Sideb
     if (d.source === "transaction-added" && pathname !== "/transactions" && myUserId !== null && d.userId !== myUserId) {
       setUnreadTx(1);
     }
-  }, [pathname, myUserId]));
+    // Any data change can flip a category over/under budget — refresh the budget alert dot.
+    loadBudgetAlerts();
+  }, [pathname, myUserId, loadBudgetAlerts]));
 
   const handleLogout = () => {
     // Use GET redirect — works on all browsers including iOS Orion
@@ -160,6 +172,11 @@ export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy }: Sideb
                 <span className="l-sidebar-badge">{unreadChat}</span>
               )}
               {item.key === "transactions" && unreadTx > 0 && !isActive && (
+                <span className="l-sidebar-badge-dot" />
+              )}
+              {/* Budget dot is a state, not an unread feed: keep it until nothing is overspent,
+                  even while viewing the budget page (refreshed live via data:updated). */}
+              {item.key === "budget" && overspent > 0 && (
                 <span className="l-sidebar-badge-dot" />
               )}
             </Link>

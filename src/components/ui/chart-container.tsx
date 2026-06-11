@@ -16,8 +16,8 @@ export function ChartContainer({
   }, []);
 
   if (!mounted) {
-    return <div style={{ height }} />;
+    return <div className="chart-container" style={{ height }} />;
   }
 
-  return <div style={{ height }}>{children}</div>;
+  return <div className="chart-container" style={{ height }}>{children}</div>;
 }

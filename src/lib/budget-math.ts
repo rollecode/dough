@@ -138,6 +138,27 @@ export function monthlyTargetEquivalent(amount: number, cadence: string, month: 
   }
 }
 
+// Months from `month` (YYYY-MM) to the target date's month, inclusive of the current month.
+// Clamped to a minimum of 1, so a past-due date asks for the full remaining amount now.
+export function monthsUntilInclusive(month: string, targetDate: string): number {
+  const [cy, cm] = month.split("-").map(Number);
+  const ty = Number(targetDate.slice(0, 4));
+  const tm = Number(targetDate.slice(5, 7));
+  if (!ty || !tm) return 1;
+  return Math.max(1, (ty * 12 + tm) - (cy * 12 + cm) + 1);
+}
+
+// Per-month contribution for a "save by date" target: the amount still missing (goal minus
+// what is already set aside) spread across the months remaining, inclusive of this one. As the
+// balance grows month over month the contribution recomputes, reaching the goal on the date.
+// Never negative; zero once the goal is reached.
+export function byDateMonthlyTarget(goal: number, alreadySaved: number, month: string, targetDate: string): number {
+  if (!(goal > 0) || !targetDate) return 0;
+  const n = monthsUntilInclusive(month, targetDate);
+  const remaining = Math.max(0, goal - alreadySaved);
+  return Math.round((remaining / n) * 100) / 100;
+}
+
 function ymOffset(monthYM: string, offset: number): string {
   const [y, m] = monthYM.split("-").map(Number);
   const d = new Date(y, m - 1 + offset, 1);

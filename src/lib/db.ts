@@ -309,6 +309,7 @@ function initializeDb(db: Database.Database) {
       category_id INTEGER NOT NULL UNIQUE REFERENCES categories(id) ON DELETE CASCADE,
       monthly_amount REAL NOT NULL DEFAULT 0,
       cadence TEXT NOT NULL DEFAULT 'monthly',
+      target_date TEXT DEFAULT '',
       snooze_until_month TEXT DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -459,6 +460,12 @@ function initializeDb(db: Database.Database) {
   if (targetCols.length > 0 && !targetCols.some((c) => c.name === "cadence")) {
     console.info("[db] Adding cadence column to category_targets");
     db.exec("ALTER TABLE category_targets ADD COLUMN cadence TEXT NOT NULL DEFAULT 'monthly'");
+  }
+
+  // Add target_date column to category_targets (used by the "save by date" target type) if missing
+  if (targetCols.length > 0 && !targetCols.some((c) => c.name === "target_date")) {
+    console.info("[db] Adding target_date column to category_targets");
+    db.exec("ALTER TABLE category_targets ADD COLUMN target_date TEXT DEFAULT ''");
   }
 
   // Add age_of_money column to ynab_month_budget (YNAB's own per-month figure) if missing

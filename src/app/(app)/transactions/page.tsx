@@ -27,6 +27,7 @@ import {
   Plus,
 } from "lucide-react";
 import { AddExpenseDialog } from "@/components/shared/add-expense-dialog";
+import { PayeeInput } from "@/components/shared/payee-input";
 import { F } from "@/components/ui/f";
 
 type FilterType = "all" | "income" | "expenses" | "transfers";
@@ -47,6 +48,7 @@ export default function TransactionsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [payees, setPayees] = useState<string[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [splitMode, setSplitMode] = useState(false);
@@ -60,6 +62,9 @@ export default function TransactionsPage() {
     }).catch(() => {});
     fetch("/api/categories").then((r) => r.json()).then((data) => {
       if (Array.isArray(data.categories)) setAllCategories(data.categories.filter((c: { is_active: number }) => c.is_active).map((c: { name: string }) => c.name));
+    }).catch(() => {});
+    fetch("/api/payees").then((r) => r.json()).then((data) => {
+      if (Array.isArray(data.payees)) setPayees(data.payees);
     }).catch(() => {});
   }, []);
 
@@ -287,7 +292,7 @@ export default function TransactionsPage() {
             <div className="form-stack">
               <div className="form-field">
                 <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
-                <Input value={editTx.payee} onChange={(e) => setEditTx({ ...editTx, payee: e.target.value })} />
+                <PayeeInput value={editTx.payee} onChange={(v) => setEditTx({ ...editTx, payee: v })} payees={payees} />
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Summa" : "Amount"}</Label>

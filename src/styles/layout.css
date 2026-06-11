@@ -17,7 +17,7 @@
   left: 0;
   right: 0;
   z-index: 30;
-  height: calc(3.5rem + env(safe-area-inset-top, 0px));
+  height: var(--app-topbar-h);
   padding-top: env(safe-area-inset-top, 0px);
   align-items: center;
   justify-content: space-between;
@@ -93,7 +93,7 @@
 
 /* Main content */
 .l-main {
-  padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  padding-top: var(--app-topbar-h);
   transition: padding-left 300ms ease;
 }
 

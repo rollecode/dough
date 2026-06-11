@@ -9,6 +9,7 @@ import { Loader2, Paperclip, X } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { useYnab } from "@/lib/ynab-context";
 import { titleCasePayee } from "@/lib/text-utils";
+import { PayeeInput } from "@/components/shared/payee-input";
 
 interface AddExpenseDialogProps {
   open: boolean;
@@ -225,10 +226,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
               )}
               <div className="form-field">
                 <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
-                <Input value={addPayee} onChange={(e) => setAddPayee(e.target.value)} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} list="payee-suggestions" autoComplete="off" />
-                <datalist id="payee-suggestions">
-                  {payees.map((p) => <option key={p} value={p} />)}
-                </datalist>
+                <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
@@ -236,7 +234,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
-                <Input value={addMemo} onChange={(e) => setAddMemo(e.target.value)} onBlur={() => resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. Lotan bussikortti" : "e.g. Bus card for kids"} />
+                <Input value={addMemo} onChange={(e) => setAddMemo(e.target.value)} onBlur={() => resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
               </div>
               <Button type="button" onClick={handleAddExpense} disabled={addLoading || !linkedAccountId || !addAmount || !addPayee}>
                 {addLoading ? (locale === "fi" ? "Lisätään..." : "Adding...") : (locale === "fi" ? "Lisää" : "Add")}

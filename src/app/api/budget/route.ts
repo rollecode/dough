@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
-import { monthBudgetNumbers, monthlyTargetEquivalent, moneyLastsDays, walkCategory, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
+import { monthBudgetNumbers, monthlyTargetEquivalent, byDateMonthlyTarget, moneyLastsDays, walkCategory, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
 
 interface CategoryRow {
   id: number;
@@ -88,8 +88,8 @@ export async function GET(request: Request) {
     const budgeted = budgetedForMonth(db, month);
     const activity = activityForMonth(db, month);
     const targets = db
-      .prepare("SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, snooze_until_month FROM category_targets")
-      .all() as { category_id: number; monthly_amount: number; cadence: string; snooze_until_month: string }[];
+      .prepare("SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, snooze_until_month FROM category_targets")
+      .all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
     const targetMap = new Map(targets.map((t) => [t.category_id, t]));
 
     const snoozedRows = db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[];
@@ -103,8 +103,14 @@ export async function GET(request: Request) {
       const t = targetMap.get(c.id);
       const target_amount = t?.monthly_amount || 0;
       const target_cadence = t?.cadence || "monthly";
-      // The amount needed this month, distributed from the chosen cadence
-      const target_monthly = target_amount > 0 ? monthlyTargetEquivalent(target_amount, target_cadence, month) : 0;
+      const target_date = t?.target_date || "";
+      // The amount needed this month. A "by_date" target spreads (goal − already saved) over the
+      // months left; every other cadence distributes its per-period amount across the month.
+      const target_monthly = target_amount > 0
+        ? (target_cadence === "by_date"
+            ? byDateMonthlyTarget(target_amount, carry, month, target_date)
+            : monthlyTargetEquivalent(target_amount, target_cadence, month))
+        : 0;
       const snooze_until_month = t?.snooze_until_month || "";
       const snoozed = snoozedSet.has(c.id);
       // A snoozed-for-the-month category never nudges its target
@@ -123,6 +129,7 @@ export async function GET(request: Request) {
         target_monthly: Math.round(target_monthly * 100) / 100,
         target_amount: Math.round(target_amount * 100) / 100,
         target_cadence,
+        target_date,
         snooze_until_month,
         target_active,
       };

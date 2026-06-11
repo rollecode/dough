@@ -28,6 +28,10 @@
   --chart-4: #a855f7;
   --chart-5: #ec4899;
   --radius: 0.75rem;
+  /* Height of the fixed mobile app top bar (.l-topbar), including the notch safe area.
+     Single source of truth so anything sitting below it (the sticky budget topbar) stays
+     aligned across devices and iOS Safari toolbar states. */
+  --app-topbar-h: calc(3.5rem + env(safe-area-inset-top, 0px));
   --sidebar: #ffffff;
   --sidebar-foreground: #09090b;
   --sidebar-primary: #6366f1;

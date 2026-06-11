@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateField } from "@/components/ui/date-field";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,7 @@ interface BudgetCategory {
   target_monthly: number;
   target_amount: number;
   target_cadence: string;
+  target_date: string;
   snooze_until_month: string;
   target_active: boolean;
 }
@@ -97,9 +99,25 @@ function availEps(decimals: number): number {
 const CADENCES = ["daily", "weekly", "monthly", "yearly"] as const;
 
 function cadenceLabel(cadence: string, locale: string): string {
-  const fi: Record<string, string> = { daily: "Päivä", weekly: "Viikko", monthly: "Kuukausi", yearly: "Vuosi" };
-  const en: Record<string, string> = { daily: "Day", weekly: "Week", monthly: "Month", yearly: "Year" };
+  const fi: Record<string, string> = { daily: "Päivä", weekly: "Viikko", monthly: "Kuukausi", yearly: "Vuosi", by_date: "Päivään mennessä" };
+  const en: Record<string, string> = { daily: "Day", weekly: "Week", monthly: "Month", yearly: "Year", by_date: "By date" };
   return (locale === "fi" ? fi : en)[cadence] || cadence;
+}
+
+// Months from the viewed month to the target date, inclusive (mirrors lib/budget-math).
+function monthsUntilInclusive(month: string, targetDate: string): number {
+  const [cy, cm] = month.split("-").map(Number);
+  const ty = Number(targetDate.slice(0, 4));
+  const tm = Number(targetDate.slice(5, 7));
+  if (!ty || !tm) return 1;
+  return Math.max(1, (ty * 12 + tm) - (cy * 12 + cm) + 1);
+}
+
+// Format an ISO date (YYYY-MM-DD) as Finnish d.m.yyyy for display.
+function formatIsoDate(iso: string): string {
+  const p = iso.split("-");
+  if (p.length !== 3) return iso;
+  return `${Number(p[2])}.${Number(p[1])}.${p[0]}`;
 }
 
 function cadenceSuffix(cadence: string, locale: string): string {
@@ -133,6 +151,7 @@ export default function BudgetPage() {
   const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
   const [targetCadence, setTargetCadence] = useState<string>("monthly");
+  const [targetDate, setTargetDate] = useState<string>("");
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveDir, setMoveDir] = useState<"in" | "out">("out");
   const [moveOther, setMoveOther] = useState<string>("");
@@ -366,14 +385,25 @@ export default function BudgetPage() {
     if (!inspectorCat) return;
     const value = evalExpression(targetDraft);
     if (value === null) return;
+    // A by_date target is meaningless without a date — keep the editor open until one is given.
+    if (targetCadence === "by_date" && !targetDate) {
+      console.warn("[budget] by_date target needs a target date");
+      return;
+    }
     try {
       await fetch("/api/targets", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category_id: inspectorCat.id, monthly_amount: value, cadence: targetCadence }),
+        body: JSON.stringify({
+          category_id: inspectorCat.id,
+          monthly_amount: value,
+          cadence: targetCadence,
+          target_date: targetCadence === "by_date" ? targetDate : "",
+        }),
       });
       setTargetEditing(false);
       setTargetDraft("");
+      setTargetDate("");
       load(month);
     } catch (err) {
       console.error("[budget] Save target error:", err);
@@ -846,6 +876,9 @@ export default function BudgetPage() {
       {bdrag?.type === "group" && dropGroupAt === localGroups.length && <div className="budget-group-drop-line" aria-hidden="true" />}
 
       {(() => {
+        // Hidden/snoozed categories belong only under the "Kaikki" (all) filter, not the
+        // overspent / money-available views which should show active budget rows only.
+        if (filter !== "all") return null;
         const snoozedCats = (data?.categories || []).filter((c) => c.is_active && c.snoozed);
         if (snoozedCats.length === 0) return null;
         return (
@@ -866,6 +899,7 @@ export default function BudgetPage() {
       })()}
 
       {(() => {
+        if (filter !== "all") return null;
         const hiddenCats = (data?.categories || []).filter((c) => !c.is_active);
         if (hiddenCats.length === 0) return null;
         return (
@@ -910,9 +944,12 @@ export default function BudgetPage() {
           {inspectorCat && (() => {
             const c = inspectorCat;
             const availState = c.available > eps ? "is-positive" : c.available < -eps ? "is-negative" : "is-zero";
-            const hasTarget = c.target_monthly > 0;
+            const isByDate = c.target_cadence === "by_date";
+            // Use the configured amount, not the monthly need: a by_date goal that is already
+            // met has a zero monthly need but should still show as a (completed) target.
+            const hasTarget = c.target_amount > 0;
             const isSnoozed = hasTarget && c.snooze_until_month >= month;
-            const progress = hasTarget ? Math.min(1, c.budgeted / c.target_monthly) : 0;
+            const progress = c.target_monthly > 0 ? Math.min(1, c.budgeted / c.target_monthly) : (hasTarget ? 1 : 0);
             return (
               <>
                 <SheetHeader className="insp-header">
@@ -980,11 +1017,28 @@ export default function BudgetPage() {
                               {CADENCES.map((cad) => (
                                 <SelectItem key={cad} value={cad}>{cadenceLabel(cad, locale)}</SelectItem>
                               ))}
+                              <SelectItem value="by_date">{cadenceLabel("by_date", locale)}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
+                        {targetCadence === "by_date" && (
+                          <div className="insp-target-date">
+                            <Label className="insp-target-date-label">{locale === "fi" ? "Mihin päivään mennessä" : "By which date"}</Label>
+                            <DateField value={targetDate} onChange={setTargetDate} />
+                          </div>
+                        )}
                         <p className="settings-help">
-                          {targetCadence === "monthly"
+                          {targetCadence === "by_date"
+                            ? (() => {
+                                const goal = evalExpression(targetDraft) || 0;
+                                if (!targetDate) return locale === "fi" ? "Säästä tämä summa valittuun päivään mennessä." : "Save this amount by the chosen date.";
+                                const n = monthsUntilInclusive(month, targetDate);
+                                const need = Math.max(0, (goal - c.carryover) / n);
+                                return locale === "fi"
+                                  ? `Tarvitaan noin ${fmt(Math.round(need * 100) / 100)} € / kk, jotta ${fmt(goal)} € on kasassa ${formatIsoDate(targetDate)}.`
+                                  : `Needs about ${fmt(Math.round(need * 100) / 100)} € / mo to reach ${fmt(goal)} € by ${formatIsoDate(targetDate)}.`;
+                              })()
+                            : targetCadence === "monthly"
                             ? (locale === "fi" ? "Summa, joka varataan tälle joka kuukausi." : "Amount assigned here every month.")
                             : (() => {
                                 const amt = evalExpression(targetDraft) || 0;
@@ -995,14 +1049,21 @@ export default function BudgetPage() {
                         <div className="insp-actions">
                           <Button type="button" size="sm" onClick={saveTarget}>{locale === "fi" ? "Tallenna" : "Save"}</Button>
                           {hasTarget && <Button type="button" variant="destructive" size="sm" onClick={() => clearTarget(c.id)}>{locale === "fi" ? "Poista" : "Clear"}</Button>}
-                          <Button type="button" variant="ghost" size="sm" onClick={() => { setTargetEditing(false); setTargetDraft(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setTargetEditing(false); setTargetDraft(""); setTargetDate(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
                         </div>
                       </div>
                     ) : hasTarget ? (
                       <div className="insp-target">
                         <div className="budget-target-progress insp-target-bar"><span className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} /></div>
                         <p className="insp-target-text">
-                          {isSnoozed ? (locale === "fi" ? "Tauolla tässä kuussa" : "Paused this month") : (
+                          {isSnoozed ? (locale === "fi" ? "Tauolla tässä kuussa" : "Paused this month") : isByDate ? (
+                            <>
+                              <F v={c.target_amount} s=" €" /> {locale === "fi" ? "→" : "by"} {c.target_date ? formatIsoDate(c.target_date) : ""}
+                              {c.target_monthly > 0
+                                ? <span className="text-muted"> · <F v={c.target_monthly} s=" €" /> {cadenceSuffix("monthly", locale)}</span>
+                                : <span className="text-positive"> · {locale === "fi" ? "valmis" : "funded"}</span>}
+                            </>
+                          ) : (
                             <>
                               <F v={c.target_amount} s=" €" /> {cadenceSuffix(c.target_cadence, locale)}
                               {c.target_cadence !== "monthly" && <span className="text-muted"> · <F v={c.target_monthly} s=" €" /> {cadenceSuffix("monthly", locale)}</span>}
@@ -1010,7 +1071,7 @@ export default function BudgetPage() {
                           )}
                         </p>
                         <div className="insp-actions">
-                          <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(c.target_amount ? fmt(c.target_amount) : ""); setTargetCadence(c.target_cadence || "monthly"); setTargetEditing(true); }}>{locale === "fi" ? "Muokkaa" : "Edit"}</Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(c.target_amount ? fmt(c.target_amount) : ""); setTargetCadence(c.target_cadence || "monthly"); setTargetDate(c.target_date || ""); setTargetEditing(true); }}>{locale === "fi" ? "Muokkaa" : "Edit"}</Button>
                           {isSnoozed ? (
                             <Button type="button" variant="outline" size="sm" onClick={() => unsnoozeTarget(c.id)}>{locale === "fi" ? "Jatka" : "Resume"}</Button>
                           ) : (
@@ -1019,7 +1080,7 @@ export default function BudgetPage() {
                         </div>
                       </div>
                     ) : (
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetCadence("monthly"); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetCadence("monthly"); setTargetDate(""); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
                     )}
                   </div>
 
