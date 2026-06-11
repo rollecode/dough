@@ -286,6 +286,7 @@ function initializeDb(db: Database.Database) {
       group_name TEXT DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
       color TEXT DEFAULT '',
+      subscription_id INTEGER DEFAULT NULL,
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -466,6 +467,13 @@ function initializeDb(db: Database.Database) {
   if (targetCols.length > 0 && !targetCols.some((c) => c.name === "target_date")) {
     console.info("[db] Adding target_date column to category_targets");
     db.exec("ALTER TABLE category_targets ADD COLUMN target_date TEXT DEFAULT ''");
+  }
+
+  // Add subscription_id to categories (links a category to a subscription for its target/branding)
+  const categoryCols = db.prepare("PRAGMA table_info(categories)").all() as { name: string }[];
+  if (categoryCols.length > 0 && !categoryCols.some((c) => c.name === "subscription_id")) {
+    console.info("[db] Adding subscription_id column to categories");
+    db.exec("ALTER TABLE categories ADD COLUMN subscription_id INTEGER");
   }
 
   // Add age_of_money column to ynab_month_budget (YNAB's own per-month figure) if missing
