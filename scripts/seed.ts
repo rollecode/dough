@@ -91,11 +91,22 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id, created_at DESC);
 `);
 
-// Seed users
+// Seed users. Passwords must come from env - the app is designed to be internet-exposed, so a
+// guessable default would create a publicly known login. User 2 is only created when configured.
+if (!process.env.USER1_PASSWORD) {
+  console.error("USER1_PASSWORD environment variable is required (no default password is seeded).");
+  process.exit(1);
+}
 const users = [
-  { email: process.env.USER1_EMAIL || "user1", password: process.env.USER1_PASSWORD || "changeme", name: process.env.USER1_NAME || "User 1", locale: "en" },
-  { email: process.env.USER2_EMAIL || "user2", password: process.env.USER2_PASSWORD || "changeme", name: process.env.USER2_NAME || "User 2", locale: "fi" },
+  { email: process.env.USER1_EMAIL || "user1", password: process.env.USER1_PASSWORD, name: process.env.USER1_NAME || "User 1", locale: "en" },
 ];
+if (process.env.USER2_EMAIL || process.env.USER2_PASSWORD) {
+  if (!process.env.USER2_PASSWORD) {
+    console.error("USER2_PASSWORD is required when USER2_EMAIL is set.");
+    process.exit(1);
+  }
+  users.push({ email: process.env.USER2_EMAIL || "user2", password: process.env.USER2_PASSWORD, name: process.env.USER2_NAME || "User 2", locale: "fi" });
+}
 
 const insertUser = db.prepare(
   "INSERT OR IGNORE INTO users (email, password_hash, display_name, locale) VALUES (?, ?, ?, ?)"
@@ -105,7 +116,7 @@ for (const u of users) {
   const hash = bcrypt.hashSync(u.password, 10);
   const result = insertUser.run(u.email, hash, u.name, u.locale);
   if (result.changes > 0) {
-    console.log(`Created user: ${u.email} (password: ${u.password})`);
+    console.log(`Created user: ${u.email}`);
   } else {
     console.log(`User already exists: ${u.email}`);
   }
