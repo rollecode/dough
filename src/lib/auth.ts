@@ -26,7 +26,12 @@ export interface SessionUser {
 }
 
 export async function createSession(userId: number): Promise<string> {
-  const token = await new SignJWT({ userId })
+  // Embed the user's current session version; bumping users.session_version invalidates every
+  // previously issued token for that user (server-side revocation for the 30-day sessions).
+  const db = getDb();
+  const row = db.prepare("SELECT session_version FROM users WHERE id = ?").get(userId) as { session_version: number } | undefined;
+  const sv = row?.session_version ?? 1;
+  const token = await new SignJWT({ userId, sv })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("30d")
     .sign(JWT_SECRET);
@@ -41,15 +46,23 @@ export async function getSession(): Promise<SessionUser | null> {
     const token = cookieStore.get(COOKIE_NAME)?.value;
     if (!token) return null;
 
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
     const userId = payload.userId as number;
 
     const db = getDb();
     const row = db
-      .prepare("SELECT id, email, display_name, locale, ynab_access_token, ynab_budget_id, last_ynab_sync FROM users WHERE id = ?")
-      .get(userId) as (SessionUser & { ynab_access_token: string | null }) | undefined;
+      .prepare("SELECT id, email, display_name, locale, ynab_access_token, ynab_budget_id, last_ynab_sync, session_version FROM users WHERE id = ?")
+      .get(userId) as (SessionUser & { ynab_access_token: string | null; session_version: number }) | undefined;
 
     if (!row) return null;
+
+    // Tokens issued before a session_version bump are revoked. Tokens minted before this claim
+    // existed carry no sv and are treated as version 1.
+    const tokenVersion = typeof payload.sv === "number" ? payload.sv : 1;
+    if (tokenVersion !== (row.session_version ?? 1)) {
+      console.warn("[auth] Rejected token with stale session version for user", userId);
+      return null;
+    }
 
     return {
       id: row.id,

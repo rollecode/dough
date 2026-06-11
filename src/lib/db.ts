@@ -36,6 +36,7 @@ function initializeDb(db: Database.Database) {
       ynab_access_token TEXT,
       ynab_budget_id TEXT,
       last_ynab_sync TEXT,
+      session_version INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -287,6 +288,8 @@ function initializeDb(db: Database.Database) {
       sort_order INTEGER NOT NULL DEFAULT 0,
       color TEXT DEFAULT '',
       subscription_id INTEGER DEFAULT NULL,
+      bill_id INTEGER DEFAULT NULL,
+      debt_account_id TEXT DEFAULT NULL,
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -469,11 +472,27 @@ function initializeDb(db: Database.Database) {
     db.exec("ALTER TABLE category_targets ADD COLUMN target_date TEXT DEFAULT ''");
   }
 
-  // Add subscription_id to categories (links a category to a subscription for its target/branding)
+  // Add link columns to categories (a category can be linked to a subscription, bill or debt,
+  // which then supplies its target and display name)
   const categoryCols = db.prepare("PRAGMA table_info(categories)").all() as { name: string }[];
   if (categoryCols.length > 0 && !categoryCols.some((c) => c.name === "subscription_id")) {
     console.info("[db] Adding subscription_id column to categories");
     db.exec("ALTER TABLE categories ADD COLUMN subscription_id INTEGER");
+  }
+  if (categoryCols.length > 0 && !categoryCols.some((c) => c.name === "bill_id")) {
+    console.info("[db] Adding bill_id column to categories");
+    db.exec("ALTER TABLE categories ADD COLUMN bill_id INTEGER");
+  }
+  if (categoryCols.length > 0 && !categoryCols.some((c) => c.name === "debt_account_id")) {
+    console.info("[db] Adding debt_account_id column to categories");
+    db.exec("ALTER TABLE categories ADD COLUMN debt_account_id TEXT");
+  }
+
+  // Add session_version to users (bumping it invalidates all existing session tokens)
+  const sessionVerCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (sessionVerCols.length > 0 && !sessionVerCols.some((c) => c.name === "session_version")) {
+    console.info("[db] Adding session_version column to users");
+    db.exec("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1");
   }
 
   // Add age_of_money column to ynab_month_budget (YNAB's own per-month figure) if missing
