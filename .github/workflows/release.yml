@@ -46,9 +46,12 @@ jobs:
 
       - name: Create release
         if: steps.check.outputs.exists == 'false'
+        # Notes are passed through an env var, not interpolated into the shell command, so
+        # changelog content can never be executed as shell syntax.
         run: |
           gh release create "v${{ steps.version.outputs.version }}" \
             --title "v${{ steps.version.outputs.version }}" \
-            --notes "${{ steps.notes.outputs.notes }}"
+            --notes "$RELEASE_NOTES"
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.notes }}
