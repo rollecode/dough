@@ -6,10 +6,12 @@ export function AppVersion() {
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
   if (!version) return null;
   const commit = process.env.NEXT_PUBLIC_APP_COMMIT;
-  const label = commit ? `v${version}-${commit}` : `v${version}`;
+  const versionLabel = commit ? `v${version}-${commit}` : `v${version}`;
   return (
     <footer className="app-version">
-      <a href={REPO_URL} target="_blank" rel="noopener noreferrer">{label}</a>
+      <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="app-version-link">
+        <span className="app-version-name">Dough</span> <span className="app-version-num">{versionLabel}</span>
+      </a>
     </footer>
   );
 }
