@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getYnabToken, getYnabBudgetId, setHouseholdSetting } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 
 export async function GET() {
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     // Allow cron calls with X-Cron-Secret header matching household setting
     const cronSecret = request.headers.get("x-cron-secret");
     const expectedSecret = getHouseholdSetting("cron_secret");
-    const isCron = !!(cronSecret && expectedSecret && cronSecret === expectedSecret);
+    const isCron = secretsEqual(cronSecret, expectedSecret);
 
     let user = await getSession();
     if (!user && isCron) {

@@ -1,4 +1,15 @@
+import { timingSafeEqual } from "crypto";
 import { getDb } from "./db";
+
+// Constant-time string comparison for secrets (cron header vs stored value), so the comparison
+// time does not leak how many leading characters match. Returns false for empty/missing values.
+export function secretsEqual(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 export function getHouseholdSetting(key: string): string | null {
   const db = getDb();
