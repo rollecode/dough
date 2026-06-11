@@ -1379,7 +1379,7 @@
 /* Available pill — green funded, red overspent, neutral zero */
 .budget-pill {
   display: inline-block;
-  min-width: 3rem;
+  min-width: 2rem;
   padding: 0.1875rem 0.5rem;
   border-radius: 9999px;
   font-size: 0.8125rem;

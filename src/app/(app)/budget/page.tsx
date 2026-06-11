@@ -49,6 +49,8 @@ interface BudgetCategory {
   target_active: boolean;
   subscription_id: number | null;
   subscription_name: string;
+  linked_type: "" | "subscription" | "bill" | "debt";
+  linked_name: string;
 }
 
 interface BudgetData {
@@ -149,6 +151,8 @@ export default function BudgetPage() {
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<{ id: number; name: string; amount: number }[]>([]);
+  const [bills, setBills] = useState<{ id: number; name: string; amount: number }[]>([]);
+  const [debts, setDebts] = useState<{ id: string; name: string; amount: number }[]>([]);
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [inspectorId, setInspectorId] = useState<number | null>(null);
   const [catSaved, setCatSaved] = useState(false);
@@ -169,7 +173,7 @@ export default function BudgetPage() {
   const [dropGroupAt, setDropGroupAt] = useState<number | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [showSnoozed, setShowSnoozed] = useState(false);
-  const [filter, setFilter] = useState<"all" | "overspent" | "available">("all");
+  const [filter, setFilter] = useState<"all" | "overspent" | "available" | "underfunded">("all");
   const [autoOpen, setAutoOpen] = useState(false);
   const [autoAmounts, setAutoAmounts] = useState<{ underfunded: number; last_assigned: number; last_spent: number } | null>(null);
   const [coverAllOpen, setCoverAllOpen] = useState(false);
@@ -210,11 +214,21 @@ export default function BudgetPage() {
 
   useEffect(() => { load(month); }, [load, month]);
 
-  // Active subscriptions a category can be linked to (for the inspector's link control).
+  // Subscriptions, bills and debts a category can be linked to (for the inspector's link control).
   useEffect(() => {
     fetch("/api/subscriptions").then((r) => r.json()).then((d) => {
       if (Array.isArray(d.subscriptions)) {
         setSubscriptions(d.subscriptions.filter((s: { is_active: number }) => s.is_active).map((s: { id: number; name: string; amount: number }) => ({ id: s.id, name: s.name, amount: s.amount })));
+      }
+    }).catch(() => {});
+    fetch("/api/bills").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.bills)) {
+        setBills(d.bills.filter((b: { is_active: number }) => b.is_active).map((b: { id: number; name: string; amount: number }) => ({ id: b.id, name: b.name, amount: b.amount })));
+      }
+    }).catch(() => {});
+    fetch("/api/debts").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.debts)) {
+        setDebts(d.debts.map((x: { id: string; name: string; minimumPayment: number }) => ({ id: x.id, name: x.name, amount: x.minimumPayment || 0 })));
       }
     }).catch(() => {});
   }, []);
@@ -453,17 +467,24 @@ export default function BudgetPage() {
     }
   };
 
-  // Link a category to a subscription (subId) or unlink (null). History is untouched server-side.
-  const linkSubscription = async (id: number, subId: number | null) => {
+  // Link a category to a subscription/bill/debt, or unlink ("none"). Links are mutually
+  // exclusive server-side; unlinking never touches budget history.
+  const linkCategory = async (id: number, link: string) => {
+    const body: { id: number; subscription_id: number | null; bill_id: number | null; debt_account_id: string | null } = {
+      id, subscription_id: null, bill_id: null, debt_account_id: null,
+    };
+    if (link.startsWith("sub:")) body.subscription_id = Number(link.slice(4));
+    else if (link.startsWith("bill:")) body.bill_id = Number(link.slice(5));
+    else if (link.startsWith("debt:")) body.debt_account_id = link.slice(5);
     try {
       await fetch("/api/categories", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, subscription_id: subId }),
+        body: JSON.stringify(body),
       });
       load(month);
     } catch (err) {
-      console.error("[budget] Link subscription error:", err);
+      console.error("[budget] Link category error:", err);
     }
   };
 
@@ -783,6 +804,7 @@ export default function BudgetPage() {
         {([
           ["all", locale === "fi" ? "Kaikki" : "All"],
           ["overspent", locale === "fi" ? "Ylitetyt" : "Overspent"],
+          ["underfunded", locale === "fi" ? "Budjetoimatta" : "Unfunded"],
           ["available", locale === "fi" ? "Rahaa jäljellä" : "Money available"],
         ] as const).map(([key, lbl]) => (
           <button
@@ -813,7 +835,10 @@ export default function BudgetPage() {
         const dragEnabled = filter === "all";
         const visibleItems = dragEnabled
           ? items
-          : items.filter((c) => (filter === "overspent" ? c.available < -0.005 : c.available > 0.005));
+          : items.filter((c) =>
+              filter === "overspent" ? c.available < -0.005
+              : filter === "underfunded" ? (c.target_active && c.budgeted < c.target_monthly - 0.005)
+              : c.available > 0.005);
         if (!dragEnabled && visibleItems.length === 0) return null;
         // Header totals reflect only the rows actually shown, so a filtered group never displays a
         // misleading aggregate (e.g. a positive/green "available" that includes hidden rows).
@@ -986,9 +1011,10 @@ export default function BudgetPage() {
             const hasTarget = c.target_amount > 0;
             const isSnoozed = hasTarget && c.snooze_until_month >= month;
             const progress = c.target_monthly > 0 ? Math.min(1, c.budgeted / c.target_monthly) : (hasTarget ? 1 : 0);
-            // When linked to a subscription, the target and branding come from it.
-            const isLinked = !!c.subscription_id;
-            const linkBrand = isLinked ? getBrandConfig(c.subscription_name) : null;
+            // When linked to a subscription/bill/debt, the target and name come from it.
+            // Only subscriptions carry a brand icon; bills and debts show just the link icon.
+            const isLinked = !!c.linked_type;
+            const linkBrand = c.linked_type === "subscription" ? getBrandConfig(c.subscription_name) : null;
             return (
               <>
                 <SheetHeader className="insp-header">
@@ -1045,31 +1071,41 @@ export default function BudgetPage() {
                   </div>
 
                   <div className="insp-section">
-                    <span className="insp-section-title">{locale === "fi" ? "Kausitilaus" : "Subscription"}</span>
-                    {isLinked && linkBrand ? (
+                    <span className="insp-section-title">{locale === "fi" ? "Linkitys" : "Link"}</span>
+                    {isLinked ? (
                       <div className="insp-linked">
-                        <span className="subscription-brand-icon insp-linked-icon" style={{ backgroundColor: linkBrand.color }}>
-                          <BrandIcon svg={linkBrand.svg} logo={linkBrand.logo} />
-                        </span>
-                        <span className="insp-linked-name">{c.subscription_name}</span>
-                        <Button type="button" variant="outline" size="sm" onClick={() => linkSubscription(c.id, null)}>{locale === "fi" ? "Poista linkitys" : "Unlink"}</Button>
+                        {linkBrand && (
+                          <span className="subscription-brand-icon insp-linked-icon" style={{ backgroundColor: linkBrand.color }}>
+                            <BrandIcon svg={linkBrand.svg} logo={linkBrand.logo} />
+                          </span>
+                        )}
+                        <span className="insp-linked-name">{c.linked_name}</span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => linkCategory(c.id, "none")}>{locale === "fi" ? "Poista linkitys" : "Unlink"}</Button>
                       </div>
-                    ) : subscriptions.length > 0 ? (
-                      <Select value="" onValueChange={(v) => v && linkSubscription(c.id, Number(v))}>
-                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kausitilaukseen" : "Link to a subscription"} /></SelectTrigger>
+                    ) : (subscriptions.length > 0 || bills.length > 0 || debts.length > 0) ? (
+                      <Select value="" onValueChange={(v) => v && linkCategory(c.id, v)}>
+                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kausitilaukseen, laskuun tai velkaan" : "Link to a subscription, bill or debt"} /></SelectTrigger>
                         <SelectContent>
-                          {subscriptions.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
+                          {subscriptions.map((s) => <SelectItem key={`sub:${s.id}`} value={`sub:${s.id}`}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
+                          {bills.map((b) => <SelectItem key={`bill:${b.id}`} value={`bill:${b.id}`}>{b.name} · {fmt(b.amount)} €</SelectItem>)}
+                          {debts.map((d) => <SelectItem key={`debt:${d.id}`} value={`debt:${d.id}`}>{d.name}{d.amount > 0 ? ` · ${fmt(d.amount)} €` : ""}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     ) : (
-                      <p className="settings-help">{locale === "fi" ? "Ei kausitilauksia." : "No subscriptions yet."}</p>
+                      <p className="settings-help">{locale === "fi" ? "Ei linkitettävää." : "Nothing to link to yet."}</p>
                     )}
                   </div>
 
                   <div className="insp-section">
                     <span className="insp-section-title">{locale === "fi" ? "Tavoite" : "Target"}</span>
                     {isLinked ? (
-                      <p className="insp-target-text">{locale === "fi" ? `Tilauksesta: ${fmt(c.target_amount)} € / kk` : `From subscription: ${fmt(c.target_amount)} € / mo`}</p>
+                      <p className="insp-target-text">
+                        {c.linked_type === "subscription" && (locale === "fi" ? `Tilauksesta: ${fmt(c.target_amount)} € / kk` : `From subscription: ${fmt(c.target_amount)} € / mo`)}
+                        {c.linked_type === "bill" && (locale === "fi" ? `Laskusta: ${fmt(c.target_amount)} € / kk` : `From bill: ${fmt(c.target_amount)} € / mo`)}
+                        {c.linked_type === "debt" && (c.target_amount > 0
+                          ? (locale === "fi" ? `Velasta: ${fmt(c.target_amount)} € / kk` : `From debt: ${fmt(c.target_amount)} € / mo`)
+                          : (locale === "fi" ? "Velalla ei ole kuukausierää." : "The debt has no monthly payment set."))}
+                      </p>
                     ) : targetEditing ? (
                       <div className="insp-target-edit">
                         <div className="insp-target-row">
@@ -1284,6 +1320,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   // Open the popover upward when there isn't room for it below (last rows near the viewport bottom)
   const decideDrop = () => { const r = availCellRef.current?.getBoundingClientRect(); setDropUp(!!r && window.innerHeight - r.bottom < 300); };
   const [focused, setFocused] = useState(false);
+  const [fundOpen, setFundOpen] = useState(false);
   const [actOpen, setActOpen] = useState(false);
   const [actTxns, setActTxns] = useState<{ id: string; date: string; payee: string; amount: number; memo: string | null; account: string }[] | null>(null);
   const [actLoading, setActLoading] = useState(false);
@@ -1348,19 +1385,15 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
     <div className="budget-grid budget-row">
       <button type="button" className="budget-row-main" onClick={onOpen}>
         <span className="budget-row-nameline">
-          <span className="budget-row-name">{cat.subscription_id ? cat.subscription_name : cat.name}</span>
-          {cat.subscription_id && (() => {
+          <span className="budget-row-name">{cat.linked_type ? cat.linked_name : cat.name}</span>
+          {cat.linked_type === "subscription" && (() => {
             const b = getBrandConfig(cat.subscription_name);
-            return (
-              <>
-                <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>
-                <Link2 className="budget-row-linkicon" aria-hidden="true" />
-              </>
-            );
+            return <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>;
           })()}
+          {cat.linked_type && <Link2 className="budget-row-linkicon" aria-hidden="true" />}
           {cat.description && <span className="budget-row-desc">{cat.description}</span>}
         </span>
-        {hasTarget && !cat.subscription_id && (
+        {hasTarget && !cat.linked_type && (
           <span className="budget-row-target">
             <span className="budget-target-progress">
               <span className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
@@ -1505,6 +1538,45 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                       ))}
                       {readyToAssign <= 0.005 && sources.length === 0 && (
                         <p className="budget-cover-empty">{locale === "fi" ? "Ei rahaa katettavaksi" : "No money available to cover"}</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </>
+        ) : underfunded ? (
+          <>
+            {/* Underfunded target: clicking opens a fund menu - top up the remaining target
+                amount from Ready to Assign or move it from another category. */}
+            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { if (!fundOpen) decideDrop(); setFundOpen((o) => !o); }} aria-label={locale === "fi" ? "Rahoita tavoite" : "Fund target"} aria-haspopup="menu" aria-expanded={fundOpen}>
+              <F v={cat.available} />
+            </button>
+            {fundOpen && (() => {
+              const amount = stillNeeded;
+              const sources = siblings.filter((o) => o.is_active && o.id !== cat.id && o.available > 0.005);
+              return (
+                <>
+                  <div className="budget-calc-backdrop" onClick={() => setFundOpen(false)} />
+                  <div className={`budget-cover-popover ${dropUp ? "is-up" : ""}`}>
+                    <div className="budget-cover-title">
+                      {locale === "fi" ? "Rahoita tavoite" : "Fund target"} <span className="budget-cover-amt"><F v={amount} s=" €" /></span>
+                    </div>
+                    <div className="budget-cover-list">
+                      {readyToAssign > 0.005 && (
+                        <button type="button" className="budget-cover-item" onClick={() => { onCover("rta", Math.min(amount, readyToAssign)); setFundOpen(false); }}>
+                          <span className="budget-cover-name">{locale === "fi" ? "Budjetoimaton raha" : "Ready to assign"}</span>
+                          <span className="budget-cover-src"><F v={readyToAssign} s=" €" /></span>
+                        </button>
+                      )}
+                      {sources.map((o) => (
+                        <button key={o.id} type="button" className="budget-cover-item" onClick={() => { onCover(o.id, Math.min(amount, o.available)); setFundOpen(false); }}>
+                          <span className="budget-cover-name">{o.name}</span>
+                          <span className="budget-cover-src"><F v={o.available} s=" €" /></span>
+                        </button>
+                      ))}
+                      {readyToAssign <= 0.005 && sources.length === 0 && (
+                        <p className="budget-cover-empty">{locale === "fi" ? "Ei rahaa siirrettäväksi" : "No money available"}</p>
                       )}
                     </div>
                   </div>
