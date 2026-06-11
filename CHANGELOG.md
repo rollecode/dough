@@ -1,3 +1,8 @@
+### 2.16.1: 2026-06-11
+
+* Add a delete button to the transaction editor so a duplicate can be removed; it reverses the account balance and refreshes the dashboard
+* Project month-end expenses at the planned discretionary rate instead of extrapolating month-to-date spending, so a late-synced or one-off past purchase no longer spikes the estimate
+
 ### 2.16.0: 2026-06-11
 
 * Set the muted text colour to #828196 and raise all 10px font sizes to 12px for readability
