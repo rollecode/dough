@@ -1,3 +1,10 @@
+### 2.15.0: 2026-06-11
+
+* Make the net worth tab work without a YNAB connection, showing current net worth from live account balances and allowing snapshots in local mode
+* Add the account name to each transaction in the budget activity popover and remove its horizontal scrollbar
+* Warn about a likely duplicate when manually adding a transaction that matches an existing amount dated today or tomorrow
+* Remove the brand initial icons from the bills list
+
 ### 2.14.0: 2026-06-11
 
 * Add a save-by-date target type: set a goal amount and a date, and the monthly need is the amount still missing spread across the months left until that date

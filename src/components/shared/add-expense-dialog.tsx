@@ -11,6 +11,18 @@ import { useYnab } from "@/lib/ynab-context";
 import { titleCasePayee } from "@/lib/text-utils";
 import { PayeeInput } from "@/components/shared/payee-input";
 
+// Human label for a duplicate candidate's date: today / tomorrow / d.m.yyyy.
+function dayLabel(iso: string, locale: string): string {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayIso = today.toISOString().slice(0, 10);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowIso = tomorrow.toISOString().slice(0, 10);
+  if (iso === todayIso) return locale === "fi" ? "tänään" : "today";
+  if (iso === tomorrowIso) return locale === "fi" ? "huomenna" : "tomorrow";
+  const p = iso.split("-");
+  return p.length === 3 ? `${Number(p[2])}.${Number(p[1])}.${p[0]}` : iso;
+}
+
 interface AddExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,6 +44,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
   const [batchLoading, setBatchLoading] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [payees, setPayees] = useState<string[]>([]);
+  const [dupCandidates, setDupCandidates] = useState<{ id: string; date: string; payee: string; amount: number; account: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -116,8 +129,25 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
     reader.readAsDataURL(file);
   };
 
-  const handleAddExpense = async () => {
+  const handleAddExpense = async (force = false) => {
     if (!linkedAccountId || !addAmount || !addPayee) return;
+    // Guard against double-entering something Synci has already synced (or will sync tomorrow):
+    // warn if a transaction with the same amount already exists today/tomorrow. Skipped on force.
+    if (!force) {
+      const amountNum = Math.abs(parseFloat(addAmount.replace(",", ".")));
+      if (isFinite(amountNum) && amountNum > 0) {
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          const res = await fetch(`/api/transactions/check-duplicate?amount=${amountNum}&date=${today}`);
+          const d = await res.json();
+          if (Array.isArray(d.duplicates) && d.duplicates.length > 0) {
+            console.info("[add-expense] Possible duplicate(s):", d.duplicates.length);
+            setDupCandidates(d.duplicates);
+            return;
+          }
+        } catch { /* if the check fails, do not block the add */ }
+      }
+    }
     setAddLoading(true);
     try {
       const res = await fetch("/api/ynab/transaction", {
@@ -133,7 +163,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
       if (res.ok) {
         onOpenChange(false);
         setAddAmount(""); setAddPayee(""); setAddMemo("");
-        setReceiptPreview(null); setBatchTransactions([]);
+        setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
         refresh();
       }
     } catch (err) {
@@ -230,15 +260,40 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
-                <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => setAddAmount(e.target.value)} placeholder="0.00" />
+                <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); }} placeholder="0.00" />
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
                 <Input value={addMemo} onChange={(e) => setAddMemo(e.target.value)} onBlur={() => resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
               </div>
-              <Button type="button" onClick={handleAddExpense} disabled={addLoading || !linkedAccountId || !addAmount || !addPayee}>
-                {addLoading ? (locale === "fi" ? "Lisätään..." : "Adding...") : (locale === "fi" ? "Lisää" : "Add")}
-              </Button>
+              {dupCandidates.length > 0 && (
+                <div className="dup-warning">
+                  <p className="dup-warning-title">
+                    {locale === "fi"
+                      ? "Samansuuruinen tapahtuma löytyi jo - mahdollinen tuplaus:"
+                      : "A transaction with the same amount already exists - possible duplicate:"}
+                  </p>
+                  {dupCandidates.map((d) => (
+                    <p key={d.id} className="dup-warning-row">
+                      {d.payee || (locale === "fi" ? "Tuntematon" : "Unknown")}
+                      {d.account ? ` · ${d.account}` : ""} · {dayLabel(d.date, locale)}
+                    </p>
+                  ))}
+                  <div className="dup-warning-actions">
+                    <Button type="button" size="sm" variant="destructive" onClick={() => handleAddExpense(true)} disabled={addLoading}>
+                      {locale === "fi" ? "Lisää silti" : "Add anyway"}
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setDupCandidates([])}>
+                      {locale === "fi" ? "Peruuta" : "Cancel"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {dupCandidates.length === 0 && (
+                <Button type="button" onClick={() => handleAddExpense()} disabled={addLoading || !linkedAccountId || !addAmount || !addPayee}>
+                  {addLoading ? (locale === "fi" ? "Lisätään..." : "Adding...") : (locale === "fi" ? "Lisää" : "Add")}
+                </Button>
+              )}
             </>
           )}
         </div>
