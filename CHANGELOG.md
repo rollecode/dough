@@ -1,3 +1,8 @@
+### 2.15.1: 2026-06-11
+
+* Fix Synci import filing a transaction on the polled account instead of its real account, which put one person's spending on another's account - attribute by the transaction's own account
+* Use the transaction value date (when the purchase happened) instead of the booking date (when it later posted) so dates match the bank
+
 ### 2.15.0: 2026-06-11
 
 * Make the net worth tab work without a YNAB connection, showing current net worth from live account balances and allowing snapshots in local mode

@@ -91,7 +91,15 @@ export async function POST(request: Request) {
 
         const payee = tx.mapped_fields?.payee || tx.creditor?.name || tx.debtor?.name || tx.remittance_information?.unstructured || tx.mapped_fields?.description || "Unknown";
         const txId = tx.id ? String(tx.id) : "";
-        const txDate = tx.booking_date || tx.mapped_fields?.date || "";
+        // Prefer value_date (when the purchase actually happened, which is what the bank shows)
+        // over booking_date (when it later posted/cleared). Using booking_date stamped purchases
+        // with their clearing date instead of the real transaction date.
+        const txDate = tx.value_date || tx.booking_date || tx.mapped_fields?.date || "";
+        // Attribute to the transaction's OWN account, not the account being polled. Synci's
+        // bank_account_id filter is not strict: a poll can return transactions belonging to other
+        // linked accounts (e.g. a partner's), and filing them under the polled account put one
+        // person's spending on another's account. Fall back to the polled account if absent.
+        const txSynciAccount = tx.financial_account_id != null ? String(tx.financial_account_id) : synciAccountId;
 
         if (!txId) continue;
 
@@ -105,7 +113,7 @@ export async function POST(request: Request) {
         // LOCAL MODE: import every transaction (income and expense) straight into Dough,
         // no YNAB round trip. Dormant while YNAB is connected.
         if (mode === "local") {
-          const localAccountId = accountMapping[synciAccountId] || "";
+          const localAccountId = accountMapping[txSynciAccount] || "";
           const importDate = txDate || now.toISOString().slice(0, 10);
           // Skip if this transaction is already present from YNAB or a manual entry, matched by
           // amount + date but NOT account. Synci attributes a transaction to the bank account it
@@ -186,7 +194,7 @@ export async function POST(request: Request) {
             // (Previously the override took priority, which misfiled income onto the wrong
             // person's account when a source was configured for a different account.)
             const overrideAccount = db.prepare("SELECT target_account_id FROM income_sources WHERE id = ?").get(pattern.source_id) as { target_account_id: string } | undefined;
-            const ynabAccountId = (accountMapping[synciAccountId] || overrideAccount?.target_account_id || "");
+            const ynabAccountId = (accountMapping[txSynciAccount] || overrideAccount?.target_account_id || "");
             const ynabToken = getHouseholdSetting("ynab_access_token");
             const ynabBudgetId = getHouseholdSetting("ynab_budget_id");
             let realYnabId = synciTxId;
