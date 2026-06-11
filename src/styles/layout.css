@@ -377,6 +377,18 @@
   text-align: left;
 }
 
+/* Pages that cap their own content width (.budget-page is 56rem) get a matching footer, so the
+   version label lines up with the content edge instead of the wider default container. */
+.l-main:has(.budget-page) .app-version {
+  max-width: calc(56rem + 1.5rem);
+}
+
+@media (min-width: 768px) {
+  .l-main:has(.budget-page) .app-version {
+    max-width: calc(56rem + 3rem);
+  }
+}
+
 @media (min-width: 768px) {
   .app-version {
     padding: 2rem 1.5rem;
