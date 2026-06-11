@@ -51,8 +51,8 @@ export function AgeOfMoneyChart() {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={hist} margin={{ top: 8, right: 12, bottom: 0, left: -18 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fill: "#71717a", fontSize: 10 }} tickLine={false} axisLine={false} width={28} allowDecimals={false} domain={[0, (m: number) => Math.max(m, 10)]} />
+            <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} width={28} allowDecimals={false} domain={[0, (m: number) => Math.max(m, 10)]} />
             <Tooltip
               cursor={{ stroke: "rgba(255,255,255,0.1)" }}
               contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: "0.5rem", fontSize: "0.8125rem" }}
