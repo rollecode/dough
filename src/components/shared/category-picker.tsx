@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 
 export interface PickerCategory {
@@ -20,17 +21,41 @@ interface CategoryPickerProps {
 }
 
 // Budget-aware category picker: a custom dropdown that lists categories grouped by their budget
-// group and shows each one's available amount, instead of a bare native <select>. Selects on
-// pointerdown so it works on touch. Shared by the add and edit transaction modals.
+// group and shows each one's available amount. The panel is rendered in a portal with fixed
+// positioning so it floats above the dialog instead of being clipped inside it (which forced
+// scrolling within the modal). Selects on pointerdown so it works on touch.
 export function CategoryPicker({ value, onChange, categories, placeholder, noneLabel, searchPlaceholder, fmt }: CategoryPickerProps) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  // Position the floating panel just below the trigger; keep it aligned while scrolling/resizing.
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = triggerRef.current?.getBoundingClientRect();
+      if (r) setPos({ left: r.left, top: r.bottom + 4, width: r.width });
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
@@ -53,13 +78,13 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
   const fmtAmt = (n: number) => (fmt ? fmt(n) : n.toFixed(2));
 
   return (
-    <div className="cat-picker" ref={wrapRef}>
-      <button type="button" className="cat-picker-trigger input" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
+    <div className="cat-picker">
+      <button ref={triggerRef} type="button" className="cat-picker-trigger input" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
         <span className={value ? "" : "cat-picker-placeholder"}>{value || placeholder}</span>
         <ChevronDown className="icon-xs" />
       </button>
-      {open && (
-        <div className="cat-picker-panel">
+      {open && mounted && pos && createPortal(
+        <div ref={panelRef} className="cat-picker-panel" style={{ position: "fixed", left: pos.left, top: pos.top, width: pos.width }}>
           <input className="cat-picker-search input" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
           <ul className="cat-picker-list">
             <li>
@@ -86,7 +111,8 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
               </li>
             ))}
           </ul>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -100,11 +100,9 @@
 }
 
 .cat-picker-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 60;
+  /* Rendered in a portal on <body> with fixed left/top/width set inline, so it floats above the
+     dialog instead of being clipped/scrolled inside it. z-index sits above the dialog (50). */
+  z-index: 100;
   padding: 4px;
   background: var(--popover);
   border: 1px solid var(--border);
