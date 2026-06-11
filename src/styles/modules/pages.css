@@ -212,6 +212,26 @@
   background: var(--accent);
 }
 
+/* AI category badge in the add-expense modal: shows the pick was made by AI (or in flight) */
+.ai-cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.ai-cat-badge.is-thinking {
+  color: var(--muted-foreground);
+}
+
+.ai-cat-badge svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
 /* Possible-duplicate warning shown before a manual transaction add */
 .dup-warning {
   display: flex;

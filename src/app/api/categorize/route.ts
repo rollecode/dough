@@ -10,15 +10,19 @@ export async function GET(request: Request) {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-    const payee = new URL(request.url).searchParams.get("payee") || "";
+    const params = new URL(request.url).searchParams;
+    const payee = params.get("payee") || "";
+    const memo = (params.get("memo") || "").trim();
     if (!payee.trim()) return NextResponse.json({ category: "" });
 
     const db = getDb();
     const names = (db.prepare("SELECT name FROM categories WHERE is_active = 1").all() as { name: string }[]).map((c) => c.name);
     if (names.length === 0) return NextResponse.json({ category: "" });
 
-    const category = await categorizePayee(payee, names);
-    console.debug("[categorize] payee", payee, "->", category);
+    // The description often disambiguates a generic payee, so include it in the context.
+    const context = memo ? `${payee} (${memo})` : payee;
+    const category = await categorizePayee(context, names);
+    console.debug("[categorize] payee", payee, "memo:", memo || "-", "->", category);
     return NextResponse.json({ category: category || "" });
   } catch (error) {
     console.error("[categorize] error:", error);

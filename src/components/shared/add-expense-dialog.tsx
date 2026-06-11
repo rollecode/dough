@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Paperclip, X } from "lucide-react";
+import { Loader2, Paperclip, X, Sparkles } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { useYnab } from "@/lib/ynab-context";
 import { titleCasePayee } from "@/lib/text-utils";
@@ -39,6 +39,9 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
   const [addCategory, setAddCategory] = useState("");
   const [addDate, setAddDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [catGuessing, setCatGuessing] = useState(false);
+  // Where the current category pick came from: AI suggestion or the user's own choice
+  const [catSource, setCatSource] = useState<"" | "ai" | "manual">("");
+  const catSourceRef = useRef<"" | "ai" | "manual">("");
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
   const [addLoading, setAddLoading] = useState(false);
   const [linkedAccountId, setLinkedAccountId] = useState("");
@@ -92,19 +95,31 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
     } catch { /* ignore */ }
   };
 
-  // Ask the AI for a likely category so the user can review/correct it before saving. Only fills
-  // an empty pick (a manual choice is never overwritten).
-  const guessCategory = async (payee: string) => {
-    if (!payee.trim()) return;
-    setCatGuessing(true);
-    try {
-      const res = await fetch(`/api/categorize?payee=${encodeURIComponent(payee)}`);
-      const d = await res.json();
-      if (d.category) setAddCategory((cur) => cur || d.category);
-    } catch { /* ignore */ } finally {
-      setCatGuessing(false);
-    }
-  };
+  // Live AI category guess: as the payee/description are typed (debounced), ask the AI for the
+  // best category and select it in the picker, marked as AI-chosen. A manual pick always wins -
+  // once the user chooses, the AI stops updating the field.
+  useEffect(() => {
+    if (!open) return;
+    const payee = addPayee.trim();
+    if (!payee || catSourceRef.current === "manual") return;
+    const t = setTimeout(async () => {
+      setCatGuessing(true);
+      try {
+        const res = await fetch(`/api/categorize?payee=${encodeURIComponent(payee)}&memo=${encodeURIComponent(addMemo.trim())}`);
+        const d = await res.json();
+        if (d.category && catSourceRef.current !== "manual") {
+          setAddCategory(d.category);
+          catSourceRef.current = "ai";
+          setCatSource("ai");
+          console.debug("[add-expense] AI suggested category:", d.category);
+        }
+      } catch { /* ignore */ } finally {
+        setCatGuessing(false);
+      }
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, addPayee, addMemo]);
 
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,6 +203,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
       if (res.ok) {
         onOpenChange(false);
         setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10));
+        catSourceRef.current = ""; setCatSource("");
         setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
         refresh();
       }
@@ -290,7 +306,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
               <div className="form-grid-2">
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
-                  <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); }} onFocus={() => guessCategory(addPayee)} placeholder="0.00" />
+                  <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); }} placeholder="0.00" />
                 </div>
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>
@@ -298,8 +314,20 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
                 </div>
               </div>
               <div className="form-field">
-                <Label>{locale === "fi" ? "Kategoria" : "Category"}{catGuessing ? ` · ${locale === "fi" ? "arvataan…" : "guessing…"}` : ""}</Label>
-                <CategoryPicker value={addCategory} onChange={setAddCategory} categories={budgetCats} fmt={fmt} placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"} noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"} searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"} />
+                <Label>
+                  {locale === "fi" ? "Kategoria" : "Category"}
+                  {catGuessing && <span className="ai-cat-badge is-thinking"><Sparkles /> {locale === "fi" ? "AI miettii…" : "AI thinking…"}</span>}
+                  {!catGuessing && catSource === "ai" && addCategory && <span className="ai-cat-badge"><Sparkles /> {locale === "fi" ? "AI valitsi" : "AI picked"}</span>}
+                </Label>
+                <CategoryPicker
+                  value={addCategory}
+                  onChange={(v) => { setAddCategory(v); const src = v ? "manual" : ""; catSourceRef.current = src; setCatSource(src); }}
+                  categories={budgetCats}
+                  fmt={fmt}
+                  placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
+                  noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
+                  searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"}
+                />
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
