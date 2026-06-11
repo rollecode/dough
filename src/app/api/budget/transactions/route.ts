@@ -9,6 +9,7 @@ interface TxRow {
   payee: string;
   amount: number;
   memo: string | null;
+  account: string;
 }
 
 // Transactions that make up a category's activity (Toteuma) for a given month.
@@ -32,11 +33,15 @@ export async function GET(request: Request) {
     const end = `${month}-${String(lastDay).padStart(2, "0")}`;
 
     const db = getDb();
+    // acc is aliased (not `a`) so it does not clash with the `ynab_accounts a` subquery inside
+    // CATEGORY_ACTIVITY_PREDICATE. Bare column names in the predicate resolve to transactions,
+    // since ynab_accounts has no payee/category/amount columns.
     const rows = db
       .prepare(
-        "SELECT id, date, payee, amount, memo FROM transactions " +
-          "WHERE category = ? AND date >= ? AND date <= ? AND amount < 0 AND " + CATEGORY_ACTIVITY_PREDICATE + " " +
-          "ORDER BY date DESC, id DESC"
+        "SELECT t.id, t.date, t.payee, t.amount, t.memo, COALESCE(acc.name, '') AS account " +
+          "FROM transactions t LEFT JOIN ynab_accounts acc ON acc.id = t.account_id " +
+          "WHERE t.category = ? AND t.date >= ? AND t.date <= ? AND t.amount < 0 AND " + CATEGORY_ACTIVITY_PREDICATE + " " +
+          "ORDER BY t.date DESC, t.id DESC"
       )
       .all(category, start, end) as TxRow[];
 

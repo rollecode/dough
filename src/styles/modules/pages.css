@@ -121,6 +121,34 @@
   background: var(--accent);
 }
 
+/* Possible-duplicate warning shown before a manual transaction add */
+.dup-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--chart-3) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chart-3) 25%, transparent);
+}
+
+.dup-warning-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dup-warning-row {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.dup-warning-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .form-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -694,6 +722,10 @@
   flex-direction: column;
   max-height: 18rem;
   overflow-y: auto;
+  /* Vertical-only scroll. Without this, overflow-y: auto promotes overflow-x (visible) to auto
+     per the CSS overflow spec, so any sub-pixel/scrollbar-gutter overflow shows a spurious
+     horizontal scrollbar. Rows truncate instead. */
+  overflow-x: hidden;
 }
 
 .budget-act-item {
@@ -728,6 +760,9 @@
   font-size: 0.6875rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .budget-act-amt {

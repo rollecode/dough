@@ -1222,7 +1222,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   const decideDrop = () => { const r = availCellRef.current?.getBoundingClientRect(); setDropUp(!!r && window.innerHeight - r.bottom < 300); };
   const [focused, setFocused] = useState(false);
   const [actOpen, setActOpen] = useState(false);
-  const [actTxns, setActTxns] = useState<{ id: string; date: string; payee: string; amount: number; memo: string | null }[] | null>(null);
+  const [actTxns, setActTxns] = useState<{ id: string; date: string; payee: string; amount: number; memo: string | null; account: string }[] | null>(null);
   const [actLoading, setActLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { fmtDate, decimals } = useLocale();
@@ -1385,7 +1385,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                         <div key={tx.id} className="budget-act-item">
                           <span className="budget-act-info">
                             <span className="budget-act-payee">{tx.payee}</span>
-                            <span className="budget-act-date">{fmtDate(tx.date)}</span>
+                            <span className="budget-act-date">{tx.account ? `${tx.account} · ` : ""}{fmtDate(tx.date)}</span>
                           </span>
                           <span className="budget-act-amt">−<F v={Math.abs(tx.amount)} s=" €" /></span>
                         </div>
