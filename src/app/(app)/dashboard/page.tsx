@@ -425,6 +425,23 @@ export default function DashboardPage() {
     spendingByDay[day] = Math.round(cumulative);
   }
 
+  // Discretionary-only cumulative: the same fixed costs the daily budget excludes (bills, debts,
+  // investments) are left out here too. The spending-flow "over/under pace" bubble used total
+  // spending minus only matched paid bills, which counted debts/investments/unmatched bills as
+  // discretionary and inflated the "over" figure.
+  const discretionaryByDay: Record<number, number> = {};
+  let discCumulative = 0;
+  for (const tx of sortedTx) {
+    if (isFixedCost(tx.payee, tx.category)) continue;
+    const day = parseInt(tx.date.split("-")[2], 10);
+    discCumulative += Math.abs(tx.amount);
+    discretionaryByDay[day] = Math.round(discCumulative);
+  }
+  const discretionarySpendingTrue = data.transactions
+    .filter((t) => t.amount < 0 && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
+    .reduce((s, t) => s + Math.abs(t.amount), 0);
+  const dailyDiscretionaryTrue = daysPassed > 0 ? Math.round((discretionarySpendingTrue / daysPassed) * 100) / 100 : 0;
+
   // Combined income for charts
   const totalExpectedIncome = incomes
     .filter((i) => i.is_active)
@@ -560,11 +577,11 @@ export default function DashboardPage() {
       />
 
       <SpendingFlow
-        spendingByDay={spendingByDay as unknown as Record<number, number>}
-        paidBillsAmount={paidBillsAmount}
+        spendingByDay={discretionaryByDay}
+        paidBillsAmount={0}
         daysInMonth={daysInMonth}
         daysPassed={daysPassed}
-        dailyDiscretionary={dailyDiscretionary}
+        dailyDiscretionary={dailyDiscretionaryTrue}
         targetPerDay={discretionaryTargetPerDay}
         dailyBudget={dailyBudget}
       />
