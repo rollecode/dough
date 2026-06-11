@@ -120,9 +120,7 @@ export async function POST(request: Request) {
             continue;
           }
           // Recognise household income by pattern. A matched inflow is categorised to Ready to
-          // Assign so it counts toward the budget; an unrecognised inflow (e.g. company money
-          // passing through a personal account) stays uncategorised and is NOT counted as income,
-          // mirroring how YNAB mode only imports pattern-matched income.
+          // Assign and counts toward the budget.
           let incomeCategory = "";
           let matchedSourceId: number | null = null;
           if (amount > 0) {
@@ -134,6 +132,15 @@ export async function POST(request: Request) {
               incomeCategory = "Inflow: Ready to Assign";
               matchedSourceId = pattern.source_id;
               break;
+            }
+            // An inflow matching no household income source is not household money - e.g. a client
+            // paying the user's company, passing through a personal account. Skip it entirely so it
+            // never inflates balances or the daily budget; YNAB's household accounts do not carry
+            // these either. (Expenses are still imported below as household spending.)
+            if (!matchedSourceId) {
+              console.info("[synci/sync] Skipping unrecognised inflow (no matching income source):", payee, amount);
+              db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
+              continue;
             }
           }
           if (localAccountId && firstUser) {

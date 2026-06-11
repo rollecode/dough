@@ -1,3 +1,7 @@
+### 2.13.5: 2026-06-11
+
+* In local mode, stop importing inflows that do not match a household income source, so company client payments passing through a personal account no longer inflate balances or the daily budget
+
 ### 2.13.4: 2026-06-11
 
 * Fix the budget columns on mobile by declaring the grid mobile-first, so the hidden activity column no longer leaves an empty track
