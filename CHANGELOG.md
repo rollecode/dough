@@ -1,3 +1,7 @@
+### 2.16.3: 2026-06-11
+
+* Make the loading state mirror the app shell - sidebar, top bar, and page placeholders where content lands - instead of a couple of stray blocks
+
 ### 2.16.2: 2026-06-11
 
 * Never extrapolate the month-to-date spending burn into the month-end estimate; project remaining days only at the planned discretionary rate, so a late-synced or one-off past purchase cannot inflate the over figure
