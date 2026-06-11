@@ -116,12 +116,14 @@ export async function POST(request: Request) {
           const localAccountId = accountMapping[txSynciAccount] || "";
           const importDate = txDate || now.toISOString().slice(0, 10);
           // Skip if this transaction is already present from YNAB or a manual entry, matched by
-          // amount + date but NOT account. Synci attributes a transaction to the bank account it
-          // polled, while YNAB may hold the same transaction on a different account; matching on
-          // account would miss those and double-count, corrupting balances after a YNAB cutover.
+          // amount but NOT account. Synci attributes a transaction to the bank account it polled,
+          // while YNAB may hold the same transaction on a different account; matching on account
+          // would miss those and double-count, corrupting balances after a YNAB cutover. The date
+          // is matched within a +/-4 day window because the booking date (when it posts) can differ
+          // from the value date (when it happened) — an exact-date match let duplicates through.
           const manualDup = db.prepare(
-            "SELECT 1 FROM transactions WHERE ROUND(amount, 2) = ROUND(?, 2) AND date = ? AND ynab_id NOT LIKE 'synci_%' LIMIT 1"
-          ).get(amount, importDate);
+            "SELECT 1 FROM transactions WHERE ROUND(amount, 2) = ROUND(?, 2) AND date BETWEEN date(?, '-4 days') AND date(?, '+4 days') AND ynab_id NOT LIKE 'synci_%' LIMIT 1"
+          ).get(amount, importDate, importDate);
           if (manualDup) {
             console.info("[synci/sync] Skipping duplicate of an existing transaction:", payee, amount, "on", importDate);
             db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
