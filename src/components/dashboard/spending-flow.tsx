@@ -94,7 +94,10 @@ export function SpendingFlow({
   let runningTarget = 0;
   for (let d = 1; d <= daysInMonth; d++) {
     let perDay: number;
-    if (snapshotByDay[d] > 0) perDay = snapshotByDay[d];
+    // Frozen snapshot only for genuinely past days. Today and the future use the live target —
+    // today's snapshot is rewritten on every load (by SavingsStreak), which otherwise made the
+    // bubble flip between values on alternate refreshes.
+    if (d < daysPassed && snapshotByDay[d] > 0) perDay = snapshotByDay[d];
     else if (d < daysPassed) perDay = earliestSnapshotTarget;
     else perDay = targetPerDay;
     runningTarget += perDay;
@@ -140,7 +143,7 @@ export function SpendingFlow({
   const cumulativeToToday = (() => {
     let sum = 0;
     for (let d = 1; d <= daysPassed; d++) {
-      if (snapshotByDay[d] > 0) sum += snapshotByDay[d];
+      if (d < daysPassed && snapshotByDay[d] > 0) sum += snapshotByDay[d];
       else if (d < daysPassed) sum += earliestSnapshotTarget;
       else sum += targetPerDay;
     }
