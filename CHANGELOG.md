@@ -68,7 +68,7 @@
 ### 2.13.2: 2026-06-11
 
 * Fix Synci double-counting transactions after a YNAB cutover by matching duplicates on amount and date rather than account, since Synci and YNAB can hold the same transaction on different accounts
-* Show the account before the category on the transactions list, for example Lotan tili and Wolttaus ja ravintolat
+* Show the account before the category on the transactions list, for example the account name followed by the category name
 * Add a small dim version label in the bottom-right corner linking to the public repository
 
 ### 2.13.1: 2026-06-10
