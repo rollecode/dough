@@ -12,6 +12,7 @@ interface CategoryRow {
   description: string;
   sort_order: number;
   is_active: number;
+  subscription_id: number | null;
 }
 
 interface BudgetedRow {
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
 
     const db = getDb();
     const cats = db
-      .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active FROM categories ORDER BY group_name, sort_order, name")
+      .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active, subscription_id FROM categories ORDER BY group_name, sort_order, name")
       .all() as CategoryRow[];
 
     // Apply saved group ordering (stable sort keeps within-group sort_order from the query)
@@ -91,6 +92,10 @@ export async function GET(request: Request) {
       .prepare("SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, snooze_until_month FROM category_targets")
       .all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
     const targetMap = new Map(targets.map((t) => [t.category_id, t]));
+    // Subscriptions a category can be linked to (supplies the target and branding).
+    const subMap = new Map(
+      (db.prepare("SELECT id, name, amount FROM subscriptions").all() as { id: number; name: string; amount: number }[]).map((s) => [s.id, s])
+    );
 
     const snoozedRows = db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[];
     const snoozedSet = new Set(snoozedRows.map((r) => r.category_id));
@@ -101,9 +106,11 @@ export async function GET(request: Request) {
       const carry = carryoverThrough(db, c.id, c.name, month);
       const available = Math.round((carry + b - a) * 100) / 100;
       const t = targetMap.get(c.id);
-      const target_amount = t?.monthly_amount || 0;
-      const target_cadence = t?.cadence || "monthly";
-      const target_date = t?.target_date || "";
+      const linkedSub = c.subscription_id ? subMap.get(c.subscription_id) : undefined;
+      // A linked subscription supplies the target (its monthly amount), overriding any manual target.
+      const target_amount = linkedSub ? linkedSub.amount : (t?.monthly_amount || 0);
+      const target_cadence = linkedSub ? "monthly" : (t?.cadence || "monthly");
+      const target_date = linkedSub ? "" : (t?.target_date || "");
       // The amount needed this month. A "by_date" target spreads (goal − already saved) over the
       // months left; every other cadence distributes its per-period amount across the month.
       const target_monthly = target_amount > 0
@@ -132,6 +139,8 @@ export async function GET(request: Request) {
         target_date,
         snooze_until_month,
         target_active,
+        subscription_id: c.subscription_id ?? null,
+        subscription_name: linkedSub?.name || "",
       };
     });
 

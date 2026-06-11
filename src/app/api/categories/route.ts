@@ -61,7 +61,7 @@ export async function PUT(request: Request) {
 
     const db = getDb();
     const updates: string[] = [];
-    const values: (string | number)[] = [];
+    const values: (string | number | null)[] = [];
     let renameFrom = "";
     let renameTo = "";
     if (body.name !== undefined) {
@@ -78,6 +78,12 @@ export async function PUT(request: Request) {
     if (body.color !== undefined) { updates.push("color = ?"); values.push(String(body.color).trim()); }
     if (body.is_active !== undefined) { updates.push("is_active = ?"); values.push(body.is_active ? 1 : 0); }
     if (body.sort_order !== undefined) { updates.push("sort_order = ?"); values.push(parseInt(String(body.sort_order), 10) || 0); }
+    // Link/unlink to a subscription. null = unlink (history in monthly_category_budgets and
+    // transactions is untouched, so unlinking never disturbs past budget data).
+    if (body.subscription_id !== undefined) {
+      const sid = body.subscription_id === null ? null : (parseInt(String(body.subscription_id), 10) || null);
+      updates.push("subscription_id = ?"); values.push(sid);
+    }
 
     if (updates.length === 0) return NextResponse.json({ success: true });
 
