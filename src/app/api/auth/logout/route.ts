@@ -10,7 +10,7 @@ function buildLogoutResponse(request: Request) {
   const response = NextResponse.redirect(redirectUrl);
   response.cookies.set(COOKIE_NAME, "", {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 0,
     path: "/",

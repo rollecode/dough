@@ -3,10 +3,17 @@ import { cookies } from "next/headers";
 import { getDb } from "./db";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "dough-default-secret-change-me"
-);
+// Fail closed: a missing SESSION_SECRET must never silently fall back to a default that is
+// visible in this public repository - that would let anyone forge a valid session.
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required");
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.SESSION_SECRET);
 const COOKIE_NAME = "dough-session";
+
+// Hash compared against when the email does not exist, so unknown and known emails take the
+// same time to reject (prevents user enumeration via response timing).
+const DUMMY_HASH = bcrypt.hashSync("timing-equalizer", 10);
 
 export interface SessionUser {
   id: number;
@@ -69,6 +76,8 @@ export async function login(
     .get(email) as (SessionUser & { password_hash: string; ynab_access_token: string | null }) | undefined;
 
   if (!dbRow) {
+    // Burn the same bcrypt cost as a real comparison so timing does not reveal valid emails
+    await bcrypt.compare(password, DUMMY_HASH);
     console.warn("[auth] Login failed: user not found", email);
     return null;
   }

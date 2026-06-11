@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "dough-default-secret-change-me"
-);
+// Fail closed: never fall back to a default secret from this public repository.
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required");
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.SESSION_SECRET);
 const COOKIE_NAME = "dough-session";
 
 export async function middleware(request: NextRequest) {
@@ -48,6 +50,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|favicon\\.png|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json)$).*)",
+    // Only manifest.json is exempt by name - a blanket *.json exemption would let any future
+    // .json route or static file bypass the auth gate.
+    "/((?!_next/static|_next/image|favicon\\.ico|favicon\\.png|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
