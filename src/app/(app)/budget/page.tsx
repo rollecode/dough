@@ -705,7 +705,14 @@ export default function BudgetPage() {
               )}
               {overspentR > eps && (
                 <div className="budget-ready-wrap" ref={coverWrapRef}>
-                  <div className="budget-ready-box is-negative">
+                  <div
+                    className="budget-ready-box is-negative is-clickable"
+                    role="button"
+                    tabIndex={0}
+                    title={locale === "fi" ? "Näytä ylitetyt" : "Show overspent"}
+                    onClick={() => setFilter("overspent")}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFilter("overspent"); } }}
+                  >
                     <span className="budget-ready-col">
                       <span className="budget-ready-value"><F v={overspentR} s=" €" /></span>
                       <span className="budget-ready-label">{locale === "fi" ? "Kattamatta" : "Uncovered"}</span>
@@ -713,7 +720,7 @@ export default function BudgetPage() {
                     <button
                       type="button"
                       className="budget-assign-trigger"
-                      onClick={() => setCoverAllOpen((o) => !o)}
+                      onClick={(e) => { e.stopPropagation(); setCoverAllOpen((o) => !o); }}
                       aria-haspopup="menu"
                       aria-expanded={coverAllOpen}
                     >
@@ -776,14 +783,16 @@ export default function BudgetPage() {
 
       {localGroups.map((group, gIdx) => {
         const items = group.items;
-        const groupBudgeted = items.reduce((s, c) => s + c.budgeted, 0);
-        const groupActivity = items.reduce((s, c) => s + c.activity, 0);
-        const groupAvailable = items.reduce((s, c) => s + c.available, 0);
         const dragEnabled = filter === "all";
         const visibleItems = dragEnabled
           ? items
           : items.filter((c) => (filter === "overspent" ? c.available < -0.005 : c.available > 0.005));
         if (!dragEnabled && visibleItems.length === 0) return null;
+        // Header totals reflect only the rows actually shown, so a filtered group never displays a
+        // misleading aggregate (e.g. a positive/green "available" that includes hidden rows).
+        const groupBudgeted = visibleItems.reduce((s, c) => s + c.budgeted, 0);
+        const groupActivity = visibleItems.reduce((s, c) => s + c.activity, 0);
+        const groupAvailable = visibleItems.reduce((s, c) => s + c.available, 0);
         const draggingRow = bdrag?.type === "row";
         const isGroupGhost = bdrag?.type === "group" && bdrag.id === group.key;
         const rowDropHere = draggingRow && dropAt?.groupKey === group.key;
