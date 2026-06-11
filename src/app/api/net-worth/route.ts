@@ -32,36 +32,20 @@ export async function POST() {
     }
 
     const db = getDb();
-    const row = db
-      .prepare("SELECT ynab_access_token, ynab_budget_id FROM users WHERE id = ?")
-      .get(user.id) as { ynab_access_token: string | null; ynab_budget_id: string | null } | undefined;
 
-    if (!row?.ynab_access_token || !row?.ynab_budget_id) {
-      return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
-    }
-
+    // Compute from the local account cache, which is the source of truth in both YNAB and local
+    // mode (kept fresh by sync). This lets net worth snapshots work without a YNAB connection.
     console.info("[net-worth] Taking snapshot for user", user.id);
+    const accounts = db
+      .prepare("SELECT type, balance FROM ynab_accounts WHERE closed = 0")
+      .all() as { type: string; balance: number }[];
 
-    const { getBudgetSummary } = await import("@/lib/ynab/client");
-    const summary = await getBudgetSummary(row.ynab_budget_id, row.ynab_access_token);
-
-    const checking = summary.accounts
-      .filter((a: any) => a.type === "checking")
-      .reduce((s: number, a: any) => s + a.balance, 0);
-
-    const savings = summary.accounts
-      .filter((a: any) => a.type === "savings")
-      .reduce((s: number, a: any) => s + a.balance, 0);
-
-    const investments = summary.accounts
-      .filter((a: any) => a.type === "otherAsset")
-      .reduce((s: number, a: any) => s + a.balance, 0);
-
-    const debtTotal = summary.accounts
-      .filter((a: any) => a.type === "otherDebt")
-      .reduce((s: number, a: any) => s + a.balance, 0);
-
-    const netWorth = checking + savings + investments + debtTotal;
+    const sumType = (type: string) => accounts.filter((a) => a.type === type).reduce((s, a) => s + a.balance, 0);
+    const checking = sumType("checking");
+    const savings = sumType("savings");
+    const investments = sumType("otherAsset");
+    const debtTotal = sumType("otherDebt");
+    const netWorth = Math.round(accounts.reduce((s, a) => s + a.balance, 0) * 100) / 100;
     const today = new Date().toISOString().slice(0, 10);
 
     db.prepare(`

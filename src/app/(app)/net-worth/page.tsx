@@ -36,7 +36,7 @@ function nwColor(value: number): string {
 
 export default function NetWorthPage() {
   const { t, locale, fmt, mask } = useLocale();
-  const { connected, data: ynabData } = useYnab();
+  const { data: ynabData } = useYnab();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [snapshotting, setSnapshotting] = useState(false);
@@ -172,7 +172,21 @@ export default function NetWorthPage() {
     }
   };
 
-  const latest = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
+  // Current net worth from live account balances (present in both YNAB and local mode, via the
+  // local cache). Used as a fallback when no historical snapshot exists yet, so the tab is never
+  // blank just because no snapshot has been taken.
+  const liveAccounts = ynabData?.summary?.accounts || [];
+  const sumAcctType = (type: string) => liveAccounts.filter((a) => a.type === type).reduce((s, a) => s + a.balance, 0);
+  const currentSnap: Snapshot | null = liveAccounts.length > 0 ? {
+    date: new Date().toISOString().slice(0, 10),
+    checking: sumAcctType("checking"),
+    savings: sumAcctType("savings"),
+    investments: sumAcctType("otherAsset"),
+    debts: sumAcctType("otherDebt"),
+    net_worth: Math.round(liveAccounts.reduce((s, a) => s + a.balance, 0) * 100) / 100,
+  } : null;
+
+  const latest = snapshots.length > 0 ? snapshots[snapshots.length - 1] : currentSnap;
 
   // Change since earliest available snapshot
   const compareSnapshot = snapshots.length >= 2 ? snapshots[0] : null;
@@ -221,15 +235,6 @@ export default function NetWorthPage() {
     const pos = arr.length > 1 ? i / (arr.length - 1) : 0.5;
     return { pos, color: nwColor(d.netWorth!) };
   });
-
-  if (!connected) {
-    return (
-      <div className="page-stack">
-        <h1 className="page-heading">{t.dashboard.netWorth}</h1>
-        <p className="page-subtitle">{t.settings.ynabDescription}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="page-stack">
