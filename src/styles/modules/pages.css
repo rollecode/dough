@@ -1152,6 +1152,42 @@
   max-width: 100%;
 }
 
+/* Small brand icon shown on a category linked to a subscription */
+.budget-row-brand {
+  width: 1.25rem;
+  height: 1.25rem;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+  border-radius: 0.375rem;
+  align-self: center;
+  font-size: 0.7rem;
+}
+
+.budget-row-brand svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+/* Inspector: linked-subscription display + link control */
+.insp-linked {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.insp-linked-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insp-link-trigger {
+  width: 100%;
+}
+
 .budget-row-name {
   font-weight: 500;
   color: var(--foreground);

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2 } from "lucide-react";
 import { F } from "@/components/ui/f";
+import { getBrandConfig, BrandIcon } from "@/lib/brands";
 import {
   Sheet,
   SheetContent,
@@ -46,6 +47,8 @@ interface BudgetCategory {
   target_date: string;
   snooze_until_month: string;
   target_active: boolean;
+  subscription_id: number | null;
+  subscription_name: string;
 }
 
 interface BudgetData {
@@ -145,6 +148,7 @@ export default function BudgetPage() {
   const [month, setMonth] = useState<string>(thisMonth());
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscriptions, setSubscriptions] = useState<{ id: number; name: string; amount: number }[]>([]);
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [inspectorId, setInspectorId] = useState<number | null>(null);
   const [catSaved, setCatSaved] = useState(false);
@@ -205,6 +209,15 @@ export default function BudgetPage() {
   }, []);
 
   useEffect(() => { load(month); }, [load, month]);
+
+  // Active subscriptions a category can be linked to (for the inspector's link control).
+  useEffect(() => {
+    fetch("/api/subscriptions").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.subscriptions)) {
+        setSubscriptions(d.subscriptions.filter((s: { is_active: number }) => s.is_active).map((s: { id: number; name: string; amount: number }) => ({ id: s.id, name: s.name, amount: s.amount })));
+      }
+    }).catch(() => {});
+  }, []);
 
   // Close the topbar Assign / Cover menus on an outside click. A fixed-position backdrop does
   // not work here because the topbar's backdrop-filter makes it the containing block, trapping
@@ -437,6 +450,20 @@ export default function BudgetPage() {
       load(month);
     } catch (err) {
       console.error("[budget] Save category error:", err);
+    }
+  };
+
+  // Link a category to a subscription (subId) or unlink (null). History is untouched server-side.
+  const linkSubscription = async (id: number, subId: number | null) => {
+    try {
+      await fetch("/api/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, subscription_id: subId }),
+      });
+      load(month);
+    } catch (err) {
+      console.error("[budget] Link subscription error:", err);
     }
   };
 
@@ -959,6 +986,9 @@ export default function BudgetPage() {
             const hasTarget = c.target_amount > 0;
             const isSnoozed = hasTarget && c.snooze_until_month >= month;
             const progress = c.target_monthly > 0 ? Math.min(1, c.budgeted / c.target_monthly) : (hasTarget ? 1 : 0);
+            // When linked to a subscription, the target and branding come from it.
+            const isLinked = !!c.subscription_id;
+            const linkBrand = isLinked ? getBrandConfig(c.subscription_name) : null;
             return (
               <>
                 <SheetHeader className="insp-header">
@@ -1015,8 +1045,32 @@ export default function BudgetPage() {
                   </div>
 
                   <div className="insp-section">
+                    <span className="insp-section-title">{locale === "fi" ? "Kausitilaus" : "Subscription"}</span>
+                    {isLinked && linkBrand ? (
+                      <div className="insp-linked">
+                        <span className="subscription-brand-icon insp-linked-icon" style={{ backgroundColor: linkBrand.color }}>
+                          <BrandIcon svg={linkBrand.svg} logo={linkBrand.logo} />
+                        </span>
+                        <span className="insp-linked-name">{c.subscription_name}</span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => linkSubscription(c.id, null)}>{locale === "fi" ? "Poista linkitys" : "Unlink"}</Button>
+                      </div>
+                    ) : subscriptions.length > 0 ? (
+                      <Select value="" onValueChange={(v) => v && linkSubscription(c.id, Number(v))}>
+                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kausitilaukseen" : "Link to a subscription"} /></SelectTrigger>
+                        <SelectContent>
+                          {subscriptions.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="settings-help">{locale === "fi" ? "Ei kausitilauksia." : "No subscriptions yet."}</p>
+                    )}
+                  </div>
+
+                  <div className="insp-section">
                     <span className="insp-section-title">{locale === "fi" ? "Tavoite" : "Target"}</span>
-                    {targetEditing ? (
+                    {isLinked ? (
+                      <p className="insp-target-text">{locale === "fi" ? `Tilauksesta: ${fmt(c.target_amount)} € / kk` : `From subscription: ${fmt(c.target_amount)} € / mo`}</p>
+                    ) : targetEditing ? (
                       <div className="insp-target-edit">
                         <div className="insp-target-row">
                           <Input value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} placeholder="0.00" inputMode="decimal" autoFocus className="insp-target-amount" />
@@ -1294,7 +1348,11 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
     <div className="budget-grid budget-row">
       <button type="button" className="budget-row-main" onClick={onOpen}>
         <span className="budget-row-nameline">
-          <span className="budget-row-name">{cat.name}</span>
+          {cat.subscription_id && (() => {
+            const b = getBrandConfig(cat.subscription_name);
+            return <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>;
+          })()}
+          <span className="budget-row-name">{cat.subscription_id ? cat.subscription_name : cat.name}</span>
           {cat.description && <span className="budget-row-desc">{cat.description}</span>}
         </span>
         {hasTarget && (
