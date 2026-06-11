@@ -6,21 +6,26 @@ import { useLocale } from "@/lib/locale-context";
 import { isTransfer } from "@/lib/transaction-utils";
 import { calculateDailyBudget } from "@/lib/daily-budget";
 import { useYnab } from "@/lib/ynab-context";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DailyAllowance } from "@/components/dashboard/daily-allowance";
-import { SpendingChart } from "@/components/dashboard/spending-chart";
-import { CategoryBreakdown } from "@/components/dashboard/category-breakdown";
-import { CashFlowChart } from "@/components/dashboard/cash-flow";
-import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { AiSummary } from "@/components/dashboard/ai-summary";
-import { NetWorth } from "@/components/dashboard/net-worth";
 import { EntryReminder } from "@/components/dashboard/entry-reminder";
 import { PersonalGreeting } from "@/components/dashboard/personal-greeting";
 import { SpendingFlow } from "@/components/dashboard/spending-flow";
-import { SavingsStreak } from "@/components/dashboard/savings-streak";
-import { SpendingHeatmap } from "@/components/dashboard/spending-heatmap";
-import { SpendingTrends } from "@/components/dashboard/spending-trends";
+
+// Below-the-fold sections load lazily (client-side) behind a skeleton, so the top of the
+// dashboard paints fast on mobile instead of rendering every chart up front.
+const chartFallback = () => <Skeleton className="app-loading-block" />;
+const SpendingChart = dynamic(() => import("@/components/dashboard/spending-chart").then((m) => ({ default: m.SpendingChart })), { ssr: false, loading: chartFallback });
+const CategoryBreakdown = dynamic(() => import("@/components/dashboard/category-breakdown").then((m) => ({ default: m.CategoryBreakdown })), { ssr: false, loading: chartFallback });
+const CashFlowChart = dynamic(() => import("@/components/dashboard/cash-flow").then((m) => ({ default: m.CashFlowChart })), { ssr: false, loading: chartFallback });
+const RecentTransactions = dynamic(() => import("@/components/dashboard/recent-transactions").then((m) => ({ default: m.RecentTransactions })), { ssr: false, loading: chartFallback });
+const NetWorth = dynamic(() => import("@/components/dashboard/net-worth").then((m) => ({ default: m.NetWorth })), { ssr: false, loading: chartFallback });
+const SpendingHeatmap = dynamic(() => import("@/components/dashboard/spending-heatmap").then((m) => ({ default: m.SpendingHeatmap })), { ssr: false, loading: chartFallback });
+const SpendingTrends = dynamic(() => import("@/components/dashboard/spending-trends").then((m) => ({ default: m.SpendingTrends })), { ssr: false, loading: chartFallback });
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Info } from "lucide-react";
+import { RefreshCw, Info } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fi as fiFns, enUS } from "date-fns/locale";
 
@@ -34,6 +39,24 @@ interface IncomeSource {
   expected_day: number;
   is_recurring: number;
   is_active: number;
+}
+
+// Coherent loading placeholder: a heading, the metric-card row, and chart blocks, shaped like the
+// real dashboard — shown until data is ready instead of a spinner then a blank screen.
+function DashboardSkeleton() {
+  return (
+    <div className="page-stack">
+      <Skeleton className="app-loading-heading" />
+      <div className="app-loading-grid">
+        <Skeleton className="app-loading-card" />
+        <Skeleton className="app-loading-card" />
+        <Skeleton className="app-loading-card" />
+        <Skeleton className="app-loading-card" />
+      </div>
+      <Skeleton className="app-loading-block" />
+      <Skeleton className="app-loading-block" />
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -61,16 +84,20 @@ export default function DashboardPage() {
   const [trendData, setTrendData] = useState<{ category: string; thisMonth: number; lastMonth: number }[]>([]);
 
   const loadSideData = useCallback(() => {
+    // Each fetch has a timeout and falls back to {} so a single stalled request on a flaky mobile
+    // connection cannot hang the whole dashboard forever (Promise.all always settles).
+    const safeFetch = (url: string) =>
+      fetch(url, { signal: AbortSignal.timeout(12000) }).then((r) => r.json()).catch(() => ({}));
     Promise.all([
-      fetch("/api/income").then((r) => r.json()),
-      fetch("/api/matches").then((r) => r.json()),
-      fetch("/api/bills").then((r) => r.json()),
-      fetch("/api/profile").then((r) => r.json()),
-      fetch("/api/household").then((r) => r.json()),
-      fetch("/api/investments").then((r) => r.json()),
-      fetch("/api/debts").then((r) => r.json()),
-      fetch("/api/monthly-history").then((r) => r.json()),
-      fetch("/api/subscriptions").then((r) => r.json()),
+      safeFetch("/api/income"),
+      safeFetch("/api/matches"),
+      safeFetch("/api/bills"),
+      safeFetch("/api/profile"),
+      safeFetch("/api/household"),
+      safeFetch("/api/investments"),
+      safeFetch("/api/debts"),
+      safeFetch("/api/monthly-history"),
+      safeFetch("/api/subscriptions"),
     ]).then(([incomeData, matchData, billsData, profileData, householdData, investmentData, debtData, historyData, subsData]) => {
       if (profileData.linkedAccountIds) setLinkedAccountIds(profileData.linkedAccountIds);
       if (profileData.profile?.budget_share) setPersonalBudgetShare(profileData.profile.budget_share);
@@ -169,13 +196,7 @@ export default function DashboardPage() {
   }, [data?.syncedAt]);
 
 
-  if (loading && !data) {
-    return (
-      <div className="page-loading">
-        <Loader2 className="page-loading-spinner animate-spin" />
-      </div>
-    );
-  }
+  if (loading && !data) return <DashboardSkeleton />;
 
   if (ynabError && !data) {
     return (
@@ -205,7 +226,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!data || !sideDataLoaded) return null;
+  if (!data || !sideDataLoaded) return <DashboardSkeleton />;
 
   // Calculate daily budget from real data
   const now = new Date();
