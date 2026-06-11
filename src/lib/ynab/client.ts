@@ -4,6 +4,8 @@ async function ynabFetch(path: string, token: string) {
   console.debug("[ynab] GET", path);
   const res = await fetch(`${YNAB_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
+    // A hung upstream must not stall the request indefinitely
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -177,6 +179,7 @@ export async function createTransaction(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
+    signal: AbortSignal.timeout(20000),
     body: JSON.stringify({
       transaction: {
         account_id: transaction.account_id,

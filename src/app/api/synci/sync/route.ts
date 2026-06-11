@@ -76,6 +76,7 @@ export async function POST(request: Request) {
 
       const res = await fetch(`https://api.synci.io/api/v1/banks/transactions?bank_account_id=${synciAccountId}`, {
         headers: { Authorization: `Bearer ${synciToken}` },
+        signal: AbortSignal.timeout(25000),
       });
 
       if (!res.ok) {

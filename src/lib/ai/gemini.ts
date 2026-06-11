@@ -13,7 +13,7 @@ export async function geminiText(
     generationConfig: { temperature: 0, maxOutputTokens, thinkingConfig: { thinkingBudget: 0 } },
   });
   try {
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, signal: AbortSignal.timeout(30000) });
     if (!res.ok) {
       console.warn("[gemini] HTTP", res.status, (await res.text()).slice(0, 200));
       return null;

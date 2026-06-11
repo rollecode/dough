@@ -16,6 +16,7 @@ export async function GET() {
 
     const res = await fetch("https://api.synci.io/api/v1/banks/accounts", {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(25000),
     });
 
     if (!res.ok) {
