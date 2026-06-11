@@ -228,7 +228,3 @@ Detailed docs live in the `docs/` directory:
 - [API reference](docs/api.md) - all endpoints
 - [CSS framework](docs/css-framework.md) - styling conventions
 - [Real-time](docs/real-time.md) - SSE implementation
-
-## License
-
-Dough is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify, and share it for any noncommercial purpose - personal use, hobby projects, study, and use by nonprofit, educational, research, and government organizations. Commercial use is not permitted.
