@@ -1,3 +1,17 @@
+### 2.17.0: 2026-06-11
+
+* Link budget categories to subscriptions, bills and debts: the link supplies the target and display name, and unlinking keeps all budget history
+* Guess the transaction category live from the payee and description while typing, with a visible AI indicator and manual override that always wins
+* Click an underfunded target pill to fund the remaining amount from ready to assign or another category
+* Add an unfunded filter to the budget view showing targets not yet fully funded
+* Base the spending pace bubble on discretionary spending only and make it deterministic across refreshes
+* Speed up the dashboard with lazily loaded charts, timeout-guarded data fetches and a proper skeleton loading state
+* Render the category picker in a portal so it floats above the modal instead of scrolling inside it
+* Match Synci duplicates within a date window so booking and value date differences cannot double-import a transaction
+* Harden security: fail closed without a session secret, secure cookies in production, login throttling and timing equalization, constant-time cron secret comparison, server-side session revocation, cross-site logout protection, outbound call timeouts and a tightened middleware matcher
+* Upgrade Next.js to 16.2.9 and fix dependency audit findings
+* Restyle the version footer and align its width with narrow page containers
+
 ### 2.16.3: 2026-06-11
 
 * Make the loading state mirror the app shell - sidebar, top bar, and page placeholders where content lands - instead of a couple of stray blocks
