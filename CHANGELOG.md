@@ -1,3 +1,8 @@
+### 2.13.6: 2026-06-11
+
+* Budget topbar on mobile: drop the side padding, keep the boxes on one line, and sit below the app top bar instead of behind it
+* Show the commit hash in the version footer (vX.X.X-hash), move it into the content flow so it stays visible (including on mobile), and make it larger and more readable
+
 ### 2.13.5: 2026-06-11
 
 * In local mode, stop importing inflows that do not match a household income source, so company client payments passing through a personal account no longer inflate balances or the daily budget
