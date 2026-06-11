@@ -122,6 +122,31 @@ export default function TransactionsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!editTx) return;
+    if (!window.confirm(locale === "fi" ? "Poistetaanko tämä tapahtuma?" : "Delete this transaction?")) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch("/api/ynab/transaction", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction_id: editTx.id }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        console.info("[transactions] Deleted", editTx.id);
+        setEditTx(null);
+        refresh();
+      } else {
+        console.error("[transactions] Delete failed:", result.error);
+      }
+    } catch (err) {
+      console.error("[transactions] Delete error:", err);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const filterLabels: Record<FilterType, string> = {
     all: t.transactions.all,
     expenses: t.transactions.expenses,
@@ -377,9 +402,14 @@ export default function TransactionsPage() {
                 <Label>{locale === "fi" ? "Kuvaus" : "Memo"}</Label>
                 <Input value={editTx.memo || ""} onChange={(e) => setEditTx({ ...editTx, memo: e.target.value })} />
               </div>
-              <Button onClick={handleEditSave} disabled={editSaving}>
-                {editSaving ? <Loader2 className="icon-sm animate-spin" /> : (locale === "fi" ? "Tallenna" : "Save")}
-              </Button>
+              <div className="insp-actions">
+                <Button onClick={handleEditSave} disabled={editSaving}>
+                  {editSaving ? <Loader2 className="icon-sm animate-spin" /> : (locale === "fi" ? "Tallenna" : "Save")}
+                </Button>
+                <Button variant="destructive" onClick={handleDelete} disabled={editSaving}>
+                  {locale === "fi" ? "Poista" : "Delete"}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
