@@ -1,3 +1,7 @@
+### 2.16.2: 2026-06-11
+
+* Never extrapolate the month-to-date spending burn into the month-end estimate; project remaining days only at the planned discretionary rate, so a late-synced or one-off past purchase cannot inflate the over figure
+
 ### 2.16.1: 2026-06-11
 
 * Add a delete button to the transaction editor so a duplicate can be removed; it reverses the account balance and refreshes the dashboard

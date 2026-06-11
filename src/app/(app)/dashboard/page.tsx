@@ -438,12 +438,10 @@ export default function DashboardPage() {
   console.debug("[dashboard] discretionary:", Math.round(discretionaryBudget), "daily:", Math.round(discretionaryTargetPerDay), "budget:", dailyBudget);
 
   // Month-end expenses estimate. The remaining days are projected at the PLANNED discretionary
-  // rate, not the actual month-to-date burn: extrapolating the burn multiplied a one-off or a
-  // late-synced past purchase across the rest of the month, spiking the estimate. Real past
-  // spending still counts once via realSpendingTotal. Falls back to the burn rate when no plan
-  // (no income) exists.
-  const projectedDailyDiscretionary = discretionaryTargetPerDay > 0 ? discretionaryTargetPerDay : dailyDiscretionary;
-  const monthExpensesEstimate = Math.round((realSpendingTotal + unpaidBillsAmount + (projectedDailyDiscretionary * daysLeft) + savingRate) * 100) / 100;
+  // rate (zero when there is no discretionary room), never the actual month-to-date burn.
+  // Extrapolating the burn multiplied a one-off or a late-synced past purchase across the rest of
+  // the month, spiking the estimate. Real past spending still counts once via realSpendingTotal.
+  const monthExpensesEstimate = Math.round((realSpendingTotal + unpaidBillsAmount + (discretionaryTargetPerDay * daysLeft) + savingRate) * 100) / 100;
 
   // Spending chart: ALL spending with Vakaa talous target (income - savings) / days
   const totalTargetPerDay = combinedIncome > 0 && savingRate > 0
