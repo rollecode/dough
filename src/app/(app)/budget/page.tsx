@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2, Link2 } from "lucide-react";
 import { F } from "@/components/ui/f";
 import { getBrandConfig, BrandIcon } from "@/lib/brands";
 import {
@@ -1348,14 +1348,19 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
     <div className="budget-grid budget-row">
       <button type="button" className="budget-row-main" onClick={onOpen}>
         <span className="budget-row-nameline">
+          <span className="budget-row-name">{cat.subscription_id ? cat.subscription_name : cat.name}</span>
           {cat.subscription_id && (() => {
             const b = getBrandConfig(cat.subscription_name);
-            return <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>;
+            return (
+              <>
+                <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>
+                <Link2 className="budget-row-linkicon" aria-hidden="true" />
+              </>
+            );
           })()}
-          <span className="budget-row-name">{cat.subscription_id ? cat.subscription_name : cat.name}</span>
           {cat.description && <span className="budget-row-desc">{cat.description}</span>}
         </span>
-        {hasTarget && (
+        {hasTarget && !cat.subscription_id && (
           <span className="budget-row-target">
             <span className="budget-target-progress">
               <span className="budget-target-progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
