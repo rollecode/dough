@@ -16,6 +16,9 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { account_id, amount, payee_name, memo, category_id, category, date } = body;
+    // Inflow (income) is stored positive and lands in Ready to Assign; the default is an outflow
+    // (expense). Keeps the expense path exactly as before when the flag is absent.
+    const inflow = body.inflow === true;
 
     if (!account_id || !amount || !payee_name) {
       return NextResponse.json({ error: "Account, amount and payee required" }, { status: 400 });
@@ -25,17 +28,20 @@ export async function POST(request: Request) {
     if (getBudgetMode() === "local") {
       const { getDb } = await import("@/lib/db");
       const db = getDb();
-      const signed = parseFloat(amount) * -1; // expense stored negative
+      const signed = inflow ? Math.abs(parseFloat(amount)) : parseFloat(amount) * -1; // expense negative, income positive
       const txDate = date || new Date().toISOString().slice(0, 10);
       const id = `local_${randomUUID()}`;
 
-      // Category: an explicit name (reviewed in the modal) wins, then a category_id, then an AI guess.
+      // Category: an explicit name (reviewed in the modal) wins, then a category_id. Income lands
+      // in Ready to Assign; an uncategorised expense falls back to an AI guess.
       let categoryName = "";
       if (typeof category === "string" && category) {
         categoryName = category;
       } else if (category_id) {
         const c = db.prepare("SELECT name FROM categories WHERE id = ?").get(category_id) as { name: string } | undefined;
         categoryName = c?.name || "";
+      } else if (inflow) {
+        categoryName = "Inflow: Ready to Assign";
       } else {
         try {
           const names = (db.prepare("SELECT name FROM categories WHERE is_active = 1").all() as { name: string }[]).map((c) => c.name);
@@ -63,12 +69,12 @@ export async function POST(request: Request) {
 
     console.info("[ynab/transaction] Creating transaction:", payee_name, amount);
 
-    // YNAB amounts are in milliunits (1000 = 1.00)
-    const milliunits = Math.round(parseFloat(amount) * -1000);
+    // YNAB amounts are in milliunits (1000 = 1.00). Inflow is positive, outflow negative.
+    const milliunits = Math.round(parseFloat(amount) * (inflow ? 1000 : -1000));
 
-    // Auto-categorize if no category provided
+    // Auto-categorize outflows with no category. Inflows go to Ready to Assign, so leave them.
     let resolvedCategoryId = category_id || null;
-    if (!resolvedCategoryId) {
+    if (!resolvedCategoryId && !inflow) {
       try {
         const { getDb } = await import("@/lib/db");
         const db = getDb();
@@ -132,7 +138,7 @@ export async function POST(request: Request) {
           INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'cleared')
           ON CONFLICT(ynab_id) DO UPDATE SET date=excluded.date, amount=excluded.amount, payee=excluded.payee, category=excluded.category, memo=excluded.memo, account_id=excluded.account_id
-        `).run(user.id, createdTx.id, date || new Date().toISOString().slice(0, 10), parseFloat(amount) * -1, payee_name, createdTx.category_name || "", memo || "", account_id);
+        `).run(user.id, createdTx.id, date || new Date().toISOString().slice(0, 10), parseFloat(amount) * (inflow ? 1 : -1), payee_name, createdTx.category_name || "", memo || "", account_id);
         console.info("[ynab/transaction] Persisted to local SQLite");
       } catch (err) {
         console.warn("[ynab/transaction] Failed to persist locally:", err);

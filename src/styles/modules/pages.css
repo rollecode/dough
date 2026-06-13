@@ -2143,6 +2143,28 @@
   color: var(--muted-foreground);
 }
 
+/* Savings-goal free-text description with clickable links */
+.goal-desc {
+  margin-top: 0.25rem;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.goal-desc-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.goal-desc-input {
+  resize: vertical;
+  min-height: 3rem;
+  font-family: inherit;
+}
+
 .list-item-amount {
   text-align: right;
 }
@@ -3034,6 +3056,37 @@
 .batch-remove-btn svg {
   width: 0.75rem;
   height: 0.75rem;
+}
+
+/* Expense / income / transfer segmented toggle in the add-transaction dialog */
+.tx-type-toggle {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+  border-radius: 0.5rem;
+}
+
+.tx-type-btn {
+  flex: 1;
+  padding: 0.4375rem 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+
+.tx-type-btn:hover {
+  color: var(--foreground);
+}
+
+.tx-type-btn.is-active {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  color: var(--foreground);
 }
 
 .receipt-preview-pdf {

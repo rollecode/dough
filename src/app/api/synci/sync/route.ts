@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { getHouseholdSetting, setHouseholdSetting, getBudgetMode, secretsEqual } from "@/lib/household";
 import { getAllPatterns } from "@/lib/matching";
 import { eventBus } from "@/lib/event-bus";
+import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -70,6 +71,9 @@ export async function POST(request: Request) {
     let totalMatched = 0;
     let totalImported = 0;
     const toCategorize: { id: string; payee: string }[] = []; // newly imported expenses for AI categorizing
+    // Unmatched inflows imported provisionally: kept if they pair into an internal transfer below,
+    // otherwise removed (genuine external money, e.g. a client paying through a personal account).
+    const provisionalInflowIds: string[] = [];
 
     for (const synciAccountId of mappedAccountIds) {
       console.info("[synci/sync] Polling account", synciAccountId, "mode:", mode);
@@ -134,6 +138,7 @@ export async function POST(request: Request) {
           // Assign and counts toward the budget.
           let incomeCategory = "";
           let matchedSourceId: number | null = null;
+          let provisionalInflow = false;
           if (amount > 0) {
             for (const pattern of patterns) {
               const matcher = patternToMatcher(pattern.payee_pattern);
@@ -144,15 +149,13 @@ export async function POST(request: Request) {
               matchedSourceId = pattern.source_id;
               break;
             }
-            // An inflow matching no household income source is not household money - e.g. a client
-            // paying the user's company, passing through a personal account. Skip it entirely so it
-            // never inflates balances or the daily budget; YNAB's household accounts do not carry
-            // these either. (Expenses are still imported below as household spending.)
-            if (!matchedSourceId) {
-              console.info("[synci/sync] Skipping unrecognised inflow (no matching income source):", payee, amount);
-              db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
-              continue;
-            }
+            // An inflow matching no household income source is either the incoming leg of an
+            // internal transfer (money from another own account) or genuinely external money
+            // (e.g. a client paying through a personal account). Import it provisionally: the
+            // transfer-pairing pass below keeps it if it pairs with an opposite outflow, otherwise
+            // it is removed so it never inflates balances or the daily budget. Previously this was
+            // skipped outright, which dropped the inflow leg and stranded transfers as expenses.
+            if (!matchedSourceId) provisionalInflow = true;
           }
           if (localAccountId && firstUser) {
             db.prepare(`
@@ -164,7 +167,8 @@ export async function POST(request: Request) {
             totalImported++;
             // Only unrecognised outflows need AI categorising; matched income is already placed.
             if (amount < 0) toCategorize.push({ id: synciTxId, payee });
-            console.info("[synci/sync] Imported", payee, amount, incomeCategory ? "(income)" : "", "to account", localAccountId);
+            if (provisionalInflow) provisionalInflowIds.push(synciTxId);
+            console.info("[synci/sync] Imported", payee, amount, incomeCategory ? "(income)" : provisionalInflow ? "(provisional inflow)" : "", "to account", localAccountId);
           }
           // Mark a matched income source as received this month
           if (matchedSourceId != null) {
@@ -273,9 +277,12 @@ export async function POST(request: Request) {
       const acctNames = new Map(
         (db.prepare("SELECT id, name FROM ynab_accounts").all() as { id: string; name: string }[]).map((a) => [a.id, a.name])
       );
+      // Matched household income (Ready to Assign) is excluded so a real paycheck is never eaten
+      // by a same-size outflow on another account and mislabelled a transfer.
       const candidates = db.prepare(
         "SELECT ynab_id, date, amount, account_id FROM transactions " +
-          "WHERE ynab_id LIKE 'synci_%' AND payee NOT LIKE 'Transfer%' AND date >= date('now', '-45 days') ORDER BY date"
+          "WHERE ynab_id LIKE 'synci_%' AND payee NOT LIKE 'Transfer%' AND category != 'Inflow: Ready to Assign' " +
+          "AND date >= date('now', '-45 days') ORDER BY date"
       ).all() as { ynab_id: string; date: string; amount: number; account_id: string }[];
       const paired = new Set<string>();
       for (let i = 0; i < candidates.length; i++) {
@@ -290,14 +297,30 @@ export async function POST(request: Request) {
           if (days > 2) continue;
           const aName = acctNames.get(a.account_id) || "";
           const bName = acctNames.get(b.account_id) || "";
-          db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${bName}`, a.ynab_id);
-          db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${aName}`, b.ynab_id);
+          // Relabel both legs as a transfer and tag them with the internal-transfer category so
+          // they read as a transfer everywhere (and stay out of spending/income via isTransfer()).
+          db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${bName}`, INTERNAL_TRANSFER_CATEGORY, a.ynab_id);
+          db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${aName}`, INTERNAL_TRANSFER_CATEGORY, b.ynab_id);
           paired.add(a.ynab_id); paired.add(b.ynab_id);
           transfersPaired++;
           break;
         }
       }
       if (transfersPaired > 0) console.info("[synci/sync] Auto-paired", transfersPaired, "transfers");
+
+      // Remove provisional inflows that did not pair into a transfer: they are external money
+      // (no matching income source, not a transfer between own accounts). Reverse their balance.
+      let droppedInflows = 0;
+      for (const id of provisionalInflowIds) {
+        if (paired.has(id)) continue;
+        const row = db.prepare("SELECT amount, account_id, payee FROM transactions WHERE ynab_id = ?").get(id) as { amount: number; account_id: string; payee: string } | undefined;
+        if (!row || row.payee.startsWith("Transfer")) continue;
+        db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(id);
+        db.prepare("UPDATE ynab_accounts SET balance = balance - ?, updated_at = datetime('now') WHERE id = ?").run(row.amount, row.account_id);
+        totalImported--;
+        droppedInflows++;
+      }
+      if (droppedInflows > 0) console.info("[synci/sync] Dropped", droppedInflows, "unrecognised external inflows");
     }
 
     // AI complement: categorize freshly imported expenses that Synci left uncategorized (skip

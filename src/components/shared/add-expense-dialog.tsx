@@ -32,7 +32,11 @@ interface AddExpenseDialogProps {
 
 export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) {
   const { locale, fmt } = useLocale();
-  const { refresh } = useYnab();
+  const { refresh, connected } = useYnab();
+  // What kind of transaction is being added. Transfers only apply in local mode (YNAB manages its
+  // own transfers), so the transfer tab is hidden when YNAB is connected.
+  const [txType, setTxType] = useState<"expense" | "income" | "transfer">("expense");
+  const [toAccountId, setToAccountId] = useState("");
   const [addAmount, setAddAmount] = useState("");
   const [addPayee, setAddPayee] = useState("");
   const [addMemo, setAddMemo] = useState("");
@@ -101,7 +105,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
   // best category and select it in the picker, marked as AI-chosen. A manual pick always wins -
   // once the user chooses, the AI stops updating the field.
   useEffect(() => {
-    if (!open) return;
+    if (!open || txType !== "expense") return;
     const payee = addPayee.trim();
     if (!payee || catSourceRef.current === "manual") return;
     const t = setTimeout(async () => {
@@ -121,7 +125,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
     }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, addPayee, addMemo]);
+  }, [open, addPayee, addMemo, txType]);
 
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -220,13 +224,16 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
           amount: addAmount.replace(",", "."),
           payee_name: addPayee,
           memo: addMemo || undefined,
-          category: addCategory || undefined,
+          // Income lands in Ready to Assign, so the category picker only applies to expenses.
+          category: txType === "expense" ? (addCategory || undefined) : undefined,
+          inflow: txType === "income",
           date: addDate,
         }),
       });
       if (res.ok) {
         onOpenChange(false);
         setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10));
+        setTxType("expense"); setToAccountId("");
         catSourceRef.current = ""; setCatSource("");
         setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
         refresh();
@@ -259,6 +266,32 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
     refresh();
   };
 
+  const handleAddTransfer = async () => {
+    if (!linkedAccountId || !toAccountId || linkedAccountId === toAccountId || !addAmount) return;
+    setAddLoading(true);
+    try {
+      const res = await fetch("/api/transactions/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from_account_id: linkedAccountId, to_account_id: toAccountId, amount: addAmount.replace(",", "."), memo: addMemo || undefined, date: addDate }),
+      });
+      if (res.ok) {
+        onOpenChange(false);
+        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10));
+        setTxType("expense"); setToAccountId("");
+        setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
+        refresh();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        console.error("[add-expense] Transfer error:", j.error);
+      }
+    } catch (err) {
+      console.error("[add-expense] Transfer error:", err);
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   const handleClose = (v: boolean) => {
     onOpenChange(v);
   };
@@ -267,7 +300,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{locale === "fi" ? "Lisää puuttuva kulu" : "Add missing expense"}</DialogTitle>
+          <DialogTitle>{locale === "fi" ? "Lisää tilitapahtuma" : "Add transaction"}</DialogTitle>
         </DialogHeader>
         <div className="form-stack">
           <div className="settings-row">
@@ -330,17 +363,47 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
             </>
           ) : (
             <>
+              {/* Transaction type: expense / income / transfer. Transfers only apply in local mode
+                  (YNAB manages its own transfers), so the transfer tab is hidden with YNAB connected. */}
+              <div className="tx-type-toggle">
+                <button type="button" className={`tx-type-btn ${txType === "expense" ? "is-active" : ""}`} onClick={() => setTxType("expense")}>
+                  {locale === "fi" ? "Meno" : "Expense"}
+                </button>
+                <button type="button" className={`tx-type-btn ${txType === "income" ? "is-active" : ""}`} onClick={() => setTxType("income")}>
+                  {locale === "fi" ? "Tulo" : "Income"}
+                </button>
+                {!connected && (
+                  <button type="button" className={`tx-type-btn ${txType === "transfer" ? "is-active" : ""}`} onClick={() => setTxType("transfer")}>
+                    {locale === "fi" ? "Siirto" : "Transfer"}
+                  </button>
+                )}
+              </div>
+
               <div className="form-field">
-                <Label>{locale === "fi" ? "Tili" : "Account"}</Label>
+                <Label>{txType === "transfer" ? (locale === "fi" ? "Miltä tililtä" : "From account") : (locale === "fi" ? "Tili" : "Account")}</Label>
                 <select className="input" value={linkedAccountId} onChange={(e) => { setLinkedAccountId(e.target.value); const a = allAccounts.find((x) => x.id === e.target.value); setLinkedAccountName(a?.name || ""); }}>
                   <option value="">{locale === "fi" ? "Valitse tili" : "Select account"}</option>
                   {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
-                <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
-              </div>
+
+              {txType === "transfer" && (
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Mille tilille" : "To account"}</Label>
+                  <select className="input" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)}>
+                    <option value="">{locale === "fi" ? "Valitse tili" : "Select account"}</option>
+                    {allAccounts.filter((a) => a.id !== linkedAccountId).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {txType !== "transfer" && (
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
+                  <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
+                </div>
+              )}
+
               <div className="form-grid-2">
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
@@ -351,27 +414,36 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
                   <DateField value={addDate} onChange={(v) => { setAddDate(v); setDupCandidates([]); }} />
                 </div>
               </div>
-              <div className="form-field">
-                <Label>
-                  {locale === "fi" ? "Kategoria" : "Category"}
-                  {catGuessing && <span className="ai-cat-badge is-thinking"><Sparkles /> {locale === "fi" ? "AI miettii…" : "AI thinking…"}</span>}
-                  {!catGuessing && catSource === "ai" && addCategory && <span className="ai-cat-badge"><Sparkles /> {locale === "fi" ? "AI valitsi" : "AI picked"}</span>}
-                </Label>
-                <CategoryPicker
-                  value={addCategory}
-                  onChange={(v) => { setAddCategory(v); const src = v ? "manual" : ""; catSourceRef.current = src; setCatSource(src); }}
-                  categories={budgetCats}
-                  fmt={fmt}
-                  placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
-                  noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
-                  searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"}
-                />
-              </div>
+
+              {txType === "expense" && (
+                <div className="form-field">
+                  <Label>
+                    {locale === "fi" ? "Kategoria" : "Category"}
+                    {catGuessing && <span className="ai-cat-badge is-thinking"><Sparkles /> {locale === "fi" ? "AI miettii…" : "AI thinking…"}</span>}
+                    {!catGuessing && catSource === "ai" && addCategory && <span className="ai-cat-badge"><Sparkles /> {locale === "fi" ? "AI valitsi" : "AI picked"}</span>}
+                  </Label>
+                  <CategoryPicker
+                    value={addCategory}
+                    onChange={(v) => { setAddCategory(v); const src = v ? "manual" : ""; catSourceRef.current = src; setCatSource(src); }}
+                    categories={budgetCats}
+                    fmt={fmt}
+                    placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
+                    noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
+                    searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"}
+                  />
+                </div>
+              )}
+
+              {txType === "income" && (
+                <p className="settings-help">{locale === "fi" ? "Tulo lisätään Budjetoimatta-saldoon (Ready to Assign)." : "Income is added to Ready to Assign."}</p>
+              )}
+
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
-                <PayeeInput value={addMemo} onChange={setAddMemo} payees={memos} onBlur={() => resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
+                <PayeeInput value={addMemo} onChange={setAddMemo} payees={memos} onBlur={() => txType !== "transfer" && resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
               </div>
-              {dupCandidates.length > 0 && (
+
+              {txType !== "transfer" && dupCandidates.length > 0 && (
                 <div className="dup-warning">
                   <p className="dup-warning-title">
                     {locale === "fi"
@@ -394,7 +466,12 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
                   </div>
                 </div>
               )}
-              {dupCandidates.length === 0 && (
+
+              {txType === "transfer" ? (
+                <Button type="button" onClick={handleAddTransfer} disabled={addLoading || !linkedAccountId || !toAccountId || linkedAccountId === toAccountId || !addAmount}>
+                  {addLoading ? (locale === "fi" ? "Siirretään..." : "Transferring...") : (locale === "fi" ? "Siirrä" : "Transfer")}
+                </Button>
+              ) : dupCandidates.length === 0 && (
                 <Button type="button" onClick={() => handleAddExpense()} disabled={addLoading || !linkedAccountId || !addAmount || !addPayee}>
                   {addLoading ? (locale === "fi" ? "Lisätään..." : "Adding...") : (locale === "fi" ? "Lisää" : "Add")}
                 </Button>

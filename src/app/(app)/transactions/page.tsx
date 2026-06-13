@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { useLocale } from "@/lib/locale-context";
-import { isTransfer } from "@/lib/transaction-utils";
+import { isTransfer, transferCategoryLabel } from "@/lib/transaction-utils";
 import { useYnab } from "@/lib/ynab-context";
 import { useEvent } from "@/lib/use-events";
 import { relativeDate, dayHeading } from "@/lib/date-utils";
@@ -226,7 +226,7 @@ export default function TransactionsPage() {
           )}
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="icon-sm" />
-            {locale === "fi" ? "Lisää kulu" : "Add expense"}
+            {locale === "fi" ? "Lisää tilitapahtuma" : "Add transaction"}
           </Button>
           <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} />
         </div>
@@ -320,7 +320,9 @@ export default function TransactionsPage() {
                 </div>
                 <p className="list-item-meta">{(() => {
                   const acct = allAccounts.find((a) => a.id === tx.account_id)?.name || "";
-                  const cat = tx.isSplit && tx.parts
+                  const cat = txIsTransfer
+                    ? transferCategoryLabel(locale)
+                    : tx.isSplit && tx.parts
                     ? tx.parts.map((p) => p.category || (locale === "fi" ? "Ei kategoriaa" : "No category")).join(" · ")
                     : tx.category;
                   return [acct, cat].filter(Boolean).join(" · ");
