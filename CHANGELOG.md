@@ -1,3 +1,11 @@
+### 2.18.0: 2026-06-13
+
+* Drop the YNAB label from the savings goal category field and pick from local budget categories grouped under their category groups
+* Create a new category straight from the savings goal picker when none fits
+* Show the total still needed to fund this month's targets at the foot of the budget assign menu
+* Hide the age of money box on mobile when the uncovered overspending box is shown so the topbar fits on one row
+* Stop the budget link picker from listing subscriptions, bills or debts already linked to another category
+
 ### 2.17.0: 2026-06-11
 
 * Link budget categories to subscriptions, bills and debts: the link supplies the target and display name, and unlinking keeps all budget history
