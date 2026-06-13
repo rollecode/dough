@@ -381,6 +381,27 @@
   flex-wrap: wrap;
 }
 
+/* Link from the edit-account modal to that account's transactions */
+.account-tx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-start;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.account-tx-link svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.account-tx-link:hover {
+  text-decoration: underline;
+}
+
 /* Reconcile against bank balance (edit-account modal) */
 .reconcile-field {
   border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
@@ -519,9 +540,45 @@
 /* Day grouping headers in the transactions list: a subtle band separating each day. The first
    item under a header drops its divider so the header and its rows read as one block. */
 .tx-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   font-weight: 600;
   color: var(--foreground);
   background: color-mix(in srgb, var(--muted) 22%, transparent);
+}
+
+.tx-day-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  border-radius: 0.375rem;
+}
+
+.tx-day-add:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.tx-day-add svg {
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+
+/* Day headers line up left/right with the transaction rows (which widen on desktop) */
+@media (min-width: 640px) {
+  .tx-day-header {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
 }
 
 .list-card-divider > .tx-day-header + * {
@@ -2657,14 +2714,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1rem;
+  width: 0.875rem;
   flex-shrink: 0;
   border: none;
   background: none;
   color: var(--muted-foreground);
   cursor: grab;
   padding: 0;
-  opacity: 0.3;
+  opacity: 0;
   transition: opacity 120ms, color 120ms;
 }
 
@@ -2672,8 +2729,13 @@
   cursor: grabbing;
 }
 
-.acct-row:hover .acct-grip {
-  opacity: 0.65;
+.acct-row:hover .acct-grip,
+.acct-grip:focus-visible {
+  opacity: 0.55;
+}
+
+.acct-grip:hover {
+  color: var(--foreground);
 }
 
 .acct-grip svg {
