@@ -48,6 +48,8 @@ interface BudgetCategory {
   snooze_until_month: string;
   target_active: boolean;
   subscription_id: number | null;
+  bill_id: number | null;
+  debt_account_id: string | null;
   subscription_name: string;
   linked_type: "" | "subscription" | "bill" | "debt";
   linked_name: string;
@@ -707,6 +709,8 @@ export default function BudgetPage() {
             : (locale === "fi" ? "Budjetoimatta" : "Ready to assign");
           // Total uncovered overspending = sum of negative category availables (shown as positive)
           const overspentR = Math.round((data?.categories || []).reduce((s, c) => s + (c.available < -eps ? -c.available : 0), 0) * 100) / 100;
+          // Total still needed to fully fund every active target this month (uncapped by RTA).
+          const remainingToTarget = Math.round((data?.categories || []).reduce((s, c) => s + (c.target_active && c.target_monthly > c.budgeted ? c.target_monthly - c.budgeted : 0), 0) * 100) / 100;
           return (
             <div className="budget-center">
               <div className="budget-ready-wrap" ref={autoWrapRef}>
@@ -742,11 +746,15 @@ export default function BudgetPage() {
                         </button>
                       );
                     })}
+                    <div className="budget-assign-menu-foot">
+                      <span>{locale === "fi" ? "Tarvitaan vielä loppukuussa" : "Still needed this month"}</span>
+                      <span className="budget-autoassign-amt"><F v={remainingToTarget} s=" €" /></span>
+                    </div>
                   </div>
                 )}
               </div>
               {data?.ageOfMoney != null && (
-                <div className="budget-aom-box" title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
+                <div className={`budget-aom-box ${overspentR > eps ? "is-hide-mobile" : ""}`} title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
                   <span className="budget-ready-value">{data.ageOfMoney} {locale === "fi" ? "pv" : "days"}</span>
                   <span className="budget-ready-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</span>
                 </div>
@@ -1015,6 +1023,15 @@ export default function BudgetPage() {
             // Only subscriptions carry a brand icon; bills and debts show just the link icon.
             const isLinked = !!c.linked_type;
             const linkBrand = c.linked_type === "subscription" ? getBrandConfig(c.subscription_name) : null;
+            // A subscription/bill/debt already linked to another category must not be offered again,
+            // so it cannot be double-linked. Only items free to link are listed.
+            const cats = data?.categories || [];
+            const linkedSubIds = new Set(cats.filter((o) => o.id !== c.id && o.subscription_id != null).map((o) => o.subscription_id));
+            const linkedBillIds = new Set(cats.filter((o) => o.id !== c.id && o.bill_id != null).map((o) => o.bill_id));
+            const linkedDebtIds = new Set(cats.filter((o) => o.id !== c.id && o.debt_account_id != null).map((o) => o.debt_account_id));
+            const availSubs = subscriptions.filter((s) => !linkedSubIds.has(s.id));
+            const availBills = bills.filter((b) => !linkedBillIds.has(b.id));
+            const availDebts = debts.filter((d) => !linkedDebtIds.has(d.id));
             return (
               <>
                 <SheetHeader className="insp-header">
@@ -1082,13 +1099,13 @@ export default function BudgetPage() {
                         <span className="insp-linked-name">{c.linked_name}</span>
                         <Button type="button" variant="outline" size="sm" onClick={() => linkCategory(c.id, "none")}>{locale === "fi" ? "Poista linkitys" : "Unlink"}</Button>
                       </div>
-                    ) : (subscriptions.length > 0 || bills.length > 0 || debts.length > 0) ? (
+                    ) : (availSubs.length > 0 || availBills.length > 0 || availDebts.length > 0) ? (
                       <Select value="" onValueChange={(v) => v && linkCategory(c.id, v)}>
                         <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kausitilaukseen, laskuun tai velkaan" : "Link to a subscription, bill or debt"} /></SelectTrigger>
                         <SelectContent>
-                          {subscriptions.map((s) => <SelectItem key={`sub:${s.id}`} value={`sub:${s.id}`}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
-                          {bills.map((b) => <SelectItem key={`bill:${b.id}`} value={`bill:${b.id}`}>{b.name} · {fmt(b.amount)} €</SelectItem>)}
-                          {debts.map((d) => <SelectItem key={`debt:${d.id}`} value={`debt:${d.id}`}>{d.name}{d.amount > 0 ? ` · ${fmt(d.amount)} €` : ""}</SelectItem>)}
+                          {availSubs.map((s) => <SelectItem key={`sub:${s.id}`} value={`sub:${s.id}`}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
+                          {availBills.map((b) => <SelectItem key={`bill:${b.id}`} value={`bill:${b.id}`}>{b.name} · {fmt(b.amount)} €</SelectItem>)}
+                          {availDebts.map((d) => <SelectItem key={`debt:${d.id}`} value={`debt:${d.id}`}>{d.name}{d.amount > 0 ? ` · ${fmt(d.amount)} €` : ""}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     ) : (
