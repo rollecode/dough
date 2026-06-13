@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
     const body = await request.json();
-    const { name, target_amount, ynab_category_id, ynab_category_name, target_date } = body;
+    const { name, target_amount, ynab_category_id, ynab_category_name, target_date, description } = body;
 
     if (!name || !target_amount) {
       return NextResponse.json({ error: "Name and target amount required" }, { status: 400 });
@@ -35,13 +35,14 @@ export async function POST(request: Request) {
 
     const db = getDb();
     const result = db
-      .prepare("INSERT INTO savings_goals (name, target_amount, priority, ynab_category_id, ynab_category_name, target_date) VALUES (?, ?, 'want', ?, ?, ?)")
+      .prepare("INSERT INTO savings_goals (name, target_amount, priority, ynab_category_id, ynab_category_name, target_date, description) VALUES (?, ?, 'want', ?, ?, ?, ?)")
       .run(
         name,
         parseFloat(String(target_amount).replace(",", ".")),
         ynab_category_id || null,
         ynab_category_name || null,
-        target_date || null
+        target_date || null,
+        description || ""
       );
 
     console.info("[savings-goals] Created:", name, "id:", result.lastInsertRowid);
@@ -92,6 +93,7 @@ export async function PUT(request: Request) {
     if (body.ynab_category_id !== undefined) { updates.push("ynab_category_id = ?"); values.push(body.ynab_category_id || null); }
     if (body.ynab_category_name !== undefined) { updates.push("ynab_category_name = ?"); values.push(body.ynab_category_name || null); }
     if (body.target_date !== undefined) { updates.push("target_date = ?"); values.push(body.target_date || null); }
+    if (body.description !== undefined) { updates.push("description = ?"); values.push(body.description || ""); }
     if (body.include_in_calculations !== undefined) { updates.push("include_in_calculations = ?"); values.push(body.include_in_calculations ? 1 : 0); }
 
     if (updates.length > 0) {

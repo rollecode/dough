@@ -542,6 +542,13 @@ function initializeDb(db: Database.Database) {
     db.exec("ALTER TABLE chat_messages ADD COLUMN image_thumb TEXT");
   }
 
+  // Add description column to savings_goals if missing (free text, supports links)
+  const goalCols = db.prepare("PRAGMA table_info(savings_goals)").all() as { name: string }[];
+  if (!goalCols.some((c) => c.name === "description")) {
+    console.info("[db] Adding description column to savings_goals");
+    db.exec("ALTER TABLE savings_goals ADD COLUMN description TEXT DEFAULT ''");
+  }
+
   // Add columns to debt_overrides if missing
   const debtCols = db.prepare("PRAGMA table_info(debt_overrides)").all() as { name: string }[];
   if (!debtCols.some((c) => c.name === "due_day")) {

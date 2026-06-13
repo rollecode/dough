@@ -30,8 +30,23 @@ interface SavingsGoal {
   ynab_category_id: string | null;
   ynab_category_name: string | null;
   target_date: string | null;
+  description: string | null;
   include_in_calculations: number;
   is_active: number;
+}
+
+// Render free text with http(s) URLs turned into clickable links.
+function Linkify({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        /^https?:\/\//.test(p)
+          ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" className="goal-desc-link" onClick={(e) => e.stopPropagation()}>{p}</a>
+          : <span key={i}>{p}</span>
+      )}
+    </>
+  );
 }
 
 export default function SavingsGoalsPage() {
@@ -113,6 +128,7 @@ export default function SavingsGoalsPage() {
       name: fd.get("name") as string,
       target_amount: parseFloat((fd.get("target_amount") as string).replace(",", ".")),
       target_date: (fd.get("target_date") as string) || null,
+      description: (fd.get("description") as string) || "",
       ynab_category_id: cat ? String(cat.id) : null,
       ynab_category_name: addCategory || null,
     };
@@ -140,6 +156,7 @@ export default function SavingsGoalsPage() {
       target_amount: parseFloat((fd.get("target_amount") as string).replace(",", ".")),
       saved_amount: parseFloat((fd.get("saved_amount") as string || "0").replace(",", ".")),
       target_date: (fd.get("target_date") as string) || null,
+      description: (fd.get("description") as string) || "",
       ynab_category_id: cat ? String(cat.id) : null,
       ynab_category_name: editCategory || null,
     };
@@ -227,6 +244,10 @@ export default function SavingsGoalsPage() {
                   createLabel={(q) => (locale === "fi" ? `Luo "${q}"` : `Create "${q}"`)}
                 />
               </div>
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
+                <textarea name="description" className="input goal-desc-input" rows={2} placeholder={locale === "fi" ? "Muistiinpanot, linkit..." : "Notes, links..."} />
+              </div>
               <Button type="submit">{locale === "fi" ? "Lisää tavoite" : "Add goal"}</Button>
             </form>
           </DialogContent>
@@ -280,6 +301,7 @@ export default function SavingsGoalsPage() {
                       {monthly > 0 && goal.target_date && <> · <F v={monthly} s={` €/${locale === "fi" ? "kk" : "mo"}`} /></>}
                       {goal.ynab_category_name && ` · ${goal.ynab_category_name}`}
                     </p>
+                    {goal.description && <p className="goal-desc"><Linkify text={goal.description} /></p>}
                     <Progress value={progress} className="progress-thin" />
                   </div>
                   <div className="list-item-end">
@@ -338,6 +360,10 @@ export default function SavingsGoalsPage() {
                   onCreate={createCategory}
                   createLabel={(q) => (locale === "fi" ? `Luo "${q}"` : `Create "${q}"`)}
                 />
+              </div>
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
+                <textarea name="description" className="input goal-desc-input" rows={2} defaultValue={editTarget.description || ""} placeholder={locale === "fi" ? "Muistiinpanot, linkit..." : "Notes, links..."} />
               </div>
               <div className="form-grid-2">
                 <Button type="button" variant="destructive" onClick={() => { deleteGoal(editTarget.id); setEditOpen(false); }}>
