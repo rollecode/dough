@@ -1,3 +1,9 @@
+### 2.19.0: 2026-06-13
+
+* Filter the transactions list by account with budget-style filter chips
+* Group the transactions list by day with a day heading so it is easy to scan when things happened
+* Raise the list item meta and relative date font to 13px
+
 ### 2.18.0: 2026-06-13
 
 * Drop the YNAB label from the savings goal category field and pick from local budget categories grouped under their category groups
