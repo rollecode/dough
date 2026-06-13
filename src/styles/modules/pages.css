@@ -183,12 +183,10 @@
   position: relative;
 }
 
+/* Rendered in a portal with fixed positioning (see PayeeInput), so it floats above dialogs
+   instead of being clipped by the modal. z-index sits above the dialog layer. */
 .payee-autocomplete-list {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 60;
+  z-index: 120;
   margin: 0;
   padding: 4px;
   list-style: none;
@@ -255,8 +253,46 @@
 }
 
 .dup-warning-row {
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4375rem 0.5rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--card) 65%, transparent);
+}
+
+.dup-warning-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.dup-warning-row-payee {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dup-warning-row-meta {
+  font-size: 13px;
   color: var(--muted-foreground);
+}
+
+.dup-warning-row-amt {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+
+.dup-warning-row-amt[data-negative] {
+  color: var(--negative);
 }
 
 .dup-warning-actions {
@@ -3056,6 +3092,12 @@
 .batch-remove-btn svg {
   width: 0.75rem;
   height: 0.75rem;
+}
+
+/* Account dropdowns in the add-transaction dialog use the portal-based Select (native selects
+   close on a single tap inside the modal), and stretch to the field width. */
+.tx-account-trigger {
+  width: 100%;
 }
 
 /* Expense / income / transfer segmented toggle in the add-transaction dialog */

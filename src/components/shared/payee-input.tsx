@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 
 interface PayeeInputProps {
@@ -11,14 +12,19 @@ interface PayeeInputProps {
   onBlur?: () => void;
 }
 
-// Payee field with a custom suggestions dropdown. Replaces the native <datalist>, which does
-// not render reliably on mobile browsers (notably iOS Safari) — the suggestions list simply
-// never appeared there. This dropdown selects on pointerdown so a touch tap registers before
-// the input loses focus.
+// Payee/description field with a custom suggestions dropdown. The list is rendered in a portal
+// with fixed positioning so it floats above a dialog instead of being clipped by the modal's
+// overflow (which forced scrolling inside the modal to reach options). Selects on pointerdown so
+// a touch tap registers before the input loses focus.
 export function PayeeInput({ value, onChange, payees, placeholder, onBlur }: PayeeInputProps) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
+  const [mounted, setMounted] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => setMounted(true), []);
 
   const q = value.trim().toLowerCase();
   const matches = (q
@@ -26,20 +32,36 @@ export function PayeeInput({ value, onChange, payees, placeholder, onBlur }: Pay
     : payees
   ).slice(0, 8);
 
+  // Position the floating list just below the field; keep it aligned while scrolling/resizing.
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = wrapRef.current?.getBoundingClientRect();
+      if (r) setPos({ left: r.left, top: r.bottom + 4, width: r.width });
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onDocDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        console.debug("[payee-input] outside pointerdown, closing suggestions");
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t) || listRef.current?.contains(t)) return;
+      console.debug("[payee-input] outside pointerdown, closing suggestions");
+      setOpen(false);
     };
     document.addEventListener("pointerdown", onDocDown);
     return () => document.removeEventListener("pointerdown", onDocDown);
   }, [open]);
 
   const choose = (p: string) => {
-    console.debug("[payee-input] selected payee", p);
+    console.debug("[payee-input] selected", p);
     onChange(p);
     setOpen(false);
     setHighlight(-1);
@@ -62,8 +84,8 @@ export function PayeeInput({ value, onChange, payees, placeholder, onBlur }: Pay
           else if (e.key === "Escape") { setOpen(false); }
         }}
       />
-      {open && matches.length > 0 && (
-        <ul className="payee-autocomplete-list">
+      {open && mounted && pos && matches.length > 0 && createPortal(
+        <ul ref={listRef} className="payee-autocomplete-list" style={{ position: "fixed", left: pos.left, top: pos.top, width: pos.width }}>
           {matches.map((p, i) => (
             <li key={p}>
               <button
@@ -75,7 +97,8 @@ export function PayeeInput({ value, onChange, payees, placeholder, onBlur }: Pay
               </button>
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body
       )}
     </div>
   );

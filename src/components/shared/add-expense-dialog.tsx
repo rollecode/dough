@@ -12,6 +12,8 @@ import { titleCasePayee } from "@/lib/text-utils";
 import { PayeeInput } from "@/components/shared/payee-input";
 import { CategoryPicker } from "@/components/shared/category-picker";
 import { DateField } from "@/components/ui/date-field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { F } from "@/components/ui/f";
 
 // Human label for a duplicate candidate's date: today / tomorrow / d.m.yyyy.
 function dayLabel(iso: string, locale: string): string {
@@ -381,19 +383,23 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
 
               <div className="form-field">
                 <Label>{txType === "transfer" ? (locale === "fi" ? "Miltä tililtä" : "From account") : (locale === "fi" ? "Tili" : "Account")}</Label>
-                <select className="input" value={linkedAccountId} onChange={(e) => { setLinkedAccountId(e.target.value); const a = allAccounts.find((x) => x.id === e.target.value); setLinkedAccountName(a?.name || ""); }}>
-                  <option value="">{locale === "fi" ? "Valitse tili" : "Select account"}</option>
-                  {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                <Select value={linkedAccountId} onValueChange={(v) => { if (v) { setLinkedAccountId(v); const a = allAccounts.find((x) => x.id === v); setLinkedAccountName(a?.name || ""); } }}>
+                  <SelectTrigger className="tx-account-trigger"><SelectValue placeholder={locale === "fi" ? "Valitse tili" : "Select account"} /></SelectTrigger>
+                  <SelectContent>
+                    {allAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
 
               {txType === "transfer" && (
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Mille tilille" : "To account"}</Label>
-                  <select className="input" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)}>
-                    <option value="">{locale === "fi" ? "Valitse tili" : "Select account"}</option>
-                    {allAccounts.filter((a) => a.id !== linkedAccountId).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
+                  <Select value={toAccountId} onValueChange={(v) => v && setToAccountId(v)}>
+                    <SelectTrigger className="tx-account-trigger"><SelectValue placeholder={locale === "fi" ? "Valitse tili" : "Select account"} /></SelectTrigger>
+                    <SelectContent>
+                      {allAccounts.filter((a) => a.id !== linkedAccountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -447,14 +453,19 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
                 <div className="dup-warning">
                   <p className="dup-warning-title">
                     {locale === "fi"
-                      ? "Samansuuruinen tapahtuma löytyi jo - mahdollinen tuplaus:"
+                      ? "Samansuuruinen tapahtuma on jo olemassa - mahdollinen duplikaatti:"
                       : "A transaction with the same amount already exists - possible duplicate:"}
                   </p>
                   {dupCandidates.map((d) => (
-                    <p key={d.id} className="dup-warning-row">
-                      {d.payee || (locale === "fi" ? "Tuntematon" : "Unknown")}
-                      {d.account ? ` · ${d.account}` : ""} · {dayLabel(d.date, locale)}
-                    </p>
+                    <div key={d.id} className="dup-warning-row">
+                      <div className="dup-warning-row-body">
+                        <span className="dup-warning-row-payee">{d.payee || (locale === "fi" ? "Tuntematon" : "Unknown")}</span>
+                        <span className="dup-warning-row-meta">{[d.account, dayLabel(d.date, locale)].filter(Boolean).join(" · ")}</span>
+                      </div>
+                      <span className="dup-warning-row-amt" data-negative={d.amount < 0 || undefined}>
+                        {d.amount < 0 ? "-" : "+"}<F v={Math.abs(d.amount)} s=" €" />
+                      </span>
+                    </div>
                   ))}
                   <div className="dup-warning-actions">
                     <Button type="button" size="sm" variant="destructive" onClick={() => handleAddExpense(true)} disabled={addLoading}>
