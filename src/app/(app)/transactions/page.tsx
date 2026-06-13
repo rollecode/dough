@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { isTransfer, transferCategoryLabel } from "@/lib/transaction-utils";
-import { useYnab } from "@/lib/ynab-context";
+import { useYnab, type YnabTransaction } from "@/lib/ynab-context";
 import { useEvent } from "@/lib/use-events";
 import { relativeDate, dayHeading } from "@/lib/date-utils";
 import { Card } from "@/components/ui/card";
@@ -55,18 +55,28 @@ function formatMonth(month: string, locale: string): string {
 export default function TransactionsPage() {
   const { t, locale, fmt } = useLocale();
   const { data, loading, connected, sync, refresh } = useYnab();
+  const [month, setMonth] = useState<string>(thisMonth());
+  // Transactions for the viewed month, loaded from the local table. The dashboard sync payload only
+  // carries the current month, so navigating to older months fetches them here.
+  const [monthTx, setMonthTx] = useState<YnabTransaction[]>([]);
+  const loadMonth = useCallback((m: string) => {
+    fetch(`/api/transactions/list?month=${m}`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d.transactions)) setMonthTx(d.transactions); })
+      .catch((err) => console.error("[transactions] Load month error:", err));
+  }, []);
+  useEffect(() => { loadMonth(month); }, [month, loadMonth]);
 
-  // SSE: refresh when transactions are added
+  // Reload the viewed month when transactions change (add/edit/delete/sync).
   useEvent("data:updated", useCallback((d: unknown) => {
     const evt = d as { source?: string };
-    if (evt.source === "transaction-added" || evt.source === "ynab-sync") {
-      refresh();
+    if (["transaction-added", "transaction-updated", "transaction-deleted", "ynab-sync", "synci-sync"].includes(evt.source || "")) {
+      loadMonth(month);
     }
-  }, [refresh]));
+  }, [loadMonth, month]));
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
   const [accountFilter, setAccountFilter] = useState<string>("all");
-  const [month, setMonth] = useState<string>(thisMonth());
   const [addOpen, setAddOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
@@ -115,7 +125,7 @@ export default function TransactionsPage() {
           }),
         });
         const result = await res.json();
-        if (result.success) { console.info("[transactions] Split saved for", editTx.id); setEditTx(null); refresh(); }
+        if (result.success) { console.info("[transactions] Split saved for", editTx.id); setEditTx(null); refresh(); loadMonth(month); }
         else console.error("[transactions] Split failed:", result.error);
         return;
       }
@@ -136,7 +146,7 @@ export default function TransactionsPage() {
       if (result.success) {
         console.info("[transactions] Edit saved for", editTx.id);
         setEditTx(null);
-        refresh();
+        refresh(); loadMonth(month);
       } else {
         console.error("[transactions] Edit failed:", result.error);
       }
@@ -161,7 +171,7 @@ export default function TransactionsPage() {
       if (result.success) {
         console.info("[transactions] Deleted", editTx.id);
         setEditTx(null);
-        refresh();
+        refresh(); loadMonth(month);
       } else {
         console.error("[transactions] Delete failed:", result.error);
       }
@@ -179,7 +189,7 @@ export default function TransactionsPage() {
     transfers: locale === "fi" ? "Siirrot" : "Transfers",
   };
 
-  const transactions = data?.transactions ?? [];
+  const transactions = monthTx;
 
   // Fold split rows (sharing a split_group) into one entry showing the total and its parts.
   const entries = (() => {
