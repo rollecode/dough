@@ -317,6 +317,10 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate }: AddExpense
     onOpenChange(v);
   };
 
+  // Value -> label map so the account Select shows the account name (not the raw id) even when the
+  // value is set programmatically (the spending account is preselected from the profile).
+  const accountItems: Record<string, string> = Object.fromEntries(allAccounts.map((a) => [a.id, a.name]));
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
@@ -402,7 +406,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate }: AddExpense
 
               <div className="form-field">
                 <Label>{txType === "transfer" ? (locale === "fi" ? "Miltä tililtä" : "From account") : (locale === "fi" ? "Tili" : "Account")}</Label>
-                <Select value={linkedAccountId} onValueChange={(v) => { if (v) { setLinkedAccountId(v); const a = allAccounts.find((x) => x.id === v); setLinkedAccountName(a?.name || ""); } }}>
+                <Select items={accountItems} value={linkedAccountId} onValueChange={(v) => { if (v) { setLinkedAccountId(v); const a = allAccounts.find((x) => x.id === v); setLinkedAccountName(a?.name || ""); } }}>
                   <SelectTrigger className="tx-account-trigger"><SelectValue placeholder={locale === "fi" ? "Valitse tili" : "Select account"} /></SelectTrigger>
                   <SelectContent>
                     {allAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
@@ -413,7 +417,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate }: AddExpense
               {txType === "transfer" && (
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Mille tilille" : "To account"}</Label>
-                  <Select value={toAccountId} onValueChange={(v) => v && setToAccountId(v)}>
+                  <Select items={accountItems} value={toAccountId} onValueChange={(v) => v && setToAccountId(v)}>
                     <SelectTrigger className="tx-account-trigger"><SelectValue placeholder={locale === "fi" ? "Valitse tili" : "Select account"} /></SelectTrigger>
                     <SelectContent>
                       {allAccounts.filter((a) => a.id !== linkedAccountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
