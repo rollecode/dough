@@ -17,6 +17,7 @@
 * Add month navigation and an account balance topbar to the transactions view
 * Hint the native date picker to start the week on Monday where the browser respects it
 * Add an AI balance check to the edit-account modal: enter the real bank balance and it explains the difference over the last 7 days and lists likely duplicate transactions to delete on the spot
+* Make the budget activity (Toteuma) transactions clickable to open the transaction, and raise their date font to 13px
 
 ### 2.19.0: 2026-06-13
 
