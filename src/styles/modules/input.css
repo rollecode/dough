@@ -111,16 +111,22 @@ select.input option {
   height: 1rem;
 }
 
+/* Transparent native date input overlaid on the calendar button. Tapping it opens the OS date
+   picker directly, which is reliable on mobile (showPicker alone is not). The left of the field
+   stays free for typing. */
 .date-field-native {
   position: absolute;
-  right: 0.5rem;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
+  top: 0;
+  right: 0;
+  width: 2.75rem;
+  height: 100%;
+  margin: 0;
   padding: 0;
   border: 0;
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* Native selects: replace the cramped default arrow with a spaced custom chevron */

@@ -78,17 +78,17 @@ export function DateField({
           else setText(curIso ? fmtDate(curIso) : "");
         }}
       />
-      <button type="button" className="date-field-btn" aria-label="Open calendar" onClick={() => pickerRef.current?.showPicker?.()}>
+      <span className="date-field-btn" aria-hidden="true">
         <CalendarDays />
-      </button>
+      </span>
       <input
         ref={pickerRef}
         type="date"
         className="date-field-native"
-        tabIndex={-1}
-        aria-hidden="true"
+        aria-label={placeholder || "Date"}
         value={curIso}
         onChange={(e) => setVal(e.target.value)}
+        onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker?.(); } catch { /* mobile opens on focus */ } }}
       />
       {name && <input type="hidden" name={name} value={curIso} />}
     </div>
