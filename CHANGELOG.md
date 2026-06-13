@@ -3,6 +3,13 @@
 * Show and let you change the category per detected line in the attachment (batch) add, pre-filled by the AI guess
 * Flag likely duplicate lines in the attachment add, both against existing transactions and repeats within the same import
 * Suggest earlier descriptions in the Kuvaus field, the same way the payee field suggests payees
+* Turn the add dialog into add transaction with expense, income and transfer types
+* Add income straight from the add dialog (lands in Ready to Assign)
+* Add internal transfers between accounts from the add dialog
+* Classify Synci internal transfers as transfers with an internal transfer category instead of leaving them as expenses
+* Fix the mobile date picker so the calendar opens on tap instead of being unreachable
+* Add a description field with clickable links to savings goals
+* Stop the net worth chart from overflowing past the page's left edge
 
 ### 2.19.0: 2026-06-13
 
