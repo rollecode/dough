@@ -155,6 +155,8 @@ export async function GET(request: Request) {
         snooze_until_month,
         target_active,
         subscription_id: c.subscription_id ?? null,
+        bill_id: c.bill_id ?? null,
+        debt_account_id: c.debt_account_id ?? null,
         subscription_name: linkedSub?.name || "",
         linked_type,
         linked_name: linked?.name || "",
