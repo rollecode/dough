@@ -9,7 +9,7 @@
 }
 
 .chart-tooltip-label {
-  font-size: 0.75rem;
+  font-size: 13px;
   line-height: 1rem;
   color: var(--muted-foreground);
 }
