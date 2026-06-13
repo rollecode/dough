@@ -5,7 +5,7 @@
 ![Claude](https://img.shields.io/badge/Claude_AI-cc785c?style=for-the-badge&logo=anthropic&logoColor=white)
 <img width="80" height="28" alt="YNAB" src="https://github.com/user-attachments/assets/c7300ced-3496-4604-ad5d-22cd60f73276" /> 
 
-A self-hosted personal finance dashboard that connects to [YNAB](https://www.ynab.com/) and uses [Claude](https://code.claude.com/docs/en/cli-reference) for financial advice, spending summaries, and debt strategies.
+A self-hosted personal finance dashboard for households. It runs on its own - managing your accounts, transactions, and envelope budgeting - or connected to [YNAB](https://www.ynab.com/). It uses [Claude](https://code.claude.com/docs/en/cli-reference) for financial advice, spending summaries, transaction categorization, and debt strategies.
 
 <img width="1746" height="1053" alt="image" src="https://github.com/user-attachments/assets/46017826-49eb-428c-b9d1-a52337b27fe7" />
 
@@ -15,25 +15,30 @@ YNAB is great for detailed per-account envelope budgeting, but it's an individua
 
 Dough was built to solve this:
 
-- **Accountless by design** - no separate checking, savings, or credit card views. One household, one balance, one daily budget. Your partner doesn't need to understand account structures or envelope budgeting.
+- **Daily-budget first** - the headline is one number: how much the household can spend today, across all accounts. Your partner doesn't need to understand account structures or envelope budgeting to use it.
+- **Works with or without YNAB** - run Dough standalone with its own accounts, transactions, and envelope budgeting, or layer it on top of YNAB as an intelligence layer. Either way the dashboard answers "how are we doing?"
 - **Household-first** - all data is shared. Both users see the same dashboard, same AI advisor, same bills and income. No "my budget" vs "your budget."
 - **AI that knows your situation** - Claude has full context of your balance, bills, debts, income dates, and spending patterns. Ask "can I buy lunch today?" and get a real answer based on cash flow simulation, not a generic rule.
 - **Cash flow simulation** - the daily budget accounts for when income arrives and when bills are due. It knows your tax payment is due the day before salary and doesn't panic about it.
-- **Receipt scanning** - snap a photo of a receipt in the chat, the AI reads it and adds the expense to YNAB automatically.
-- **Works alongside YNAB** - Dough doesn't replace YNAB's envelope budgeting or bank connections. It's an intelligence layer on top. YNAB handles the accounting, Dough handles the "how are we doing?" question.
+- **Receipt scanning** - snap a photo of a receipt or a bank statement in the add dialog, the AI reads it and adds the transactions for you.
 - **Self-hosted, private** - your financial data stays on your machine. No cloud services, no third-party access. SQLite database you can back up with a single file copy.
 
 ## Features
 
 - **Dashboard** with daily budget, burn rate, month status, spending chart, category breakdown, cash flow, and net worth
+- **Budget** with built-in envelope budgeting (categories, targets, assign, ready-to-assign, age of money) - used when running without YNAB, or mirrored from YNAB
 - **AI advisor** chat with full financial context, shared across household members
 - **AI summary** generated daily with spending analysis and projections
-- **Bills** tracking with YNAB payee matching, overdue detection, and manual paid toggles
-- **Income** sources with expected dates and auto-matching to YNAB transactions
-- **Debts** pulled from YNAB with editable interest rates, snowball/avalanche strategies
-- **Investments** pulled from YNAB with monthly contributions and compound growth projections
+- **AI categorization** of new transactions, with a manual override that always wins
+- **AI balance check** that compares an account against the real bank balance and explains duplicates or missing entries
+- **Bills** tracking with payee matching, overdue detection, and manual paid toggles
+- **Income** sources with expected dates and auto-matching to incoming transactions
+- **Debts** with editable interest rates and snowball/avalanche strategies (from YNAB or added manually)
+- **Investments** with monthly contributions and compound growth projections (from YNAB or added manually)
 - **Net worth** history with daily snapshots and area chart
-- **Transactions** synced from YNAB with search, filtering, and manual expense entry
+- **Transactions** with month navigation, account balance, search, filtering, day grouping, splits, transfers, and manual entry
+- **Automatic bank import** via Synci (optional): imports income and expenses, categorizes them, and pairs internal transfers
+- **Accounts** management with balances and reconciliation
 - **Real-time** updates via Server-Sent Events across all connected clients
 - **Multi-user** household support with shared data and per-user settings
 - **Bilingual** English and Finnish with per-user language preference
@@ -42,7 +47,7 @@ Dough was built to solve this:
 
 - Node.js 22+
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with an active Claude subscription (`claude` command in PATH) for AI features
-- YNAB account with [personal access token](https://app.ynab.com/settings/developer)
+- Optional: a YNAB account with a [personal access token](https://app.ynab.com/settings/developer) - only if you want to connect YNAB
 - Linux or macOS (tested on Arch Linux)
 
 ## Installation
@@ -95,19 +100,40 @@ The app runs at `http://localhost:3001`.
 ### First login
 
 1. Log in with the credentials from the seed script
-2. Go to Settings and paste your YNAB personal access token
-3. Select your budget and sync
-4. Set your display name, household details, and link your spending account
-5. Add income sources and recurring bills with YNAB payee patterns
+2. Set your display name and household details
+3. Add your accounts (Settings or the Accounts page), or connect YNAB - see "Modes" below
+4. Link your spending account so the daily budget knows what you pay from
+5. Add income sources and recurring bills, and set up budget categories and targets
 
-## YNAB setup
+## Modes
+
+Dough runs in one of two modes, chosen automatically by whether YNAB is connected.
+
+### Standalone (no YNAB)
+
+This is the default. Dough manages everything itself:
+
+1. Add your accounts on the Accounts page (or import them via Synci, below)
+2. Use the Budget tab for envelope budgeting - create categories, set targets, and assign money
+3. Add transactions manually, by scanning a receipt or statement, or automatically via Synci
+
+### YNAB
 
 1. Go to [YNAB Developer Settings](https://app.ynab.com/settings/developer)
 2. Create a personal access token
-3. Paste it in Dough settings or `.env.local`
-4. Select your budget and sync
+3. Paste it in Dough settings or `.env.local`, then select your budget and sync
 
-Dough caches YNAB data locally in SQLite. Syncing is manual (button press) to avoid rate limits. The app works fully offline with cached data.
+Dough caches YNAB data locally in SQLite. Syncing is manual (button press) to avoid rate limits, and the app works fully offline with cached data.
+
+## Automatic bank import (Synci)
+
+Optional. Connect [Synci](https://synci.io/) (a bank-aggregation API) to import transactions automatically:
+
+1. Paste a Synci API token in Settings
+2. Map your bank accounts to Dough accounts
+3. Dough imports income and expenses, categorizes them with AI, and pairs internal transfers between your own accounts
+
+Imports are deduplicated against existing transactions, so a manual entry and the later bank import will not double up.
 
 ## AI setup
 
@@ -116,7 +142,12 @@ Dough uses the [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) for 
 AI features:
 - **Chat advisor** with full financial context (balance, transactions, bills, debts, investments, income)
 - **Daily summary** with spending analysis and month-end projections
+- **Transaction categorization** as you type or on import
+- **Receipt and statement scanning** that reads an image or PDF and extracts the transactions
+- **Balance reconcile** that explains why an account differs from the real bank balance
 - **Debt payoff suggestions** with strategy recommendations
+
+Categorization can use Google Gemini instead of the Claude CLI when a Gemini API key is set in Settings (faster and cheaper for that routine task). Everything else uses the Claude CLI.
 
 All AI prompts are editable in Settings. The household profile is injected into every prompt for personalized advice.
 
