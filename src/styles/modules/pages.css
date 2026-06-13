@@ -1062,12 +1062,24 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
+  width: 100%;
   padding: 0.4375rem 0.375rem;
+  border: none;
   border-top: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0.375rem;
 }
 
 .budget-act-item:first-child {
   border-top: none;
+}
+
+.budget-act-item:hover {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
 }
 
 .budget-act-info {
@@ -1086,7 +1098,7 @@
 }
 
 .budget-act-date {
-  font-size: 0.6875rem;
+  font-size: 13px;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
   overflow: hidden;

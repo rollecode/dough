@@ -219,6 +219,21 @@ export default function TransactionsPage() {
       return true;
     });
 
+  // Deep link from elsewhere (e.g. the budget activity popover): /transactions?tx=<id> opens that
+  // transaction's editor directly, regardless of the current month/filter.
+  useEffect(() => {
+    if (!data?.transactions) return;
+    const txId = new URLSearchParams(window.location.search).get("tx");
+    if (!txId) return;
+    const t = data.transactions.find((x) => x.id === txId);
+    if (t) {
+      setEditTx({ id: t.id, payee: t.payee, amount: t.amount, category: t.category, memo: t.memo, account_id: t.account_id || "", date: t.date });
+      setSplitMode(false);
+      setSplitLines([]);
+      window.history.replaceState({}, "", "/transactions");
+    }
+  }, [data]);
+
   // Infinite scroll: reset the window when filter/search changes, grow it as the sentinel scrolls into view
   useEffect(() => { setVisibleCount(50); }, [search, filter, accountFilter, month]);
 

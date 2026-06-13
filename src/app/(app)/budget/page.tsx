@@ -1510,13 +1510,18 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                   ) : actTxns && actTxns.length > 0 ? (
                     <div className="budget-act-list">
                       {actTxns.map((tx) => (
-                        <div key={tx.id} className="budget-act-item">
+                        <button
+                          key={tx.id}
+                          type="button"
+                          className="budget-act-item"
+                          onClick={() => { window.location.href = `/transactions?tx=${encodeURIComponent(tx.id)}`; }}
+                        >
                           <span className="budget-act-info">
                             <span className="budget-act-payee">{tx.payee}</span>
                             <span className="budget-act-date">{tx.account ? `${tx.account} · ` : ""}{fmtDate(tx.date)}</span>
                           </span>
                           <span className="budget-act-amt">−<F v={Math.abs(tx.amount)} s=" €" /></span>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   ) : (
