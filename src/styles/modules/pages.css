@@ -339,6 +339,24 @@
   color: var(--muted-foreground);
 }
 
+/* Account filter chips on the transactions page reuse the budget filter style, but may be many,
+   so they wrap onto multiple rows instead of overflowing. */
+.tx-account-filterbar {
+  flex-wrap: wrap;
+}
+
+/* Day grouping headers in the transactions list: a subtle band separating each day. The first
+   item under a header drops its divider so the header and its rows read as one block. */
+.tx-day-header {
+  font-weight: 600;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
+}
+
+.list-card-divider > .tx-day-header + * {
+  border-top: none;
+}
+
 /* Budget page */
 .budget-topbar {
   display: grid;
@@ -2120,7 +2138,7 @@
 }
 
 .list-item-meta {
-  font-size: 0.75rem;
+  font-size: 13px;
   line-height: 1rem;
   color: var(--muted-foreground);
 }
@@ -2148,7 +2166,7 @@
 .metric-card-value-3xl.is-positive { color: var(--positive); }
 
 .list-item-amount-date {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted-foreground);
 }
 
