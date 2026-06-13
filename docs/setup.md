@@ -4,7 +4,7 @@
 
 - Node.js 22+ (tested with v22.20.0)
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with an active Claude subscription (`claude` command in PATH) for AI features
-- YNAB account with personal access token
+- Optional: a YNAB account with a personal access token, only if you want to connect YNAB
 - SQLite (bundled via better-sqlite3, no separate install)
 
 ### Installation
@@ -52,10 +52,14 @@ The app runs at `http://localhost:3001`.
 ### First login
 
 1. Log in with the credentials you set in the seed script
-2. Go to settings and connect YNAB (paste your personal access token)
-3. Select your budget
-4. Set your name, household size, and link your spending account
-5. Add income sources and recurring bills
+2. Set your name, household size, and add your accounts (or connect YNAB - see below)
+3. Link your spending account so the daily budget knows what you pay from
+4. Add income sources and recurring bills, and set up budget categories and targets
+5. Optionally connect Synci to import bank transactions automatically (see the timer section below)
+
+Dough chooses its mode automatically: without a YNAB token and budget it runs standalone (its own
+accounts, transactions, and envelope budgeting); with them it mirrors YNAB. To connect YNAB, paste a
+personal access token in settings (or `.env.local`) and select your budget.
 
 ### Cloudflare tunnel (optional)
 

@@ -10,10 +10,10 @@
 - **Icons**: lucide-react
 - **Charts**: Recharts
 - **i18n**: Custom locale system with React context
-- **AI**: Claude CLI via stdin pipe (Opus model)
+- **AI**: Claude CLI via stdin pipe (Opus); optional Google Gemini for categorization
 - **Real-time**: Server-Sent Events (in-process EventBus)
-- **Finance data**: YNAB REST API
-- **Bank sync**: Synci REST API (income polling)
+- **Finance data**: local SQLite, optionally mirrored from the YNAB REST API
+- **Bank sync**: Synci REST API (optional transaction import: income, expenses, transfers)
 
 ### Directory structure
 
@@ -72,7 +72,7 @@ docs/                     # Documentation
 - `users` — user accounts with locale, budget share
 - `user_linked_accounts` — per-user linked YNAB spending accounts
 - `household_settings` — shared key-value settings
-- `transactions` — YNAB transactions (shared, unique on ynab_id)
+- `transactions` — shared transactions from YNAB, Synci or manual entry (unique on ynab_id)
 - `recurring_bills` — monthly bills with is_priority flag
 - `bill_amount_history` — bill amount tracking per month
 - `bill_manual_status` — manual paid/unpaid overrides per month
@@ -148,7 +148,8 @@ Claude CLI invoked via `spawn` with Opus model. Features:
 2. **AI summary** — cached, shared across users, reads from local DB
 3. **Debt suggestion** — one-shot advice, shared cache
 4. **Receipt parsing** — Claude vision extracts amounts, payees, dates, accounts
-5. **Transaction categorization** — AI picks YNAB category for new expenses
+5. **Transaction categorization** — AI picks a budget category for new transactions (Claude CLI, or fast Gemini when a key is set)
+6. **Balance reconcile** — AI compares an account to the real bank balance and explains duplicates or missing entries over the last 7 days
 
 ### Synci integration
 
@@ -159,8 +160,8 @@ Polls Synci REST API every 30 minutes via systemd timer (see setup.md). Per mapp
 3. Local mode: imports every transaction (income and expense); YNAB mode: income only (YNAB imports the rest from the bank)
 4. Skips anything already added manually (same account, amount and date) so it never duplicates
 5. Auto-categorizes freshly imported expenses with the fast AI path (shared categorizer)
-6. Auto-pairs opposite-sign equal-magnitude transactions on different accounts within 2 days as transfers
-7. Inflows are categorised to Ready to Assign (counted as income) only when they match a household income source; unrecognised inflows, such as company money passing through a personal account, are imported for balance accuracy but not counted as household income. Marks income received in monthly_matches
+6. Auto-pairs opposite-sign equal-magnitude transactions on different accounts within 2 days as internal transfers, tagging both legs with an internal-transfer category so they stay out of spending and income
+7. Inflows are categorised to Ready to Assign (counted as income, recorded in monthly_matches) only when they match a household income source. Other inflows are imported provisionally and kept only if they pair into an internal transfer; an unmatched, unpaired inflow (such as company money passing through a personal account) is removed so it never inflates balances or income
 8. Updates local account balances; deduplicates re-imports via the synci_processed table
 
 ### Authentication flow

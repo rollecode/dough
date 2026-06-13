@@ -48,17 +48,20 @@
 
 ### Transactions
 
-- Real-time sync from YNAB API with deletion sync
-- Shared transactions (one copy per YNAB transaction, not per user)
-- Filter by all, expenses, income, transfers
+- Month-navigated view with prev/next month and a non-sticky account balance topbar (green when positive, red when negative)
+- Transactions come from the bank via Synci, from YNAB, or are entered manually
+- Day grouping with a heading per day and a plus on each heading to add a transaction for that day
+- Shared transactions (one copy each, not per user)
+- Filter by all, expenses, income or transfers, and by account (chips)
+- Deep-linkable per account at `/transactions/<account>`, with a link from the edit-account modal
 - Search by payee or category
-- Add expense with AI auto-categorization and receipt image recognition
-- Receipt photo or PDF attachment auto-fills payee and amount via Claude vision
-- Auto-detect YNAB account from receipt content
-- Edit a transaction's category from the edit dialog (writes back to YNAB and local data)
-- Split a transaction across multiple categories (Dough-side, stored as child rows sharing a split_group, with live remaining + auto-distribute); shown as one grouped row and preserved across YNAB re-sync
+- Add an expense, income, or a transfer between accounts, with AI auto-categorization and a duplicate check
+- Receipt or statement photo/PDF: the AI reads it and adds one or many transactions, each with an editable category and a possible-duplicate flag
+- Payee and description fields autocomplete from earlier entries (rendered in a portal so they are not clipped by the modal)
+- Edit a transaction's category from the edit dialog (writes back to YNAB when connected, plus local data)
+- Split a transaction across multiple categories (stored as child rows sharing a split_group, with live remaining + auto-distribute); shown as one grouped row and preserved across YNAB re-sync
 - Date fields follow the configured date format with a themed calendar picker
-- Floating action button for quick expense entry (hidden on chat page)
+- Floating action button for quick entry (hidden on chat page)
 - Unread indicator dot when new data synced
 
 ### Budget
@@ -87,6 +90,8 @@
 - Manage accounts without YNAB: add, edit, close and delete manual accounts
 - Mark a spending account and exclude accounts from the budget
 - Per-account AI notes and source badges for manual, Synci and YNAB accounts
+- AI balance check: enter the real bank balance and the AI explains likely duplicates or missing entries from the last few days, each shown with an inline delete
+- Link to an account's transactions (also reachable at `/transactions/<account>`)
 
 ### Local data mode
 
@@ -118,7 +123,7 @@
 
 ### Debts
 
-- Auto-populated from YNAB otherDebt accounts
+- From YNAB otherDebt accounts, or added manually
 - Must-pay priority flag
 - Editable interest rates and monthly payments
 - Snowball and avalanche payoff strategies with charts
@@ -127,7 +132,7 @@
 
 ### Investments
 
-- Auto-populated from YNAB otherAsset accounts
+- From YNAB otherAsset accounts, or added manually
 - Editable monthly contribution amount and expected return percentage
 - Ticker tracking with Yahoo Finance and Seligson fund scraping
 - Compound growth projection chart
@@ -146,14 +151,15 @@
 
 - Target amount, saved amount, and progress bar
 - Optional target date with monthly savings calculation
-- Optional YNAB category linking
+- Optional budget category link, picked from grouped local categories (with the option to create one inline)
+- Description field with clickable links
 - AI advisor and summary are aware of all goals
 
 ### Net worth
 
 - Snapshot history with area chart and forecast line
 - 20-year projection modeling cash, investments, and debts separately
-- Auto-snapshot on every YNAB sync
+- Auto-snapshot on every sync
 
 ### Settings
 
