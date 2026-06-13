@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
+import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
 import { isTransfer, transferCategoryLabel } from "@/lib/transaction-utils";
 import { useYnab, type YnabTransaction } from "@/lib/ynab-context";
@@ -35,6 +36,14 @@ import { F } from "@/components/ui/f";
 
 type FilterType = "all" | "income" | "expenses" | "transfers";
 
+// URL-friendly slug for an account name, e.g. "Veeran tili" -> "veeran-tili". Used so an account's
+// transactions are deep-linkable at /transactions/<slug>.
+export function accountSlug(name: string): string {
+  return name.toLowerCase()
+    .replace(/ä/g, "a").replace(/ö/g, "o").replace(/å/g, "a")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 function thisMonth(): string {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
@@ -55,6 +64,7 @@ function formatMonth(month: string, locale: string): string {
 export default function TransactionsPage() {
   const { t, locale, fmt } = useLocale();
   const { data, loading, connected, sync, refresh } = useYnab();
+  const pathname = usePathname();
   const [month, setMonth] = useState<string>(thisMonth());
   // Transactions for the viewed month, loaded from the local table. The dashboard sync payload only
   // carries the current month, so navigating to older months fetches them here.
@@ -78,6 +88,7 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [addDayDate, setAddDayDate] = useState("");
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
   const [payees, setPayees] = useState<string[]>([]);
@@ -244,6 +255,15 @@ export default function TransactionsPage() {
     }
   }, [data]);
 
+  // Deep link: /transactions/<account-slug> pre-selects that account once accounts have loaded.
+  useEffect(() => {
+    if (!allAccounts.length) return;
+    const slug = pathname.startsWith("/transactions/") ? decodeURIComponent(pathname.slice("/transactions/".length)) : "";
+    if (!slug) return;
+    const match = allAccounts.find((a) => accountSlug(a.name) === slug);
+    if (match) setAccountFilter(match.id);
+  }, [pathname, allAccounts]);
+
   // Infinite scroll: reset the window when filter/search changes, grow it as the sentinel scrolls into view
   useEffect(() => { setVisibleCount(50); }, [search, filter, accountFilter, month]);
 
@@ -279,11 +299,11 @@ export default function TransactionsPage() {
               <RefreshCw className={loading ? "icon-sm animate-spin" : "icon-sm"} />
             </Button>
           )}
-          <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Button size="sm" onClick={() => { setAddDayDate(""); setAddOpen(true); }}>
             <Plus className="icon-sm" />
             {locale === "fi" ? "Lisää tilitapahtuma" : "Add transaction"}
           </Button>
-          <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} />
+          <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} initialDate={addDayDate || undefined} />
         </div>
       </div>
 
@@ -377,7 +397,19 @@ export default function TransactionsPage() {
             };
             return (
             <Fragment key={tx.id}>
-            {showDay && <div className="list-group-header tx-day-header">{dayHeading(tx.date, locale)}</div>}
+            {showDay && (
+              <div className="list-group-header tx-day-header">
+                <span>{dayHeading(tx.date, locale)}</span>
+                <button
+                  type="button"
+                  className="tx-day-add"
+                  onClick={() => { setAddDayDate(tx.date); setAddOpen(true); }}
+                  aria-label={locale === "fi" ? "Lisää tapahtuma tähän päivään" : "Add a transaction for this day"}
+                >
+                  <Plus />
+                </button>
+              </div>
+            )}
             <div
               className="list-item is-clickable"
               role="button"

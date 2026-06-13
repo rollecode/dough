@@ -14,8 +14,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2, GripVertical, Trash2, Sparkles } from "lucide-react";
+import { Plus, Loader2, GripVertical, Trash2, Sparkles, ArrowRight } from "lucide-react";
 import { F } from "@/components/ui/f";
+import { accountSlug } from "@/app/(app)/transactions/page";
 
 interface Account {
   id: string;
@@ -341,6 +342,11 @@ export default function AccountsPage() {
                 <Label>{locale === "fi" ? "Muistiinpano AI:lle" : "Note for AI"}</Label>
                 <Input value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder={locale === "fi" ? "esim. Puskuritili" : "e.g. Buffer account"} autoComplete="off" />
               </div>
+
+              <a href={`/transactions/${accountSlug(editTarget.name)}`} className="account-tx-link">
+                {locale === "fi" ? "Näytä tapahtumat" : "View transactions"}
+                <ArrowRight />
+              </a>
 
               <div className="form-field reconcile-field">
                 <Label>{locale === "fi" ? "Tarkista pankin saldoa vasten" : "Check against the bank balance"}</Label>
