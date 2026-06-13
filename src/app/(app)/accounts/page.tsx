@@ -350,7 +350,7 @@ export default function AccountsPage() {
 
               <div className="form-field reconcile-field">
                 <Label>{locale === "fi" ? "Tarkista pankin saldoa vasten" : "Check against the bank balance"}</Label>
-                <p className="settings-help">{locale === "fi" ? "Syötä pankin todellinen saldo, niin AI etsii erot ja tuplaukset viime päiviltä." : "Enter the real bank balance and the AI finds the differences and duplicates from the last few days."}</p>
+                <p className="settings-help">{locale === "fi" ? "Syötä pankin todellinen saldo, niin AI etsii erot ja duplikaatit viime päiviltä." : "Enter the real bank balance and the AI finds the differences and duplicates from the last few days."}</p>
                 <div className="reconcile-row">
                   <Input value={trueBalance} onChange={(e) => setTrueBalance(e.target.value)} type="text" inputMode="decimal" placeholder={locale === "fi" ? "Pankin saldo €" : "Bank balance €"} autoComplete="off" />
                   <Button type="button" variant="outline" onClick={runReconcile} disabled={reconciling || !trueBalance.trim()}>

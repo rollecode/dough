@@ -348,7 +348,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate }: AddExpense
                       <div className="batch-item-info">
                         <p className="batch-item-payee">
                           {tx.payee}
-                          {tx.dup && <span className="batch-dup-chip">{locale === "fi" ? "mahdollinen tuplaus" : "possible duplicate"}</span>}
+                          {tx.dup && <span className="batch-dup-chip">{locale === "fi" ? "mahdollinen duplikaatti" : "possible duplicate"}</span>}
                         </p>
                         <p className="batch-item-meta">{tx.amount} € · {tx.date === new Date().toISOString().slice(0, 10) ? (locale === "fi" ? "tänään" : "today") : (() => { const [y, m, d] = tx.date.split("-"); return `${parseInt(d)}.${parseInt(m)}.${y}`; })()} · {tx.account_name}</p>
                       </div>
