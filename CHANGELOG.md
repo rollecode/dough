@@ -10,6 +10,10 @@
 * Fix the mobile date picker so the calendar opens on tap instead of being unreachable
 * Add a description field with clickable links to savings goals
 * Stop the net worth chart from overflowing past the page's left edge
+* Cover an overspent category from Ready to Assign even when nothing is left to assign, so covering works when everything is budgeted
+* Reword and restyle the possible-duplicate warning to read like a transaction row with better contrast
+* Use portal-based account dropdowns in the add dialog so they open on a single tap inside the modal
+* Show payee and description suggestions in a portal so they are not clipped by the modal
 
 ### 2.19.0: 2026-06-13
 
