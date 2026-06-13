@@ -532,6 +532,14 @@
   color: var(--foreground);
 }
 
+.tx-balance-value.is-positive {
+  color: var(--positive);
+}
+
+.tx-balance-value.is-negative {
+  color: var(--negative);
+}
+
 .tx-balance-label {
   font-size: 13px;
   color: var(--muted-foreground);

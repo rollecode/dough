@@ -323,7 +323,7 @@ export default function TransactionsPage() {
           )}
         </div>
         <div className="tx-balance-box">
-          <span className="tx-balance-value"><F v={topBalance} s=" €" /></span>
+          <span className={`tx-balance-value ${topBalance < -0.005 ? "is-negative" : topBalance > 0.005 ? "is-positive" : ""}`}><F v={topBalance} s=" €" /></span>
           <span className="tx-balance-label">{topBalanceLabel}</span>
         </div>
       </div>
