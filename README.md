@@ -7,7 +7,7 @@
 
 A self-hosted personal finance dashboard that connects to [YNAB](https://www.ynab.com/) and uses [Claude](https://code.claude.com/docs/en/cli-reference) for financial advice, spending summaries, and debt strategies.
 
-<img width="1666" height="1102" alt="image" src="https://github.com/user-attachments/assets/451f341a-9ba4-4658-be3a-361dc3ba06d4" />
+<img width="1746" height="1053" alt="image" src="https://github.com/user-attachments/assets/46017826-49eb-428c-b9d1-a52337b27fe7" />
 
 ## Why Dough
 
