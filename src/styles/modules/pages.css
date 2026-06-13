@@ -381,6 +381,113 @@
   flex-wrap: wrap;
 }
 
+/* Reconcile against bank balance (edit-account modal) */
+.reconcile-field {
+  border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  padding-top: 0.875rem;
+}
+
+.reconcile-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.reconcile-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.reconcile-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+}
+
+.reconcile-diff {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--negative);
+}
+
+.reconcile-diff.is-ok {
+  color: var(--positive);
+}
+
+.reconcile-explanation {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+.reconcile-suspect {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.5rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--card) 65%, transparent);
+}
+
+.reconcile-suspect-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.reconcile-suspect-payee {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reconcile-suspect-meta {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.reconcile-suspect-amt {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+
+.reconcile-suspect-amt[data-negative] {
+  color: var(--negative);
+}
+
+.reconcile-suspect-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  border-radius: 0.375rem;
+}
+
+.reconcile-suspect-del:hover {
+  color: var(--negative);
+  background: color-mix(in srgb, var(--negative) 12%, transparent);
+}
+
+.reconcile-suspect-del svg {
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+
 /* Transactions topbar: month nav on the left, account balance on the right (not sticky) */
 .tx-topbar {
   display: flex;

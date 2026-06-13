@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2, GripVertical } from "lucide-react";
+import { Plus, Loader2, GripVertical, Trash2, Sparkles } from "lucide-react";
 import { F } from "@/components/ui/f";
 
 interface Account {
@@ -39,7 +39,7 @@ function typeLabel(type: string, locale: string): string {
 }
 
 export default function AccountsPage() {
-  const { locale, fmt } = useLocale();
+  const { locale, fmt, fmtDate } = useLocale();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
@@ -48,6 +48,9 @@ export default function AccountsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [editNote, setEditNote] = useState("");
+  const [trueBalance, setTrueBalance] = useState("");
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcile, setReconcile] = useState<{ diff: number; explanation: string; suspects: { id: string; date: string; payee: string; amount: number }[] } | null>(null);
   const addFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
   const [orderedOpen, setOrderedOpen] = useState<Account[]>([]);
@@ -134,6 +137,45 @@ export default function AccountsPage() {
     } catch (err) { console.error("[accounts] Edit error:", err); }
   };
 
+  const runReconcile = async () => {
+    if (!editTarget || !trueBalance.trim()) return;
+    setReconciling(true);
+    setReconcile(null);
+    try {
+      const res = await fetch("/api/accounts/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account_id: editTarget.id, true_balance: trueBalance, locale }),
+      });
+      const d = await res.json();
+      if (!d.error) setReconcile({ diff: d.diff, explanation: d.explanation || "", suspects: d.suspects || [] });
+    } catch (err) {
+      console.error("[accounts] Reconcile error:", err);
+    } finally {
+      setReconciling(false);
+    }
+  };
+
+  // Delete a suspect transaction straight from the reconcile panel; the delete endpoint reverses
+  // the account balance, so we adjust the shown difference by the removed amount too.
+  const deleteSuspect = async (txId: string, amount: number) => {
+    try {
+      await fetch("/api/ynab/transaction", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction_id: txId }),
+      });
+      setReconcile((prev) => prev ? {
+        ...prev,
+        diff: Math.round((prev.diff + amount) * 100) / 100,
+        suspects: prev.suspects.filter((s) => s.id !== txId),
+      } : prev);
+      load();
+    } catch (err) {
+      console.error("[accounts] Delete suspect error:", err);
+    }
+  };
+
   const toggleLinked = async (id: string) => {
     const next = linkedIds.includes(id) ? linkedIds.filter((x) => x !== id) : [...linkedIds, id];
     setLinkedIds(next);
@@ -210,7 +252,7 @@ export default function AccountsPage() {
             <div
               key={a.id}
               className={`list-item acct-row ${dragIdx === idx ? "is-dragging" : ""}`}
-              onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); }}
+              onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}
               onDragOver={(e) => handleAcctDragOver(e, idx)}
             >
               <button
@@ -245,7 +287,7 @@ export default function AccountsPage() {
           <p className="list-group-header">{locale === "fi" ? "Suljetut" : "Closed"}</p>
           <Card className="list-card list-card-divider">
             {closed.map((a) => (
-              <div key={a.id} className="list-item" onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); }}>
+              <div key={a.id} className="list-item" onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}>
                 <div className="list-item-body">
                   <p className="list-item-name is-inactive">{a.name}</p>
                   <p className="list-item-meta">{typeLabel(a.type, locale)}</p>
@@ -260,7 +302,7 @@ export default function AccountsPage() {
       )}
 
       {/* Edit dialog */}
-      <Dialog open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }}>
+      <Dialog open={!!editTarget} onOpenChange={(o) => { if (!o) { setEditTarget(null); setReconcile(null); setTrueBalance(""); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{locale === "fi" ? "Muokkaa tiliä" : "Edit account"}</DialogTitle></DialogHeader>
           {editTarget && (
@@ -298,6 +340,43 @@ export default function AccountsPage() {
               <div className="form-field">
                 <Label>{locale === "fi" ? "Muistiinpano AI:lle" : "Note for AI"}</Label>
                 <Input value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder={locale === "fi" ? "esim. Puskuritili" : "e.g. Buffer account"} autoComplete="off" />
+              </div>
+
+              <div className="form-field reconcile-field">
+                <Label>{locale === "fi" ? "Tarkista pankin saldoa vasten" : "Check against the bank balance"}</Label>
+                <p className="settings-help">{locale === "fi" ? "Syötä pankin todellinen saldo, niin AI etsii erot ja tuplaukset viime päiviltä." : "Enter the real bank balance and the AI finds the differences and duplicates from the last few days."}</p>
+                <div className="reconcile-row">
+                  <Input value={trueBalance} onChange={(e) => setTrueBalance(e.target.value)} type="text" inputMode="decimal" placeholder={locale === "fi" ? "Pankin saldo €" : "Bank balance €"} autoComplete="off" />
+                  <Button type="button" variant="outline" onClick={runReconcile} disabled={reconciling || !trueBalance.trim()}>
+                    {reconciling ? <Loader2 className="icon-sm animate-spin" /> : <><Sparkles className="icon-sm" />{locale === "fi" ? "Tarkista" : "Check"}</>}
+                  </Button>
+                </div>
+                {reconcile && (
+                  <div className="reconcile-result">
+                    {reconcile.diff === 0 ? (
+                      <p className="reconcile-diff is-ok">{locale === "fi" ? "Saldo täsmää." : "The balance matches."}</p>
+                    ) : (
+                      <p className="reconcile-diff" data-negative={reconcile.diff < 0 || undefined}>
+                        {reconcile.diff > 0
+                          ? (locale === "fi" ? `Saldo on ${fmt(Math.abs(reconcile.diff))} € liian pieni` : `Balance is ${fmt(Math.abs(reconcile.diff))} € too low`)
+                          : (locale === "fi" ? `Saldo on ${fmt(Math.abs(reconcile.diff))} € liian suuri` : `Balance is ${fmt(Math.abs(reconcile.diff))} € too high`)}
+                      </p>
+                    )}
+                    {reconcile.explanation && <p className="reconcile-explanation">{reconcile.explanation}</p>}
+                    {reconcile.suspects.map((s) => (
+                      <div key={s.id} className="reconcile-suspect">
+                        <div className="reconcile-suspect-body">
+                          <span className="reconcile-suspect-payee">{s.payee}</span>
+                          <span className="reconcile-suspect-meta">{fmtDate(s.date)}</span>
+                        </div>
+                        <span className="reconcile-suspect-amt" data-negative={s.amount < 0 || undefined}>{s.amount < 0 ? "-" : "+"}<F v={Math.abs(s.amount)} s=" €" /></span>
+                        <button type="button" className="reconcile-suspect-del" onClick={() => deleteSuspect(s.id, s.amount)} aria-label={locale === "fi" ? "Poista" : "Delete"}>
+                          <Trash2 />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="form-grid-2">
                 <Button type="button" variant="destructive" onClick={() => closeOrDelete(editTarget)}>
