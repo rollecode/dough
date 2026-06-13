@@ -20,6 +20,10 @@
 * Make the budget activity transactions clickable to open the transaction, and raise their date font to 13px
 * Load each viewed month of transactions from the database so older months are no longer empty when navigating
 * Pad the empty transactions state
+* Make an account's transactions deep-linkable at /transactions/<account>, with a link to it from the edit-account modal
+* Reveal the account reorder handle on hover like the budget page, and line up the day headers with the rows
+* Add a plus on each day heading to add a transaction with that day preselected
+* Add a duplicate check to the transfer add so an already-imported transaction cannot be re-entered as a transfer
 
 ### 2.19.0: 2026-06-13
 
