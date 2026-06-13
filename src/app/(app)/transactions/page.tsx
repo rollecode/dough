@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { isTransfer } from "@/lib/transaction-utils";
 import { useYnab } from "@/lib/ynab-context";
 import { useEvent } from "@/lib/use-events";
-import { relativeDate } from "@/lib/date-utils";
+import { relativeDate, dayHeading } from "@/lib/date-utils";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
@@ -46,6 +46,7 @@ export default function TransactionsPage() {
   }, [refresh]));
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
+  const [accountFilter, setAccountFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
@@ -184,6 +185,7 @@ export default function TransactionsPage() {
       if (search && !tx.payee.toLowerCase().includes(search.toLowerCase()) && !tx.category.toLowerCase().includes(search.toLowerCase()) && !partMatch) {
         return false;
       }
+      if (accountFilter !== "all" && tx.account_id !== accountFilter) return false;
       const txIsTransfer = isTransfer(tx.payee, tx.category);
       if (filter === "income" && (tx.amount < 0 || txIsTransfer)) return false;
       if (filter === "expenses" && (tx.amount >= 0 || txIsTransfer)) return false;
@@ -193,7 +195,7 @@ export default function TransactionsPage() {
     });
 
   // Infinite scroll: reset the window when filter/search changes, grow it as the sentinel scrolls into view
-  useEffect(() => { setVisibleCount(50); }, [search, filter]);
+  useEffect(() => { setVisibleCount(50); }, [search, filter, accountFilter]);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -251,14 +253,38 @@ export default function TransactionsPage() {
         </div>
       </div>
 
+      {allAccounts.length > 1 && (
+        <div className="budget-filterbar tx-account-filterbar">
+          <button
+            type="button"
+            className={`budget-filter ${accountFilter === "all" ? "is-active" : ""}`}
+            onClick={() => setAccountFilter("all")}
+          >
+            {locale === "fi" ? "Kaikki tilit" : "All accounts"}
+          </button>
+          {allAccounts.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              className={`budget-filter ${accountFilter === a.id ? "is-active" : ""}`}
+              onClick={() => setAccountFilter(a.id)}
+            >
+              {a.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading && !data ? (
         <div className="page-loading">
           <Loader2 className="page-loading-spinner animate-spin" />
         </div>
       ) : (
         <Card className="list-card list-card-divider">
-          {filtered.slice(0, visibleCount).map((tx) => {
+          {(() => { let lastDay = ""; return filtered.slice(0, visibleCount).map((tx) => {
             const txIsTransfer = isTransfer(tx.payee, tx.category);
+            const showDay = tx.date !== lastDay;
+            lastDay = tx.date;
             const openEdit = () => {
               setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date });
               if (tx.isSplit && tx.parts) {
@@ -270,8 +296,9 @@ export default function TransactionsPage() {
               }
             };
             return (
+            <Fragment key={tx.id}>
+            {showDay && <div className="list-group-header tx-day-header">{dayHeading(tx.date, locale)}</div>}
             <div
-              key={tx.id}
               className="list-item is-clickable"
               role="button"
               tabIndex={0}
@@ -302,8 +329,9 @@ export default function TransactionsPage() {
                 <p className="list-item-amount-date">{relativeDate(tx.date, locale)}</p>
               </div>
             </div>
+            </Fragment>
             );
-          })}
+          }); })()}
           {filtered.length === 0 && (
             <div className="list-empty">
               <p>{locale === "fi" ? "Ei tapahtumia" : "No transactions"}</p>
