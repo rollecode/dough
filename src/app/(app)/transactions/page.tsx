@@ -25,6 +25,8 @@ import {
   RefreshCw,
   Loader2,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { AddExpenseDialog } from "@/components/shared/add-expense-dialog";
 import { PayeeInput } from "@/components/shared/payee-input";
@@ -32,6 +34,23 @@ import { CategoryPicker } from "@/components/shared/category-picker";
 import { F } from "@/components/ui/f";
 
 type FilterType = "all" | "income" | "expenses" | "transfers";
+
+function thisMonth(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function shiftMonth(month: string, offset: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1 + offset, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonth(month: string, locale: string): string {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString(locale === "fi" ? "fi" : "en", { month: "long", year: "numeric" });
+}
 
 export default function TransactionsPage() {
   const { t, locale, fmt } = useLocale();
@@ -47,6 +66,7 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
   const [accountFilter, setAccountFilter] = useState<string>("all");
+  const [month, setMonth] = useState<string>(thisMonth());
   const [addOpen, setAddOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
@@ -189,6 +209,7 @@ export default function TransactionsPage() {
       if (search && !tx.payee.toLowerCase().includes(search.toLowerCase()) && !tx.category.toLowerCase().includes(search.toLowerCase()) && !partMatch) {
         return false;
       }
+      if (tx.date.slice(0, 7) !== month) return false;
       if (accountFilter !== "all" && tx.account_id !== accountFilter) return false;
       const txIsTransfer = isTransfer(tx.payee, tx.category);
       if (filter === "income" && (tx.amount < 0 || txIsTransfer)) return false;
@@ -199,7 +220,16 @@ export default function TransactionsPage() {
     });
 
   // Infinite scroll: reset the window when filter/search changes, grow it as the sentinel scrolls into view
-  useEffect(() => { setVisibleCount(50); }, [search, filter, accountFilter]);
+  useEffect(() => { setVisibleCount(50); }, [search, filter, accountFilter, month]);
+
+  // Live account balances for the topbar box (selected account, or all checking/savings).
+  const acctBalances = data?.summary?.accounts ?? [];
+  const topBalance = accountFilter === "all"
+    ? acctBalances.filter((a) => a.type === "checking" || a.type === "savings").reduce((s, a) => s + a.balance, 0)
+    : (acctBalances.find((a) => a.id === accountFilter)?.balance ?? 0);
+  const topBalanceLabel = accountFilter === "all"
+    ? (locale === "fi" ? "Tilien saldo" : "Accounts balance")
+    : (allAccounts.find((a) => a.id === accountFilter)?.name ?? "");
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -229,6 +259,27 @@ export default function TransactionsPage() {
             {locale === "fi" ? "Lisää tilitapahtuma" : "Add transaction"}
           </Button>
           <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} />
+        </div>
+      </div>
+
+      <div className="tx-topbar">
+        <div className="budget-monthnav">
+          <button type="button" className="budget-monthnav-arrow" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Previous month">
+            <ChevronLeft />
+          </button>
+          <span className="budget-monthnav-label">{formatMonth(month, locale)}</span>
+          <button type="button" className="budget-monthnav-arrow" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="Next month">
+            <ChevronRight />
+          </button>
+          {month !== thisMonth() && (
+            <button type="button" className="budget-monthnav-today" onClick={() => setMonth(thisMonth())}>
+              {locale === "fi" ? "Tänään" : "Today"}
+            </button>
+          )}
+        </div>
+        <div className="tx-balance-box">
+          <span className="tx-balance-value"><F v={topBalance} s=" €" /></span>
+          <span className="tx-balance-label">{topBalanceLabel}</span>
         </div>
       </div>
 
