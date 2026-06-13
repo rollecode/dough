@@ -2,7 +2,7 @@
 
 * Show and let you change the category per detected line in the attachment (batch) add, pre-filled by the AI guess
 * Flag likely duplicate lines in the attachment add, both against existing transactions and repeats within the same import
-* Suggest earlier descriptions in the Kuvaus field, the same way the payee field suggests payees
+* Suggest earlier descriptions in the description field, the same way the payee field suggests payees
 * Turn the add dialog into add transaction with expense, income and transfer types
 * Add income straight from the add dialog (lands in Ready to Assign)
 * Add internal transfers between accounts from the add dialog
@@ -17,7 +17,9 @@
 * Add month navigation and an account balance topbar to the transactions view
 * Hint the native date picker to start the week on Monday where the browser respects it
 * Add an AI balance check to the edit-account modal: enter the real bank balance and it explains the difference over the last 7 days and lists likely duplicate transactions to delete on the spot
-* Make the budget activity (Toteuma) transactions clickable to open the transaction, and raise their date font to 13px
+* Make the budget activity transactions clickable to open the transaction, and raise their date font to 13px
+* Load each viewed month of transactions from the database so older months are no longer empty when navigating
+* Pad the empty transactions state
 
 ### 2.19.0: 2026-06-13
 
