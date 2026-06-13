@@ -2,7 +2,7 @@
 
 * Drop the YNAB label from the savings goal category field and pick from local budget categories grouped under their category groups
 * Create a new category straight from the savings goal picker when none fits
-* Show the total still needed to fund this month's targets at the foot of the budget assign menu
+* Show the total still needed to fund this month's targets in the budget assign menu, below fund to targets
 * Hide the age of money box on mobile when the uncovered overspending box is shown so the topbar fits on one row
 * Stop the budget link picker from listing subscriptions, bills or debts already linked to another category
 

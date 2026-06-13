@@ -680,17 +680,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Summary row at the foot of the assign menu (total still needed to fund this month's targets) */
-.budget-assign-menu-foot {
+/* Info row in the assign menu (total still needed to fund this month's targets); sits under
+   "Fund to targets" and is not clickable, so it reads as context rather than an action. */
+.budget-assign-menu-note {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.4375rem 0.625rem 0.375rem;
-  margin-top: 0.25rem;
+  padding: 0.25rem 0.625rem 0.4375rem;
+  margin-bottom: 0.125rem;
   font-size: 0.75rem;
   color: var(--muted-foreground);
-  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
 
 /* Cover-overspending popout anchored to the red available amount */

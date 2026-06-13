@@ -740,16 +740,22 @@ export default function BudgetPage() {
                       const amt = autoAmounts?.[mode] ?? null;
                       const disabled = amt !== null && amt <= 0;
                       return (
-                        <button key={mode} type="button" disabled={disabled} onClick={() => autoAssign(mode)}>
-                          <span>{lbl}</span>
-                          <span className="budget-autoassign-amt">{amt !== null ? <F v={amt} s=" €" /> : "…"}</span>
-                        </button>
+                        <Fragment key={mode}>
+                          <button type="button" disabled={disabled} onClick={() => autoAssign(mode)}>
+                            <span>{lbl}</span>
+                            <span className="budget-autoassign-amt">{amt !== null ? <F v={amt} s=" €" /> : "…"}</span>
+                          </button>
+                          {/* Right after "Fund to targets": the full remaining need toward targets,
+                              uncapped by Ready to Assign (differs from the capped assign amount above). */}
+                          {mode === "underfunded" && (
+                            <div className="budget-assign-menu-note">
+                              <span>{locale === "fi" ? "Tarvitaan vielä loppukuussa" : "Still needed this month"}</span>
+                              <span className="budget-autoassign-amt"><F v={remainingToTarget} s=" €" /></span>
+                            </div>
+                          )}
+                        </Fragment>
                       );
                     })}
-                    <div className="budget-assign-menu-foot">
-                      <span>{locale === "fi" ? "Tarvitaan vielä loppukuussa" : "Still needed this month"}</span>
-                      <span className="budget-autoassign-amt"><F v={remainingToTarget} s=" €" /></span>
-                    </div>
                   </div>
                 )}
               </div>
