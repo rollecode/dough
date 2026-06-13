@@ -24,6 +24,9 @@
 * Reveal the account reorder handle on hover like the budget page, and line up the day headers with the rows
 * Add a plus on each day heading to add a transaction with that day preselected
 * Add a duplicate check to the transfer add so an already-imported transaction cannot be re-entered as a transfer
+* Colour the transactions account balance green when positive and red when negative
+* Raise tooltip text to 13px so the heatmap and other tooltips are easier to read
+* Use clearer Finnish wording for possible duplicates
 
 ### 2.19.0: 2026-06-13
 
