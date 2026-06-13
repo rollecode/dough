@@ -1547,21 +1547,19 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                       {locale === "fi" ? "Kata budjetin ylitys" : "Cover overspending"} <span className="budget-cover-amt"><F v={amount} s=" €" /></span>
                     </div>
                     <div className="budget-cover-list">
-                      {readyToAssign > 0.005 && (
-                        <button type="button" className="budget-cover-item" onClick={() => { onCover("rta", amount); setCoverOpen(false); }}>
-                          <span className="budget-cover-name">{locale === "fi" ? "Budjetoimaton raha" : "Ready to assign"}</span>
-                          <span className="budget-cover-src"><F v={readyToAssign} s=" €" /></span>
-                        </button>
-                      )}
+                      {/* Always offered, even at 0: covering from Ready to Assign pushes it negative
+                          (over-assigned), which is the honest state when there is nothing spare to
+                          move - and it lets you clear an overspend when everything is budgeted. */}
+                      <button type="button" className="budget-cover-item" onClick={() => { onCover("rta", amount); setCoverOpen(false); }}>
+                        <span className="budget-cover-name">{locale === "fi" ? "Budjetoimaton raha" : "Ready to assign"}</span>
+                        <span className="budget-cover-src"><F v={readyToAssign} s=" €" /></span>
+                      </button>
                       {sources.map((o) => (
                         <button key={o.id} type="button" className="budget-cover-item" onClick={() => { onCover(o.id, amount); setCoverOpen(false); }}>
                           <span className="budget-cover-name">{o.name}</span>
                           <span className="budget-cover-src"><F v={o.available} s=" €" /></span>
                         </button>
                       ))}
-                      {readyToAssign <= 0.005 && sources.length === 0 && (
-                        <p className="budget-cover-empty">{locale === "fi" ? "Ei rahaa katettavaksi" : "No money available to cover"}</p>
-                      )}
                     </div>
                   </div>
                 </>
