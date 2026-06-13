@@ -47,7 +47,11 @@ export function DateField({
   className?: string;
   required?: boolean;
 }) {
-  const { dateFormat, fmtDate } = useLocale();
+  const { dateFormat, fmtDate, locale } = useLocale();
+  // Hint the native calendar's locale so its week starts on Monday where the browser respects it
+  // (Chromium/Android use the input's lang; iOS Safari follows the device region and ignores this).
+  // "en-GB" is used for English so the default is a Monday start rather than Sunday.
+  const pickerLang = locale === "fi" ? "fi" : "en-GB";
   const pickerRef = useRef<HTMLInputElement>(null);
   const controlled = value !== undefined;
   const [iso, setIso] = useState(value ?? defaultValue ?? "");
@@ -84,6 +88,7 @@ export function DateField({
       <input
         ref={pickerRef}
         type="date"
+        lang={pickerLang}
         className="date-field-native"
         aria-label={placeholder || "Date"}
         value={curIso}
