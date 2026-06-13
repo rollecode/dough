@@ -13,6 +13,7 @@ import { AiSummary } from "@/components/dashboard/ai-summary";
 import { EntryReminder } from "@/components/dashboard/entry-reminder";
 import { PersonalGreeting } from "@/components/dashboard/personal-greeting";
 import { SpendingFlow } from "@/components/dashboard/spending-flow";
+import { AddExpenseDialog } from "@/components/shared/add-expense-dialog";
 
 // Below-the-fold sections load lazily (client-side) behind a skeleton, so the top of the
 // dashboard paints fast on mobile instead of rendering every chart up front.
@@ -65,6 +66,7 @@ export default function DashboardPage() {
   const [incomes, setIncomes] = useState<IncomeSource[]>([]);
   const [matchedIncomeIds, setMatchedIncomeIds] = useState<Set<number>>(new Set());
   const [dashInfoOpen, setDashInfoOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [matchedBillIds, setMatchedBillIds] = useState<Set<number>>(new Set());
   const [bills, setBills] = useState<{ id: number; name: string; amount: number; due_day: number; is_active: number; is_paid: boolean }[]>([]);
   const [investmentMonthly, setInvestmentMonthly] = useState(0);
@@ -586,8 +588,9 @@ export default function DashboardPage() {
 
       <EntryReminder
         lastTransactionDate={recentTransactions.length > 0 ? recentTransactions[0].date : null}
-        onAddExpense={() => window.location.href = "/transactions"}
+        onAddExpense={() => setAddOpen(true)}
       />
+      <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} />
 
       <PersonalGreeting
         todaySpentPersonal={todaySpentPersonal}

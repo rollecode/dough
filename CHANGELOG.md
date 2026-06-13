@@ -3,6 +3,7 @@
 * Filter the transactions list by account with budget-style filter chips
 * Group the transactions list by day with a day heading so it is easy to scan when things happened
 * Raise the list item meta and relative date font to 13px
+* Open the add expense dialog from the dashboard entry reminder instead of navigating to the transactions page
 
 ### 2.18.0: 2026-06-13
 
