@@ -18,13 +18,17 @@ interface CategoryPickerProps {
   noneLabel: string;
   searchPlaceholder: string;
   fmt?: (n: number) => string;
+  // When provided, a typed name with no exact match offers a create row that persists a new
+  // category and selects it. createLabel formats that row's text for the typed query.
+  onCreate?: (name: string) => void;
+  createLabel?: (name: string) => string;
 }
 
 // Budget-aware category picker: a custom dropdown that lists categories grouped by their budget
 // group and shows each one's available amount. The panel is rendered in a portal with fixed
 // positioning so it floats above the dialog instead of being clipped inside it (which forced
 // scrolling within the modal). Selects on pointerdown so it works on touch.
-export function CategoryPicker({ value, onChange, categories, placeholder, noneLabel, searchPlaceholder, fmt }: CategoryPickerProps) {
+export function CategoryPicker({ value, onChange, categories, placeholder, noneLabel, searchPlaceholder, fmt, onCreate, createLabel }: CategoryPickerProps) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -76,6 +80,9 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
 
   const choose = (name: string) => { onChange(name); setOpen(false); setQ(""); };
   const fmtAmt = (n: number) => (fmt ? fmt(n) : n.toFixed(2));
+  const exactMatch = categories.some((c) => c.name.toLowerCase() === ql);
+  const canCreate = !!onCreate && ql.length > 0 && !exactMatch;
+  const doCreate = (name: string) => { onCreate?.(name); onChange(name); setOpen(false); setQ(""); };
 
   return (
     <div className="cat-picker">
@@ -87,6 +94,13 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
         <div ref={panelRef} className="cat-picker-panel" style={{ position: "fixed", left: pos.left, top: pos.top, width: pos.width }}>
           <input className="cat-picker-search input" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
           <ul className="cat-picker-list">
+            {canCreate && (
+              <li>
+                <button type="button" className="cat-picker-option cat-picker-create" onPointerDown={(e) => { e.preventDefault(); doCreate(q.trim()); }}>
+                  <span className="cat-picker-name">{createLabel ? createLabel(q.trim()) : `+ ${q.trim()}`}</span>
+                </button>
+              </li>
+            )}
             <li>
               <button type="button" className={`cat-picker-option ${value === "" ? "is-active" : ""}`} onPointerDown={(e) => { e.preventDefault(); choose(""); }}>
                 <span className="cat-picker-name">{noneLabel}</span>
