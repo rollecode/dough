@@ -1,4 +1,4 @@
-import { formatDistanceToNow, isToday, isYesterday, parseISO, type Locale as DateFnsLocale } from "date-fns";
+import { format, formatDistanceToNow, isToday, isYesterday, parseISO, type Locale as DateFnsLocale } from "date-fns";
 import { fi, enUS } from "date-fns/locale";
 
 const localeMap: Record<string, DateFnsLocale> = {
@@ -18,6 +18,16 @@ export function relativeDate(dateStr: string, locale: string = "en"): string {
   }
 
   return formatDistanceToNow(date, { addSuffix: true, locale: loc });
+}
+
+// Heading for a day group in a transaction list: today/yesterday, else weekday + d.M.yyyy.
+export function dayHeading(dateStr: string, locale: string = "en"): string {
+  const date = parseISO(dateStr);
+  const loc = localeMap[locale] || enUS;
+  if (isToday(date)) return locale === "fi" ? "Tänään" : "Today";
+  if (isYesterday(date)) return locale === "fi" ? "Eilen" : "Yesterday";
+  const s = format(date, "EEEE d.M.yyyy", { locale: loc });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export function formatDuration(months: number, locale: string = "en"): string {
