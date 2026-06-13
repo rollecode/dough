@@ -1,3 +1,9 @@
+### 2.20.0: 2026-06-13
+
+* Show and let you change the category per detected line in the attachment (batch) add, pre-filled by the AI guess
+* Flag likely duplicate lines in the attachment add, both against existing transactions and repeats within the same import
+* Suggest earlier descriptions in the Kuvaus field, the same way the payee field suggests payees
+
 ### 2.19.0: 2026-06-13
 
 * Filter the transactions list by account with budget-style filter chips
