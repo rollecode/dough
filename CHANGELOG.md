@@ -14,6 +14,8 @@
 * Reword and restyle the possible-duplicate warning to read like a transaction row with better contrast
 * Use portal-based account dropdowns in the add dialog so they open on a single tap inside the modal
 * Show payee and description suggestions in a portal so they are not clipped by the modal
+* Add month navigation and an account balance topbar to the transactions view
+* Hint the native date picker to start the week on Monday where the browser respects it
 
 ### 2.19.0: 2026-06-13
 
