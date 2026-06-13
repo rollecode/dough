@@ -18,13 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CategoryPicker } from "@/components/shared/category-picker";
 import { Plus, Loader2, Target, Star } from "lucide-react";
 import { F } from "@/components/ui/f";
 
@@ -47,9 +41,10 @@ export default function SavingsGoalsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SavingsGoal | null>(null);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; group_name: string }[]>([]);
   const addFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
+  // Picker values hold the category name (CategoryPicker selects by name); the id is looked up on save.
   const [addCategory, setAddCategory] = useState("");
   const [editCategory, setEditCategory] = useState("");
 
@@ -67,27 +62,59 @@ export default function SavingsGoalsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadCategories = useCallback(() => {
+    fetch("/api/categories").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.categories)) {
+        setCategories(
+          d.categories
+            .filter((c: { is_active: number }) => c.is_active)
+            .map((c: { id: number; name: string; group_name: string }) => ({ id: c.id, name: c.name, group_name: c.group_name || "" }))
+        );
+      }
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     loadGoals();
-    fetch("/api/ynab/categories").then((r) => r.json()).then((d) => {
-      if (d.categories) setCategories(d.categories);
-    }).catch(() => {});
-  }, [loadGoals]);
+    loadCategories();
+  }, [loadGoals, loadCategories]);
 
-  useEvent("data:updated", useCallback(() => { loadGoals(); }, [loadGoals]));
+  useEvent("data:updated", useCallback(() => { loadGoals(); loadCategories(); }, [loadGoals, loadCategories]));
+
+  // Create a new category from the picker and select it. Names are unique, so a duplicate just
+  // reuses the existing one (already in the list); a real create is appended for the next open.
+  const createCategory = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const d = await res.json();
+      if (d.id) {
+        console.info("[savings-goals] Created category", trimmed, "id:", d.id);
+        setCategories((prev) =>
+          [...prev, { id: d.id as number, name: trimmed, group_name: "" }]
+            .sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "") || a.name.localeCompare(b.name))
+        );
+      }
+    } catch (err) { console.error("[savings-goals] Create category error:", err); }
+  }, []);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = addFormRef.current;
     if (!form) return;
     const fd = new FormData(form);
-    const cat = categories.find((c) => c.id === addCategory);
+    const cat = categories.find((c) => c.name === addCategory);
     const body = {
       name: fd.get("name") as string,
       target_amount: parseFloat((fd.get("target_amount") as string).replace(",", ".")),
       target_date: (fd.get("target_date") as string) || null,
-      ynab_category_id: addCategory || null,
-      ynab_category_name: cat?.name || null,
+      ynab_category_id: cat ? String(cat.id) : null,
+      ynab_category_name: addCategory || null,
     };
     console.info("[savings-goals] Adding:", body.name);
     try {
@@ -106,15 +133,15 @@ export default function SavingsGoalsPage() {
     e.preventDefault();
     if (!editTarget || !editFormRef.current) return;
     const fd = new FormData(editFormRef.current);
-    const cat = categories.find((c) => c.id === editCategory);
+    const cat = categories.find((c) => c.name === editCategory);
     const body = {
       id: editTarget.id,
       name: fd.get("name") as string,
       target_amount: parseFloat((fd.get("target_amount") as string).replace(",", ".")),
       saved_amount: parseFloat((fd.get("saved_amount") as string || "0").replace(",", ".")),
       target_date: (fd.get("target_date") as string) || null,
-      ynab_category_id: editCategory || null,
-      ynab_category_name: cat?.name || null,
+      ynab_category_id: cat ? String(cat.id) : null,
+      ynab_category_name: editCategory || null,
     };
     console.info("[savings-goals] Editing:", body.id);
     try {
@@ -187,21 +214,19 @@ export default function SavingsGoalsPage() {
                 <Label>{locale === "fi" ? "Tavoitepäivä" : "Target date"}</Label>
                 <DateField name="target_date" />
               </div>
-              {categories.length > 0 && (
-                <div className="form-field">
-                  <Label>{locale === "fi" ? "YNAB-kategoria" : "YNAB category"}</Label>
-                  <Select value={addCategory} onValueChange={(v) => v && setAddCategory(v)}>
-                    <SelectTrigger className="settings-input">
-                      <SelectValue placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Kategoria" : "Category"}</Label>
+                <CategoryPicker
+                  value={addCategory}
+                  onChange={setAddCategory}
+                  categories={categories}
+                  placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
+                  noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
+                  searchPlaceholder={locale === "fi" ? "Hae tai luo uusi..." : "Search or create..."}
+                  onCreate={createCategory}
+                  createLabel={(q) => (locale === "fi" ? `Luo "${q}"` : `Create "${q}"`)}
+                />
+              </div>
               <Button type="submit">{locale === "fi" ? "Lisää tavoite" : "Add goal"}</Button>
             </form>
           </DialogContent>
@@ -243,7 +268,7 @@ export default function SavingsGoalsPage() {
             const monthly = calcMonthlySavings(goal);
             return (
               <div key={goal.id} className="list-item list-item-col">
-                <div className="list-item-main" onClick={() => { setEditTarget(goal); setEditCategory(goal.ynab_category_id || ""); setEditOpen(true); }}>
+                <div className="list-item-main" onClick={() => { setEditTarget(goal); setEditCategory(goal.ynab_category_name || ""); setEditOpen(true); }}>
                   <div className="list-item-body">
                     <div className="list-item-name-row">
                       <p className="list-item-name">{goal.name}</p>
@@ -301,21 +326,19 @@ export default function SavingsGoalsPage() {
                 <Label>{locale === "fi" ? "Tavoitepäivä" : "Target date"}</Label>
                 <DateField name="target_date" defaultValue={editTarget.target_date || ""} />
               </div>
-              {categories.length > 0 && (
-                <div className="form-field">
-                  <Label>{locale === "fi" ? "YNAB-kategoria" : "YNAB category"}</Label>
-                  <Select value={editCategory} onValueChange={(v) => v && setEditCategory(v)}>
-                    <SelectTrigger className="settings-input">
-                      <SelectValue placeholder={locale === "fi" ? "Ei kategoriaa" : "No category"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="form-field">
+                <Label>{locale === "fi" ? "Kategoria" : "Category"}</Label>
+                <CategoryPicker
+                  value={editCategory}
+                  onChange={setEditCategory}
+                  categories={categories}
+                  placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
+                  noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
+                  searchPlaceholder={locale === "fi" ? "Hae tai luo uusi..." : "Search or create..."}
+                  onCreate={createCategory}
+                  createLabel={(q) => (locale === "fi" ? `Luo "${q}"` : `Create "${q}"`)}
+                />
+              </div>
               <div className="form-grid-2">
                 <Button type="button" variant="destructive" onClick={() => { deleteGoal(editTarget.id); setEditOpen(false); }}>
                   {t.common.delete}
