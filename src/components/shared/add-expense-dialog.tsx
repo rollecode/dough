@@ -49,16 +49,18 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
   const [receiptParsing, setReceiptParsing] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [receiptType, setReceiptType] = useState("");
-  const [batchTransactions, setBatchTransactions] = useState<{ payee: string; amount: string; date: string; account_id: string; account_name: string }[]>([]);
+  const [batchTransactions, setBatchTransactions] = useState<{ payee: string; amount: string; date: string; account_id: string; account_name: string; category: string; dup: boolean }[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [payees, setPayees] = useState<string[]>([]);
+  const [memos, setMemos] = useState<string[]>([]);
   const [dupCandidates, setDupCandidates] = useState<{ id: string; date: string; payee: string; amount: number; account: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     console.debug("[add-expense] Loading accounts");
     fetch("/api/payees").then((r) => r.json()).then((d) => { if (Array.isArray(d.payees)) setPayees(d.payees); }).catch(() => {});
+    fetch("/api/memos").then((r) => r.json()).then((d) => { if (Array.isArray(d.memos)) setMemos(d.memos); }).catch(() => {});
     const ym = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
     fetch(`/api/budget?month=${ym}`).then((r) => r.json()).then((d) => {
       if (Array.isArray(d.categories)) setBudgetCats(d.categories.filter((c: { is_active: number }) => c.is_active).map((c: { name: string; group_name: string; available: number }) => ({ name: c.name, group_name: c.group_name, available: c.available })));
@@ -140,7 +142,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
         });
         const data = await res.json();
         if (data.transactions && data.transactions.length > 1) {
-          const batch = data.transactions.map((tx: { payee: string; amount: string; date?: string; account?: string }) => {
+          const base = data.transactions.map((tx: { payee: string; amount: string; date?: string; account?: string }) => {
             const payee = titleCasePayee(tx.payee || "");
             let accId = linkedAccountId;
             let accName = linkedAccountName;
@@ -150,7 +152,29 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
             }
             return { payee, amount: tx.amount, date: tx.date || new Date().toISOString().slice(0, 10), account_id: accId, account_name: accName };
           });
-          setBatchTransactions(batch);
+          // Enrich each parsed line like the single-add flow does: guess a category (AI) and flag
+          // likely duplicates - both against existing transactions and identical lines within this
+          // same parse (a statement that lists the same charge twice, or the parser repeating one).
+          const enriched = await Promise.all(base.map(async (tx: { payee: string; amount: string; date: string; account_id: string; account_name: string }, idx: number) => {
+            const amt = Math.abs(parseFloat(String(tx.amount).replace(",", ".")));
+            let category = "";
+            try {
+              const cr = await fetch(`/api/categorize?payee=${encodeURIComponent(tx.payee)}&memo=`);
+              const cd = await cr.json();
+              if (cd.category) category = cd.category;
+            } catch { /* leave uncategorized; server still auto-cats on add */ }
+            let dup = base.some((o: { payee: string; amount: string; date: string }, j: number) =>
+              j < idx && o.date === tx.date && o.payee === tx.payee && Math.abs(parseFloat(String(o.amount).replace(",", "."))) === amt);
+            if (!dup && isFinite(amt) && amt > 0) {
+              try {
+                const dr = await fetch(`/api/transactions/check-duplicate?amount=${amt}&date=${tx.date}`);
+                const dd = await dr.json();
+                if (Array.isArray(dd.duplicates) && dd.duplicates.length > 0) dup = true;
+              } catch { /* non-blocking */ }
+            }
+            return { ...tx, category, dup };
+          }));
+          setBatchTransactions(enriched);
         } else {
           if (data.payee) setAddPayee(titleCasePayee(data.payee));
           if (data.amount) setAddAmount(data.amount);
@@ -224,7 +248,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
         const res = await fetch("/api/ynab/transaction", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ account_id: tx.account_id, amount: tx.amount.replace(",", "."), payee_name: tx.payee, date: tx.date }),
+          body: JSON.stringify({ account_id: tx.account_id, amount: tx.amount.replace(",", "."), payee_name: tx.payee, category: tx.category || undefined, date: tx.date }),
         });
         if (res.ok) added++;
       } catch { /* skip */ }
@@ -265,24 +289,38 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
               <p className="settings-help">{batchTransactions.length} {locale === "fi" ? "tapahtumaa tunnistettu" : "transactions detected"}</p>
               <div className="batch-list">
                 {batchTransactions.map((tx, i) => (
-                  <div key={i} className="batch-item">
-                    <div className="batch-item-info">
-                      <p className="batch-item-payee">{tx.payee}</p>
-                      <p className="batch-item-meta">{tx.amount} € · {tx.date === new Date().toISOString().slice(0, 10) ? (locale === "fi" ? "tänään" : "today") : (() => { const [y, m, d] = tx.date.split("-"); return `${parseInt(d)}.${parseInt(m)}.${y}`; })()} · {tx.account_name}</p>
+                  <div key={i} className={`batch-item ${tx.dup ? "is-dup" : ""}`}>
+                    <div className="batch-item-top">
+                      <div className="batch-item-info">
+                        <p className="batch-item-payee">
+                          {tx.payee}
+                          {tx.dup && <span className="batch-dup-chip">{locale === "fi" ? "mahdollinen tuplaus" : "possible duplicate"}</span>}
+                        </p>
+                        <p className="batch-item-meta">{tx.amount} € · {tx.date === new Date().toISOString().slice(0, 10) ? (locale === "fi" ? "tänään" : "today") : (() => { const [y, m, d] = tx.date.split("-"); return `${parseInt(d)}.${parseInt(m)}.${y}`; })()} · {tx.account_name}</p>
+                      </div>
+                      <div className="batch-item-actions">
+                        {allAccounts.length > 1 && (
+                          <select value={tx.account_id} onChange={(e) => {
+                            const acc = allAccounts.find((a) => a.id === e.target.value);
+                            setBatchTransactions((prev) => prev.map((t, j) => j === i ? { ...t, account_id: e.target.value, account_name: acc?.name || "" } : t));
+                          }} className="batch-account-select">
+                            {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                          </select>
+                        )}
+                        <button type="button" className="batch-remove-btn" onClick={() => setBatchTransactions((prev) => prev.filter((_, j) => j !== i))}>
+                          <X />
+                        </button>
+                      </div>
                     </div>
-                    <div className="batch-item-actions">
-                      {allAccounts.length > 1 && (
-                        <select value={tx.account_id} onChange={(e) => {
-                          const acc = allAccounts.find((a) => a.id === e.target.value);
-                          setBatchTransactions((prev) => prev.map((t, j) => j === i ? { ...t, account_id: e.target.value, account_name: acc?.name || "" } : t));
-                        }} className="batch-account-select">
-                          {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                        </select>
-                      )}
-                      <button type="button" className="batch-remove-btn" onClick={() => setBatchTransactions((prev) => prev.filter((_, j) => j !== i))}>
-                        <X />
-                      </button>
-                    </div>
+                    <CategoryPicker
+                      value={tx.category}
+                      onChange={(v) => setBatchTransactions((prev) => prev.map((t, j) => j === i ? { ...t, category: v } : t))}
+                      categories={budgetCats}
+                      fmt={fmt}
+                      placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
+                      noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
+                      searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"}
+                    />
                   </div>
                 ))}
               </div>
@@ -331,7 +369,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
-                <Input value={addMemo} onChange={(e) => setAddMemo(e.target.value)} onBlur={() => resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
+                <PayeeInput value={addMemo} onChange={setAddMemo} payees={memos} onBlur={() => resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
               </div>
               {dupCandidates.length > 0 && (
                 <div className="dup-warning">

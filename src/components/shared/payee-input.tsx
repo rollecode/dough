@@ -8,13 +8,14 @@ interface PayeeInputProps {
   onChange: (value: string) => void;
   payees: string[];
   placeholder?: string;
+  onBlur?: () => void;
 }
 
 // Payee field with a custom suggestions dropdown. Replaces the native <datalist>, which does
 // not render reliably on mobile browsers (notably iOS Safari) — the suggestions list simply
 // never appeared there. This dropdown selects on pointerdown so a touch tap registers before
 // the input loses focus.
-export function PayeeInput({ value, onChange, payees, placeholder }: PayeeInputProps) {
+export function PayeeInput({ value, onChange, payees, placeholder, onBlur }: PayeeInputProps) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -50,6 +51,7 @@ export function PayeeInput({ value, onChange, payees, placeholder }: PayeeInputP
         value={value}
         onChange={(e) => { onChange(e.target.value); setOpen(true); setHighlight(-1); }}
         onFocus={() => setOpen(true)}
+        onBlur={onBlur}
         placeholder={placeholder}
         autoComplete="off"
         onKeyDown={(e) => {

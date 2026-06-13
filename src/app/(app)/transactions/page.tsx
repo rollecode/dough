@@ -51,6 +51,7 @@ export default function TransactionsPage() {
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
   const [payees, setPayees] = useState<string[]>([]);
+  const [memos, setMemos] = useState<string[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [splitMode, setSplitMode] = useState(false);
@@ -64,6 +65,9 @@ export default function TransactionsPage() {
     }).catch(() => {});
     fetch("/api/payees").then((r) => r.json()).then((data) => {
       if (Array.isArray(data.payees)) setPayees(data.payees);
+    }).catch(() => {});
+    fetch("/api/memos").then((r) => r.json()).then((data) => {
+      if (Array.isArray(data.memos)) setMemos(data.memos);
     }).catch(() => {});
     // Budget categories with their available amounts, for the category picker.
     const now = new Date();
@@ -428,7 +432,7 @@ export default function TransactionsPage() {
               })()}
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Memo"}</Label>
-                <Input value={editTx.memo || ""} onChange={(e) => setEditTx({ ...editTx, memo: e.target.value })} />
+                <PayeeInput value={editTx.memo || ""} onChange={(v) => setEditTx({ ...editTx, memo: v })} payees={memos} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
               </div>
               <div className="insp-actions">
                 <Button onClick={handleEditSave} disabled={editSaving}>
