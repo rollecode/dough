@@ -30,9 +30,10 @@ function dayLabel(iso: string, locale: string): string {
 interface AddExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialDate?: string;
 }
 
-export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ open, onOpenChange, initialDate }: AddExpenseDialogProps) {
   const { locale, fmt } = useLocale();
   const { refresh, connected } = useYnab();
   // What kind of transaction is being added. Transfers only apply in local mode (YNAB manages its
@@ -44,6 +45,8 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
   const [addMemo, setAddMemo] = useState("");
   const [addCategory, setAddCategory] = useState("");
   const [addDate, setAddDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // Preselect a day when opened from a day heading's + button.
+  useEffect(() => { if (open && initialDate) setAddDate(initialDate); }, [open, initialDate]);
   const [catGuessing, setCatGuessing] = useState(false);
   // Where the current category pick came from: AI suggestion or the user's own choice
   const [catSource, setCatSource] = useState<"" | "ai" | "manual">("");
@@ -268,8 +271,24 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
     refresh();
   };
 
-  const handleAddTransfer = async () => {
+  const handleAddTransfer = async (force = false) => {
     if (!linkedAccountId || !toAccountId || linkedAccountId === toAccountId || !addAmount) return;
+    // Guard against re-entering a transfer that already exists (e.g. one Synci already imported as
+    // an expense) - same amount on the source account today/tomorrow. Skipped on force.
+    if (!force) {
+      const amountNum = Math.abs(parseFloat(addAmount.replace(",", ".")));
+      if (isFinite(amountNum) && amountNum > 0) {
+        try {
+          const res = await fetch(`/api/transactions/check-duplicate?amount=${amountNum}&date=${addDate}`);
+          const d = await res.json();
+          if (Array.isArray(d.duplicates) && d.duplicates.length > 0) {
+            console.info("[add-expense] Possible duplicate transfer(s):", d.duplicates.length);
+            setDupCandidates(d.duplicates);
+            return;
+          }
+        } catch { /* if the check fails, do not block the transfer */ }
+      }
+    }
     setAddLoading(true);
     try {
       const res = await fetch("/api/transactions/transfer", {
@@ -449,7 +468,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
                 <PayeeInput value={addMemo} onChange={setAddMemo} payees={memos} onBlur={() => txType !== "transfer" && resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
               </div>
 
-              {txType !== "transfer" && dupCandidates.length > 0 && (
+              {dupCandidates.length > 0 && (
                 <div className="dup-warning">
                   <p className="dup-warning-title">
                     {locale === "fi"
@@ -468,7 +487,7 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
                     </div>
                   ))}
                   <div className="dup-warning-actions">
-                    <Button type="button" size="sm" variant="destructive" onClick={() => handleAddExpense(true)} disabled={addLoading}>
+                    <Button type="button" size="sm" variant="destructive" onClick={() => (txType === "transfer" ? handleAddTransfer(true) : handleAddExpense(true))} disabled={addLoading}>
                       {locale === "fi" ? "Lisää silti" : "Add anyway"}
                     </Button>
                     <Button type="button" size="sm" variant="ghost" onClick={() => setDupCandidates([])}>
@@ -478,15 +497,15 @@ export function AddExpenseDialog({ open, onOpenChange }: AddExpenseDialogProps) 
                 </div>
               )}
 
-              {txType === "transfer" ? (
-                <Button type="button" onClick={handleAddTransfer} disabled={addLoading || !linkedAccountId || !toAccountId || linkedAccountId === toAccountId || !addAmount}>
+              {dupCandidates.length === 0 && (txType === "transfer" ? (
+                <Button type="button" onClick={() => handleAddTransfer()} disabled={addLoading || !linkedAccountId || !toAccountId || linkedAccountId === toAccountId || !addAmount}>
                   {addLoading ? (locale === "fi" ? "Siirretään..." : "Transferring...") : (locale === "fi" ? "Siirrä" : "Transfer")}
                 </Button>
-              ) : dupCandidates.length === 0 && (
+              ) : (
                 <Button type="button" onClick={() => handleAddExpense()} disabled={addLoading || !linkedAccountId || !addAmount || !addPayee}>
                   {addLoading ? (locale === "fi" ? "Lisätään..." : "Adding...") : (locale === "fi" ? "Lisää" : "Add")}
                 </Button>
-              )}
+              ))}
             </>
           )}
         </div>
