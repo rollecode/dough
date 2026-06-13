@@ -27,6 +27,7 @@
 * Colour the transactions account balance green when positive and red when negative
 * Raise tooltip text to 13px so the heatmap and other tooltips are easier to read
 * Use clearer Finnish wording for possible duplicates
+* Show the account name instead of the raw id in the transfer account selects
 
 ### 2.19.0: 2026-06-13
 
