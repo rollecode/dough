@@ -100,8 +100,8 @@
   gap: 0.625rem;
   padding: 0.625rem 0.75rem;
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--muted) 35%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  background: color-mix(in srgb, var(--muted) 85%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 .synci-status-icon {
