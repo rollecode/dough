@@ -41,6 +41,7 @@ export async function GET() {
         synci_api_token: settings.synci_api_token ? "••••••••" : null,
         synci_accounts: settings.synci_accounts || null,
         synci_account_mapping: settings.synci_account_mapping || null,
+        synci_last_sync: settings.synci_last_sync || null,
       },
     });
   } catch (error) {
