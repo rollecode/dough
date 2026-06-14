@@ -28,6 +28,8 @@
 * Raise tooltip text to 13px so the heatmap and other tooltips are easier to read
 * Use clearer Finnish wording for possible duplicates
 * Show the account name instead of the raw id in the transfer account selects
+* Show a dashboard notice with the last bank sync time and weekend pending context when Synci is the data source
+* Show labels instead of raw values in the preselected budget cadence and delete-destination selects
 
 ### 2.19.0: 2026-06-13
 
