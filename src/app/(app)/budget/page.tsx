@@ -1133,7 +1133,7 @@ export default function BudgetPage() {
                       <div className="insp-target-edit">
                         <div className="insp-target-row">
                           <Input value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} placeholder="0.00" inputMode="decimal" autoFocus className="insp-target-amount" />
-                          <Select value={targetCadence} onValueChange={(v) => v && setTargetCadence(v)}>
+                          <Select items={{ ...Object.fromEntries(CADENCES.map((cad) => [cad, cadenceLabel(cad, locale)])), by_date: cadenceLabel("by_date", locale) }} value={targetCadence} onValueChange={(v) => v && setTargetCadence(v)}>
                             <SelectTrigger className="insp-target-cadence"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {CADENCES.map((cad) => (
@@ -1268,7 +1268,7 @@ export default function BudgetPage() {
                         {c.available > eps && (
                           <>
                             <span className="insp-delete-note">{locale === "fi" ? `Kategoriassa on ${fmt(c.available)} €. Mihin se siirretään?` : `This category holds ${fmt(c.available)} €. Move it where?`}</span>
-                            <Select value={deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
+                            <Select items={{ rta: locale === "fi" ? "Budjetoimatta" : "Ready to Assign", ...Object.fromEntries((data?.categories || []).filter((o) => o.is_active && o.id !== c.id).map((o) => [String(o.id), o.name])) }} value={deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
                               <SelectTrigger className="insp-move-select"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="rta">{locale === "fi" ? "Budjetoimatta" : "Ready to Assign"}</SelectItem>
