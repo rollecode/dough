@@ -74,13 +74,13 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
           <ul className="cat-picker-list">
             {canCreate && (
               <li>
-                <button type="button" className="cat-picker-option cat-picker-create" onPointerDown={(e) => { e.preventDefault(); doCreate(q.trim()); }}>
+                <button type="button" className="cat-picker-option cat-picker-create" onClick={() => doCreate(q.trim())}>
                   <span className="cat-picker-name">{createLabel ? createLabel(q.trim()) : `+ ${q.trim()}`}</span>
                 </button>
               </li>
             )}
             <li>
-              <button type="button" className={`cat-picker-option ${value === "" ? "is-active" : ""}`} onPointerDown={(e) => { e.preventDefault(); choose(""); }}>
+              <button type="button" className={`cat-picker-option ${value === "" ? "is-active" : ""}`} onClick={() => choose("")}>
                 <span className="cat-picker-name">{noneLabel}</span>
               </button>
             </li>
@@ -92,7 +92,7 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
                     key={c.name}
                     type="button"
                     className={`cat-picker-option ${c.name === value ? "is-active" : ""}`}
-                    onPointerDown={(e) => { e.preventDefault(); choose(c.name); }}
+                    onClick={() => choose(c.name)}
                   >
                     <span className="cat-picker-name">{c.name}</span>
                     {typeof c.available === "number" && (
