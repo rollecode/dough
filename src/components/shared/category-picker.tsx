@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 
 export interface PickerCategory {
@@ -25,48 +24,20 @@ interface CategoryPickerProps {
 }
 
 // Budget-aware category picker: a custom dropdown that lists categories grouped by their budget
-// group and shows each one's available amount. The panel is rendered in a portal with fixed
-// positioning so it floats above the dialog instead of being clipped inside it (which forced
-// scrolling within the modal). Selects on pointerdown so it works on touch.
+// group and shows each one's available amount. The panel renders inline (in flow) inside its
+// wrapper, not in a body portal: inside a modal a body-portalled panel is treated as an outside
+// press and dismisses the dialog, and a fixed-positioned panel drifts when the mobile keyboard
+// resizes the viewport. Inline, the dialog simply scrolls to it. The search field is not
+// auto-focused so picking an existing category never forces the keyboard open on mobile.
 export function CategoryPicker({ value, onChange, categories, placeholder, noneLabel, searchPlaceholder, fmt, onCreate, createLabel }: CategoryPickerProps) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [mounted, setMounted] = useState(false);
-  const [pos, setPos] = useState<{ left: number; top: number; width: number } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setMounted(true), []);
-
-  // Position the floating panel just below the trigger; keep it aligned while scrolling/resizing.
-  useEffect(() => {
-    if (!open) return;
-    const place = () => {
-      const r = triggerRef.current?.getBoundingClientRect();
-      if (r) setPos({ left: r.left, top: r.bottom + 4, width: r.width });
-    };
-    place();
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("resize", place);
-    // The on-screen keyboard resizes the visual viewport without firing window resize, so track it
-    // too - otherwise the panel drifts off the trigger when the keyboard opens on mobile.
-    const vv = window.visualViewport;
-    vv?.addEventListener("resize", place);
-    vv?.addEventListener("scroll", place);
-    return () => {
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("resize", place);
-      vv?.removeEventListener("resize", place);
-      vv?.removeEventListener("scroll", place);
-    };
-  }, [open]);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      const t = e.target as Node;
-      if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
-      setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
@@ -92,14 +63,14 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
   const doCreate = (name: string) => { onCreate?.(name); onChange(name); setOpen(false); setQ(""); };
 
   return (
-    <div className="cat-picker">
-      <button ref={triggerRef} type="button" className="cat-picker-trigger input" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
+    <div className="cat-picker" ref={wrapRef}>
+      <button type="button" className="cat-picker-trigger input" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
         <span className={value ? "" : "cat-picker-placeholder"}>{value || placeholder}</span>
         <ChevronDown className="icon-xs" />
       </button>
-      {open && mounted && pos && createPortal(
-        <div ref={panelRef} className="cat-picker-panel" style={{ position: "fixed", left: pos.left, top: pos.top, width: pos.width }}>
-          <input className="cat-picker-search input" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
+      {open && (
+        <div className="cat-picker-panel">
+          <input className="cat-picker-search input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
           <ul className="cat-picker-list">
             {canCreate && (
               <li>
@@ -132,8 +103,7 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
               </li>
             ))}
           </ul>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

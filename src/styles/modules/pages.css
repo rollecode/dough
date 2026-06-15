@@ -107,14 +107,14 @@
 }
 
 .cat-picker-panel {
-  /* Rendered in a portal on <body> with fixed left/top/width set inline, so it floats above the
-     dialog instead of being clipped/scrolled inside it. z-index sits above the dialog (50). */
-  z-index: 100;
+  /* Inline (in flow) inside the dialog: the modal scrolls to it. Not portalled/fixed, so it never
+     drifts when the mobile keyboard resizes the viewport and never reads as an outside press that
+     would dismiss the dialog. */
+  margin-top: 0.25rem;
   padding: 4px;
   background: var(--popover);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .cat-picker-search {

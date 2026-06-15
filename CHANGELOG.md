@@ -3,7 +3,7 @@
 * Notify on the dashboard when the bank sync is behind, so you know transactions may be missing
 * Show labels instead of raw values in the preselected budget cadence and delete-destination selects
 * Stop the dashboard from scrolling horizontally
-* Anchor dialogs to the top on mobile so the keyboard no longer makes the modal jump, and keep the category picker aligned to its field
+* Anchor dialogs to the top on mobile so the keyboard no longer makes the modal jump, and render the category picker inline inside the modal so selecting works on mobile (it no longer dismisses or drifts)
 * Make the account balance larger on the accounts list and the transactions topbar
 
 ### 2.20.0: 2026-06-13
