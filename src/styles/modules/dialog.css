@@ -91,6 +91,34 @@
   animation: dialog-exit 140ms ease forwards;
 }
 
+/* On phones, anchor the dialog near the top instead of vertically centering it. A centered dialog
+   jumps when the on-screen keyboard opens (100dvh shrinks and it re-centers), which threw off the
+   category picker. Top-anchored, it stays put while you type and scroll the picker. */
+@media (max-width: 639px) {
+  .dialog-content {
+    top: max(1rem, env(safe-area-inset-top, 0px));
+    transform: translateX(-50%);
+  }
+
+  .dialog-content[data-open] {
+    animation: dialog-enter-top 180ms ease forwards;
+  }
+
+  .dialog-content[data-closed] {
+    animation: dialog-exit-top 140ms ease forwards;
+  }
+}
+
+@keyframes dialog-enter-top {
+  from { opacity: 0; transform: translateX(-50%) scale(0.98); filter: blur(8px); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); filter: blur(0); }
+}
+
+@keyframes dialog-exit-top {
+  from { opacity: 1; transform: translateX(-50%) scale(1); filter: blur(0); }
+  to { opacity: 0; transform: translateX(-50%) scale(0.98); filter: blur(6px); }
+}
+
 .dialog-close {
   position: absolute;
   top: 0.5rem;

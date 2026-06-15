@@ -48,9 +48,16 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
     place();
     window.addEventListener("scroll", place, true);
     window.addEventListener("resize", place);
+    // The on-screen keyboard resizes the visual viewport without firing window resize, so track it
+    // too - otherwise the panel drifts off the trigger when the keyboard opens on mobile.
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", place);
+    vv?.addEventListener("scroll", place);
     return () => {
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
+      vv?.removeEventListener("resize", place);
+      vv?.removeEventListener("scroll", place);
     };
   }, [open]);
 
