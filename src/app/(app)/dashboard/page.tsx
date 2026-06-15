@@ -556,7 +556,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="page-stack">
+    <div className="page-stack dashboard-page">
       <div className="page-header-row">
         <div>
         <h1 className="page-heading">

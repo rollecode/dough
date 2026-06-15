@@ -59,12 +59,12 @@
 .net-worth-grid {
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 @media (min-width: 1024px) {
   .net-worth-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
