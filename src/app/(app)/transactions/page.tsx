@@ -314,7 +314,7 @@ export default function TransactionsPage() {
             <Plus className="icon-sm" />
             {locale === "fi" ? "Lisää tilitapahtuma" : "Add transaction"}
           </Button>
-          <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} initialDate={addDayDate || undefined} />
+          <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} initialDate={addDayDate || undefined} initialAccountId={accountFilter !== "all" ? accountFilter : undefined} />
         </div>
       </div>
 

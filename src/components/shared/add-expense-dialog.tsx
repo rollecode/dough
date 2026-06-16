@@ -31,9 +31,10 @@ interface AddExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialDate?: string;
+  initialAccountId?: string;
 }
 
-export function AddExpenseDialog({ open, onOpenChange, initialDate }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccountId }: AddExpenseDialogProps) {
   const { locale, fmt } = useLocale();
   const { refresh, connected } = useYnab();
   // What kind of transaction is being added. Transfers only apply in local mode (YNAB manages its
@@ -89,6 +90,14 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate }: AddExpense
       }
     }).catch(() => {});
   }, []);
+
+  // Preselect the account when opened while the transactions list is filtered to one account.
+  useEffect(() => {
+    if (!open || !initialAccountId) return;
+    setLinkedAccountId(initialAccountId);
+    const a = allAccounts.find((x) => x.id === initialAccountId);
+    if (a) setLinkedAccountName(a.name);
+  }, [open, initialAccountId, allAccounts]);
 
   const resolveAccountFromMemo = async (memo: string) => {
     if (!memo.trim()) return;
