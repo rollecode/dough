@@ -2730,12 +2730,23 @@
 }
 
 /* Accounts page */
+/* The accounts list row anchors the absolutely-positioned drag grip. */
+.acct-row {
+  position: relative;
+}
+
+/* Absolutely positioned so the hidden (hover-revealed) grip does not reserve a column of empty
+   space on the left of every row. It sits in the row's left padding and appears on hover. */
 .acct-grip {
+  position: absolute;
+  left: 0.125rem;
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 0.875rem;
-  flex-shrink: 0;
+  height: 1.5rem;
   border: none;
   background: none;
   color: var(--muted-foreground);
