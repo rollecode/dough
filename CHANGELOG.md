@@ -1,3 +1,7 @@
+### 2.22.1: 2026-06-16
+
+* Preselect the filtered account in the add dialog when the transactions list is filtered to one account
+
 ### 2.22.0: 2026-06-16
 
 * Change a transaction's type between expense, income and transfer in the edit dialog
