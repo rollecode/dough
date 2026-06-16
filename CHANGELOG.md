@@ -1,3 +1,7 @@
+### 2.23.0: 2026-06-16
+
+* Rank a payee's and description's most-used categories first in the category picker, under a Suggested heading, so re-selecting a category is faster
+
 ### 2.22.1: 2026-06-16
 
 * Preselect the filtered account in the add dialog when the transactions list is filtered to one account
