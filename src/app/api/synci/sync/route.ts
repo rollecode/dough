@@ -71,9 +71,6 @@ export async function POST(request: Request) {
     let totalMatched = 0;
     let totalImported = 0;
     const toCategorize: { id: string; payee: string }[] = []; // newly imported expenses for AI categorizing
-    // Unmatched inflows imported provisionally: kept if they pair into an internal transfer below,
-    // otherwise removed (genuine external money, e.g. a client paying through a personal account).
-    const provisionalInflowIds: string[] = [];
 
     for (const synciAccountId of mappedAccountIds) {
       console.info("[synci/sync] Polling account", synciAccountId, "mode:", mode);
@@ -167,7 +164,6 @@ export async function POST(request: Request) {
             totalImported++;
             // Only unrecognised outflows need AI categorising; matched income is already placed.
             if (amount < 0) toCategorize.push({ id: synciTxId, payee });
-            if (provisionalInflow) provisionalInflowIds.push(synciTxId);
             console.info("[synci/sync] Imported", payee, amount, incomeCategory ? "(income)" : provisionalInflow ? "(provisional inflow)" : "", "to account", localAccountId);
           }
           // Mark a matched income source as received this month
@@ -279,9 +275,12 @@ export async function POST(request: Request) {
       );
       // Matched household income (Ready to Assign) is excluded so a real paycheck is never eaten
       // by a same-size outflow on another account and mislabelled a transfer.
+      // Matched income and already-classified transfers (paired or marked by the user) are excluded
+      // so neither a real paycheck nor a confirmed transfer is re-paired into the wrong thing.
       const candidates = db.prepare(
         "SELECT ynab_id, date, amount, account_id FROM transactions " +
-          "WHERE ynab_id LIKE 'synci_%' AND payee NOT LIKE 'Transfer%' AND category != 'Inflow: Ready to Assign' " +
+          "WHERE ynab_id LIKE 'synci_%' AND payee NOT LIKE 'Transfer%' " +
+          "AND category != 'Inflow: Ready to Assign' AND category != 'Internal transfer' " +
           "AND date >= date('now', '-45 days') ORDER BY date"
       ).all() as { ynab_id: string; date: string; amount: number; account_id: string }[];
       const paired = new Set<string>();
@@ -308,19 +307,21 @@ export async function POST(request: Request) {
       }
       if (transfersPaired > 0) console.info("[synci/sync] Auto-paired", transfersPaired, "transfers");
 
-      // Remove provisional inflows that did not pair into a transfer: they are external money
-      // (no matching income source, not a transfer between own accounts). Reverse their balance.
-      let droppedInflows = 0;
-      for (const id of provisionalInflowIds) {
-        if (paired.has(id)) continue;
-        const row = db.prepare("SELECT amount, account_id, payee FROM transactions WHERE ynab_id = ?").get(id) as { amount: number; account_id: string; payee: string } | undefined;
-        if (!row || row.payee.startsWith("Transfer")) continue;
-        db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(id);
+      // Sweep unpaired provisional inflows (imported with no category, not income, not a transfer)
+      // that are older than 3 days: by then the opposite transfer leg has had time to arrive in a
+      // later sync, so a still-unpaired one is genuinely external money - remove it and reverse its
+      // balance. Recent ones are kept so a leg arriving in a different sync can still pair.
+      const stale = db.prepare(
+        "SELECT ynab_id, amount, account_id FROM transactions " +
+          "WHERE ynab_id LIKE 'synci_%' AND amount > 0 AND payee NOT LIKE 'Transfer%' " +
+          "AND COALESCE(category, '') = '' AND date < date('now', '-3 days')"
+      ).all() as { ynab_id: string; amount: number; account_id: string }[];
+      for (const row of stale) {
+        db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(row.ynab_id);
         db.prepare("UPDATE ynab_accounts SET balance = balance - ?, updated_at = datetime('now') WHERE id = ?").run(row.amount, row.account_id);
         totalImported--;
-        droppedInflows++;
       }
-      if (droppedInflows > 0) console.info("[synci/sync] Dropped", droppedInflows, "unrecognised external inflows");
+      if (stale.length > 0) console.info("[synci/sync] Dropped", stale.length, "unrecognised external inflows older than 3 days");
     }
 
     // AI complement: categorize freshly imported expenses that Synci left uncategorized (skip
