@@ -60,6 +60,16 @@ export async function GET() {
       overrideMap[o.ynab_account_id] = o;
     }
 
+    // Amount paid toward each debt during the current calendar month, derived from the account's own
+    // transactions (a payment reduces what is owed, i.e. a positive amount on a debt account). This
+    // works in both YNAB and local mode and does not depend on a matching budget category.
+    const paidRows = db.prepare(
+      "SELECT account_id, COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS paid " +
+        "FROM transactions WHERE date >= date('now', 'start of month') GROUP BY account_id"
+    ).all() as { account_id: string; paid: number }[];
+    const paidMonthMap: Record<string, number> = {};
+    for (const r of paidRows) paidMonthMap[r.account_id] = r.paid;
+
     const debts = debtAccounts.map((a: any) => {
       const override = overrideMap[a.id];
       // Find matching category for payment info
@@ -69,21 +79,35 @@ export async function GET() {
       );
 
       const monthlyTarget = matchingCat ? Math.abs(matchingCat.budgeted) : 0;
-      const monthlyPayment = matchingCat ? Math.abs(matchingCat.activity) : 0;
+      const balance = Math.abs(a.balance);
+      const history = debtHistory(db, a.id, a.balance);
+      // Paid this month from real transactions, falling back to the YNAB category activity.
+      const paidThisMonth = Math.round((paidMonthMap[a.id] ?? (matchingCat ? Math.abs(matchingCat.activity) : 0)) * 100) / 100;
+      // Starting balance: user-set, otherwise suggested from the highest point in the recent history.
+      const peakHistory = history.reduce((m, p) => Math.max(m, p.balance), 0);
+      const originalAmount = override?.original_amount > 0 ? override.original_amount : 0;
+      const suggestedOriginal = Math.round(Math.max(balance, peakHistory) * 100) / 100;
+      const effectiveOriginal = originalAmount > 0 ? originalAmount : suggestedOriginal;
+      const paidTotal = Math.round(Math.max(0, effectiveOriginal - balance) * 100) / 100;
+      const percentPaid = effectiveOriginal > 0 ? Math.min(100, Math.round((paidTotal / effectiveOriginal) * 1000) / 10) : 0;
 
       return {
         id: a.id,
         name: a.name,
-        balance: Math.abs(a.balance),
+        balance,
         interestRate: override?.interest_rate ?? 0,
         minimumPayment: override?.minimum_payment ?? monthlyTarget,
         dueDay: override?.due_day ?? 0,
         monthlyTarget,
-        monthlyPayment,
+        monthlyPayment: paidThisMonth,
+        originalAmount,
+        suggestedOriginal,
+        paidTotal,
+        percentPaid,
         notes: override?.notes ?? "",
         sortOrder: override?.sort_order ?? 999,
         isPriority: override?.is_priority ?? 0,
-        history: debtHistory(db, a.id, a.balance),
+        history,
       };
     });
 
@@ -128,7 +152,7 @@ export async function PUT(request: Request) {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
     const body = await request.json();
-    const { ynab_account_id, interest_rate, minimum_payment, due_day, notes } = body;
+    const { ynab_account_id, interest_rate, minimum_payment, due_day, notes, original_amount } = body;
 
     if (!ynab_account_id) return NextResponse.json({ error: "Account ID required" }, { status: 400 });
 
@@ -157,6 +181,12 @@ export async function PUT(request: Request) {
         notes = excluded.notes,
         updated_at = datetime('now')
     `).run(ynab_account_id, interest_rate ?? 0, minimum_payment ?? 0, due_day ?? 0, notes ?? "");
+
+    // Only touch the starting balance when explicitly provided, so saving other fields never wipes it.
+    if (original_amount !== undefined) {
+      db.prepare("UPDATE debt_overrides SET original_amount = ?, updated_at = datetime('now') WHERE ynab_account_id = ?")
+        .run(Math.abs(original_amount ?? 0), ynab_account_id);
+    }
 
     console.info("[debts] Override saved for", ynab_account_id);
     eventBus.emit("data:updated", { source: "debt-updated" });

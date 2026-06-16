@@ -559,6 +559,10 @@ function initializeDb(db: Database.Database) {
     console.info("[db] Adding sort_order column to debt_overrides");
     db.exec("ALTER TABLE debt_overrides ADD COLUMN sort_order INTEGER DEFAULT 0");
   }
+  if (!debtCols.some((c) => c.name === "original_amount")) {
+    console.info("[db] Adding original_amount column to debt_overrides");
+    db.exec("ALTER TABLE debt_overrides ADD COLUMN original_amount REAL NOT NULL DEFAULT 0");
+  }
 
   // Add budget_share column to users if missing
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
