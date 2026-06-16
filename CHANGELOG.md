@@ -1,3 +1,9 @@
+### 2.22.0: 2026-06-16
+
+* Change a transaction's type between expense, income and transfer in the edit dialog
+* Treat the internal-transfer category as a transfer everywhere, so a transaction marked as a transfer is excluded from spending and income
+* Keep recent unpaired Synci inflows so a transfer's two legs can pair across separate syncs, dropping only ones older than 3 days, and never re-pair a confirmed transfer
+
 ### 2.21.0: 2026-06-14
 
 * Notify on the dashboard when the bank sync is behind, so you know transactions may be missing
