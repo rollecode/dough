@@ -48,11 +48,28 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [addDate, setAddDate] = useState(() => new Date().toISOString().slice(0, 10));
   // Preselect a day when opened from a day heading's + button.
   useEffect(() => { if (open && initialDate) setAddDate(initialDate); }, [open, initialDate]);
+
+  // Rank likely categories for the typed payee/description so they appear first in the picker.
+  useEffect(() => {
+    if (!open) return;
+    const payee = addPayee.trim();
+    const memo = addMemo.trim();
+    if (!payee && !memo) { setCatSuggestions([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/categories/suggest?payee=${encodeURIComponent(payee)}&memo=${encodeURIComponent(memo)}`);
+        const d = await r.json();
+        if (Array.isArray(d.categories)) setCatSuggestions(d.categories);
+      } catch { /* ignore */ }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [open, addPayee, addMemo]);
   const [catGuessing, setCatGuessing] = useState(false);
   // Where the current category pick came from: AI suggestion or the user's own choice
   const [catSource, setCatSource] = useState<"" | "ai" | "manual">("");
   const catSourceRef = useRef<"" | "ai" | "manual">("");
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
+  const [catSuggestions, setCatSuggestions] = useState<string[]>([]);
   const [addLoading, setAddLoading] = useState(false);
   const [linkedAccountId, setLinkedAccountId] = useState("");
   const [linkedAccountName, setLinkedAccountName] = useState("");
@@ -468,6 +485,8 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
                     placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
                     noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
                     searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"}
+                    suggestions={catSuggestions}
+                    suggestionsLabel={locale === "fi" ? "Ehdotukset" : "Suggested"}
                   />
                 </div>
               )}

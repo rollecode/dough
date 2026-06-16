@@ -95,6 +95,7 @@ export default function TransactionsPage() {
   const [memos, setMemos] = useState<string[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editType, setEditType] = useState<"expense" | "income" | "transfer">("expense");
+  const [editSuggestions, setEditSuggestions] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [splitMode, setSplitMode] = useState(false);
   const [splitLines, setSplitLines] = useState<{ category: string; amount: string }[]>([]);
@@ -265,6 +266,19 @@ export default function TransactionsPage() {
       window.history.replaceState({}, "", "/transactions");
     }
   }, [data]);
+
+  // Rank likely categories for the edited transaction's payee/description so they appear first.
+  useEffect(() => {
+    if (!editTx) { setEditSuggestions([]); return; }
+    const payee = editTx.payee.trim();
+    const memo = (editTx.memo || "").trim();
+    if (!payee && !memo) { setEditSuggestions([]); return; }
+    fetch(`/api/categories/suggest?payee=${encodeURIComponent(payee)}&memo=${encodeURIComponent(memo)}`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d.categories)) setEditSuggestions(d.categories); })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editTx?.id]);
 
   // Deep link: /transactions/<account-slug> pre-selects that account once accounts have loaded.
   useEffect(() => {
@@ -528,6 +542,8 @@ export default function TransactionsPage() {
                     placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
                     noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
                     searchPlaceholder={locale === "fi" ? "Hae..." : "Search..."}
+                    suggestions={editSuggestions}
+                    suggestionsLabel={locale === "fi" ? "Ehdotukset" : "Suggested"}
                   />
                 </div>
               ) : (() => {
