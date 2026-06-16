@@ -307,6 +307,31 @@ export async function POST(request: Request) {
       }
       if (transfersPaired > 0) console.info("[synci/sync] Auto-paired", transfersPaired, "transfers");
 
+      // Pass two: attach a still-unmatched inflow to an existing single-leg internal transfer - an
+      // outflow already marked a transfer (by the user, or paired earlier) whose received leg never
+      // arrived. Only outflows that do not already have an opposite internal-transfer leg qualify,
+      // so a complete transfer is never disturbed.
+      const lateInflows = db.prepare(
+        "SELECT ynab_id, date, amount, account_id FROM transactions " +
+          "WHERE ynab_id LIKE 'synci_%' AND amount > 0 AND payee NOT LIKE 'Transfer%' " +
+          "AND COALESCE(category, '') = '' AND date >= date('now', '-45 days')"
+      ).all() as { ynab_id: string; date: string; amount: number; account_id: string }[];
+      for (const inf of lateInflows) {
+        if (paired.has(inf.ynab_id)) continue;
+        const out = db.prepare(
+          "SELECT o.ynab_id, o.account_id FROM transactions o " +
+            "WHERE o.category = 'Internal transfer' AND ROUND(o.amount, 2) = ROUND(?, 2) AND o.account_id != ? " +
+            "AND ABS(julianday(o.date) - julianday(?)) <= 2 " +
+            "AND NOT EXISTS (SELECT 1 FROM transactions z WHERE z.category = 'Internal transfer' AND ROUND(z.amount, 2) = ROUND(?, 2) AND z.account_id != o.account_id AND ABS(julianday(z.date) - julianday(o.date)) <= 2) " +
+            "LIMIT 1"
+        ).get(-inf.amount, inf.account_id, inf.date, inf.amount) as { ynab_id: string; account_id: string } | undefined;
+        if (!out) continue;
+        const outName = acctNames.get(out.account_id) || "";
+        db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${outName}`, INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
+        paired.add(inf.ynab_id);
+        transfersPaired++;
+      }
+
       // Sweep unpaired provisional inflows (imported with no category, not income, not a transfer)
       // that are older than 3 days: by then the opposite transfer leg has had time to arrive in a
       // later sync, so a still-unpaired one is genuinely external money - remove it and reverse its
