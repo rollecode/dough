@@ -40,6 +40,7 @@ import {
 import { ChartContainer } from "@/components/ui/chart-container";
 import { formatDuration } from "@/lib/date-utils";
 import { F } from "@/components/ui/f";
+import { DebtDonut } from "@/components/debts/debt-donut";
 
 interface DebtData {
   id: string;
@@ -50,6 +51,10 @@ interface DebtData {
   dueDay: number;
   monthlyTarget: number;
   monthlyPayment: number;
+  originalAmount: number;
+  suggestedOriginal: number;
+  paidTotal: number;
+  percentPaid: number;
   notes: string;
   isPriority: number;
   history?: { month: string; balance: number }[];
@@ -234,6 +239,7 @@ export default function DebtsPage() {
           interest_rate: debt.interestRate,
           minimum_payment: debt.minimumPayment,
           due_day: debt.dueDay,
+          original_amount: debt.originalAmount,
         }),
       });
     } catch (err) {
@@ -265,7 +271,7 @@ export default function DebtsPage() {
   };
 
   const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
-  const totalMonthly = debts.reduce((s, d) => s + (d.monthlyPayment || d.minimumPayment || d.monthlyTarget), 0);
+  const totalMonthly = debts.reduce((s, d) => s + (d.minimumPayment || d.monthlyTarget), 0);
 
   const snowball = calculatePayoff(debts, extraPayment, (a, b) => a.balance - b.balance);
   const avalanche = calculatePayoff(debts, extraPayment, (a, b) => b.interestRate - a.interestRate);
@@ -355,6 +361,21 @@ export default function DebtsPage() {
         </Card>
       </div>
 
+      {/* Debt breakdown donut */}
+      {debts.length > 0 && (
+        <DebtDonut
+          debts={debts.map((d) => ({
+            id: d.id,
+            name: d.name,
+            balance: d.balance,
+            paidThisMonth: d.monthlyPayment || 0,
+            paidTotal: d.paidTotal || 0,
+            percentPaid: d.percentPaid || 0,
+            effectiveOriginal: d.originalAmount > 0 ? d.originalAmount : d.suggestedOriginal,
+          }))}
+        />
+      )}
+
       {/* AI suggestion */}
       {!aiHidden && (
       <Card className="ai-summary-card">
@@ -402,10 +423,29 @@ export default function DebtsPage() {
                 </div>
                 <GripVertical className="drag-handle" />
               </div>
+              {debt.percentPaid > 0 && (
+                <div className="debt-progress-row">
+                  <Progress value={debt.percentPaid} className="debt-progress" />
+                  <span className="debt-progress-label">
+                    {mask(`${debt.percentPaid} %`)} {locale === "fi" ? "maksettu" : "paid"} · {locale === "fi" ? "alkup." : "orig."} <F v={debt.originalAmount > 0 ? debt.originalAmount : debt.suggestedOriginal} />
+                  </span>
+                </div>
+              )}
               {debt.history && debt.history.length > 1 && (
                 <DebtSparkline data={debt.history} uid={debt.id.replace(/[^a-zA-Z0-9]/g, "")} />
               )}
               <div className="list-edit-row">
+                <div className="list-edit-field">
+                  <Label className="list-edit-label">{locale === "fi" ? "Alkup. €" : "Original €"}</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={debt.originalAmount || ""}
+                    onChange={(e) => updateDebt(debt.id, "originalAmount", parseFloat(e.target.value) || 0)}
+                    placeholder={debt.suggestedOriginal ? String(Math.round(debt.suggestedOriginal)) : "0"}
+                    className="list-edit-input"
+                  />
+                </div>
                 <div className="list-edit-field">
                   <Label className="list-edit-label">{locale === "fi" ? "Saldo €" : "Balance €"}</Label>
                   <Input

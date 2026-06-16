@@ -1,0 +1,167 @@
+/* Module: debt-donut — debt breakdown donut with per-debt payoff progress */
+
+.card.debt-donut-card {
+  border: none;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.02));
+  backdrop-filter: none;
+  padding: 0.75rem;
+  gap: 0;
+}
+
+@media (min-width: 768px) {
+  .card.debt-donut-card {
+    padding: 1.25rem;
+  }
+}
+
+.card.debt-donut-card:hover {
+  border-color: transparent;
+}
+
+.debt-donut-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin-bottom: 0.5rem;
+}
+
+.debt-donut-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .debt-donut-body {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.debt-donut-chart {
+  position: relative;
+  height: 260px;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 639px) {
+  .debt-donut-chart {
+    width: 100%;
+    max-width: 260px;
+    margin: 0 auto;
+  }
+}
+
+.debt-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.debt-donut-total {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-donut-sub {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.debt-donut-legend {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  justify-content: center;
+}
+
+.debt-donut-legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.debt-donut-legend-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.debt-donut-legend-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.debt-donut-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.debt-donut-legend-text {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debt-donut-legend-amount {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-donut-legend-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.debt-donut-legend-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.debt-donut-legend-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.debt-donut-legend-month {
+  color: var(--positive);
+  white-space: nowrap;
+}
+
+.debt-donut-legend-total {
+  margin-top: 0.25rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}

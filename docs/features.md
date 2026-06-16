@@ -125,7 +125,11 @@
 
 - From YNAB otherDebt accounts, or added manually
 - Must-pay priority flag
-- Editable interest rates and monthly payments
+- Editable interest rates, monthly payments and original (starting) amount
+- Debt breakdown donut: each debt's share, overall payoff progress, and amount paid this month
+- Per-debt percentage paid off with progress bar and balance history sparkline
+- Amount paid this month derived from each account's transactions (works without YNAB)
+- Linkable to a budget category so the minimum payment becomes that category's monthly target
 - Snowball and avalanche payoff strategies with charts
 - AI debt payoff suggestion (shared cache)
 - Closed account sync from YNAB

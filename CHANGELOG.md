@@ -1,3 +1,9 @@
+### 2.25.0: 2026-06-17
+
+* Add a debt breakdown donut showing each debt's share, overall payoff progress and amount paid this month
+* Track each debt's original amount and show percentage paid off with a per-debt progress bar
+* Derive amount paid this month per debt from account transactions so it works without YNAB
+
 ### 2.24.0: 2026-06-17
 
 * Pick a counterpart account when marking a transaction as a transfer, so it shows on both accounts with the matching leg
