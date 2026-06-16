@@ -167,13 +167,15 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { transaction_id, amount, payee_name, memo, account_id, date, category } = body;
     if (!transaction_id) return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
+    // Inflow (income, or a positive-side transfer) is stored positive; default stays an outflow.
+    const inflow = body.inflow === true;
 
     // LOCAL MODE: update local row, adjust account balance by the delta
     if (getBudgetMode() === "local") {
       const { getDb } = await import("@/lib/db");
       const db = getDb();
       const prev = db.prepare("SELECT amount, account_id, category FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string; category: string } | undefined;
-      const signed = parseFloat(amount) * -1;
+      const signed = inflow ? Math.abs(parseFloat(amount)) : parseFloat(amount) * -1;
       const newCategory = category !== undefined ? category : (prev?.category ?? "");
       db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ?, category = ? WHERE ynab_id = ?")
         .run(signed, payee_name || "", memo || "", account_id || (prev?.account_id ?? ""), date || "", newCategory, transaction_id);
@@ -193,7 +195,7 @@ export async function PUT(request: Request) {
 
     console.info("[ynab/transaction] Updating transaction:", transaction_id);
 
-    const milliunits = Math.round(parseFloat(amount) * -1000);
+    const milliunits = Math.round(parseFloat(amount) * (inflow ? 1000 : -1000));
     const update: Record<string, unknown> = { id: transaction_id };
     if (amount !== undefined) update.amount = milliunits;
     if (payee_name !== undefined) update.payee_name = payee_name;
@@ -231,10 +233,10 @@ export async function PUT(request: Request) {
       const db = getDb();
       if (category !== undefined) {
         db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ?, category = ? WHERE ynab_id = ?")
-          .run(parseFloat(amount) * -1, payee_name || "", memo || "", account_id || "", date || "", category, transaction_id);
+          .run(parseFloat(amount) * (inflow ? 1 : -1), payee_name || "", memo || "", account_id || "", date || "", category, transaction_id);
       } else {
         db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ? WHERE ynab_id = ?")
-          .run(parseFloat(amount) * -1, payee_name || "", memo || "", account_id || "", date || "", transaction_id);
+          .run(parseFloat(amount) * (inflow ? 1 : -1), payee_name || "", memo || "", account_id || "", date || "", transaction_id);
       }
       console.info("[ynab/transaction] Local DB updated");
     } catch (err) {

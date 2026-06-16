@@ -94,6 +94,7 @@ export default function TransactionsPage() {
   const [payees, setPayees] = useState<string[]>([]);
   const [memos, setMemos] = useState<string[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
+  const [editType, setEditType] = useState<"expense" | "income" | "transfer">("expense");
   const [editSaving, setEditSaving] = useState(false);
   const [splitMode, setSplitMode] = useState(false);
   const [splitLines, setSplitLines] = useState<{ category: string; amount: string }[]>([]);
@@ -140,6 +141,14 @@ export default function TransactionsPage() {
         else console.error("[transactions] Split failed:", result.error);
         return;
       }
+      // Income is stored positive (Ready to Assign); a transfer keeps its current sign and the
+      // internal-transfer category; an expense keeps the picked category and stays negative.
+      const inflow = editType === "income" ? true : editType === "transfer" ? editTx.amount >= 0 : false;
+      const category = editType === "income"
+        ? "Inflow: Ready to Assign"
+        : editType === "transfer"
+        ? "Internal transfer"
+        : (splitMode ? (usableSplits[0]?.category ?? editTx.category) : editTx.category);
       const res = await fetch("/api/ynab/transaction", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -150,7 +159,8 @@ export default function TransactionsPage() {
           memo: editTx.memo || "",
           account_id: editTx.account_id,
           date: editTx.date,
-          category: splitMode ? (usableSplits[0]?.category ?? editTx.category) : editTx.category,
+          category,
+          inflow,
         }),
       });
       const result = await res.json();
@@ -249,6 +259,7 @@ export default function TransactionsPage() {
     const t = data.transactions.find((x) => x.id === txId);
     if (t) {
       setEditTx({ id: t.id, payee: t.payee, amount: t.amount, category: t.category, memo: t.memo, account_id: t.account_id || "", date: t.date });
+      setEditType(isTransfer(t.payee, t.category) ? "transfer" : t.amount > 0 ? "income" : "expense");
       setSplitMode(false);
       setSplitLines([]);
       window.history.replaceState({}, "", "/transactions");
@@ -387,6 +398,7 @@ export default function TransactionsPage() {
             lastDay = tx.date;
             const openEdit = () => {
               setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date });
+              setEditType(txIsTransfer ? "transfer" : tx.amount > 0 ? "income" : "expense");
               if (tx.isSplit && tx.parts) {
                 setSplitMode(true);
                 setSplitLines(tx.parts.map((p) => ({ category: p.category, amount: String(Math.abs(p.amount)) })));
@@ -463,6 +475,18 @@ export default function TransactionsPage() {
           </DialogHeader>
           {editTx && (
             <div className="form-stack">
+              <div className="tx-type-toggle">
+                {(["expense", "income", "transfer"] as const).map((ty) => (
+                  <button
+                    key={ty}
+                    type="button"
+                    className={`tx-type-btn ${editType === ty ? "is-active" : ""}`}
+                    onClick={() => { setEditType(ty); if (ty !== "expense") { setSplitMode(false); setSplitLines([]); } }}
+                  >
+                    {ty === "expense" ? (locale === "fi" ? "Meno" : "Expense") : ty === "income" ? (locale === "fi" ? "Tulo" : "Income") : (locale === "fi" ? "Siirto" : "Transfer")}
+                  </button>
+                ))}
+              </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
                 <PayeeInput value={editTx.payee} onChange={(v) => setEditTx({ ...editTx, payee: v })} payees={payees} />
@@ -484,7 +508,11 @@ export default function TransactionsPage() {
                   {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
-              {!splitMode ? (
+              {editType === "transfer" ? (
+                <p className="settings-help">{locale === "fi" ? "Merkitty sisäiseksi siirroksi - ei lasketa kuluksi eikä tuloksi." : "Marked as an internal transfer - excluded from spending and income."}</p>
+              ) : editType === "income" ? (
+                <p className="settings-help">{locale === "fi" ? "Merkitty tuloksi (Budjetoimatta)." : "Marked as income (Ready to Assign)."}</p>
+              ) : !splitMode ? (
                 <div className="form-field">
                   <div className="tx-split-head">
                     <Label>{locale === "fi" ? "Kategoria" : "Category"}</Label>
