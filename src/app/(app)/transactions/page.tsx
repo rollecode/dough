@@ -95,6 +95,7 @@ export default function TransactionsPage() {
   const [memos, setMemos] = useState<string[]>([]);
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editType, setEditType] = useState<"expense" | "income" | "transfer">("expense");
+  const [editTransferTo, setEditTransferTo] = useState("");
   const [editSuggestions, setEditSuggestions] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [splitMode, setSplitMode] = useState(false);
@@ -162,6 +163,7 @@ export default function TransactionsPage() {
           date: editTx.date,
           category,
           inflow,
+          transfer_account_id: editType === "transfer" && editTransferTo ? editTransferTo : undefined,
         }),
       });
       const result = await res.json();
@@ -261,6 +263,7 @@ export default function TransactionsPage() {
     if (t) {
       setEditTx({ id: t.id, payee: t.payee, amount: t.amount, category: t.category, memo: t.memo, account_id: t.account_id || "", date: t.date });
       setEditType(isTransfer(t.payee, t.category) ? "transfer" : t.amount > 0 ? "income" : "expense");
+      setEditTransferTo("");
       setSplitMode(false);
       setSplitLines([]);
       window.history.replaceState({}, "", "/transactions");
@@ -413,6 +416,7 @@ export default function TransactionsPage() {
             const openEdit = () => {
               setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date });
               setEditType(txIsTransfer ? "transfer" : tx.amount > 0 ? "income" : "expense");
+              setEditTransferTo("");
               if (tx.isSplit && tx.parts) {
                 setSplitMode(true);
                 setSplitLines(tx.parts.map((p) => ({ category: p.category, amount: String(Math.abs(p.amount)) })));
@@ -523,7 +527,14 @@ export default function TransactionsPage() {
                 </select>
               </div>
               {editType === "transfer" ? (
-                <p className="settings-help">{locale === "fi" ? "Merkitty sisäiseksi siirroksi - ei lasketa kuluksi eikä tuloksi." : "Marked as an internal transfer - excluded from spending and income."}</p>
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Vastatili" : "Counterpart account"}</Label>
+                  <select className="input" value={editTransferTo} onChange={(e) => setEditTransferTo(e.target.value)}>
+                    <option value="">{locale === "fi" ? "Ei toista tiliä (ulkoinen)" : "No second account (external)"}</option>
+                    {allAccounts.filter((a) => a.id !== editTx.account_id).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <p className="settings-help">{locale === "fi" ? "Siirto näkyy molemmilla tileillä, kun vastatili on valittu. Ei lasketa kuluksi eikä tuloksi." : "When a counterpart account is picked, the transfer shows on both accounts. Excluded from spending and income."}</p>
+                </div>
               ) : editType === "income" ? (
                 <p className="settings-help">{locale === "fi" ? "Merkitty tuloksi (Budjetoimatta)." : "Marked as income (Ready to Assign)."}</p>
               ) : !splitMode ? (

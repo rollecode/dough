@@ -1,3 +1,9 @@
+### 2.24.0: 2026-06-17
+
+* Pick a counterpart account when marking a transaction as a transfer, so it shows on both accounts with the matching leg
+* Attach a late or orphaned Synci inflow to an already-marked internal transfer so a transfer's received leg is never dropped
+* Reuse an existing opposite leg instead of creating a duplicate when adding the counterpart of a transfer
+
 ### 2.23.0: 2026-06-16
 
 * Rank a payee's and description's most-used categories first in the category picker, under a Suggested heading, so re-selecting a category is faster

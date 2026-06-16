@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { categorizePayee } from "@/lib/ai/categorize";
+import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -184,6 +185,31 @@ export async function PUT(request: Request) {
         db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
         db.prepare("UPDATE ynab_accounts SET balance = balance + ? WHERE id = ?").run(signed, account_id || prev.account_id);
       }
+
+      // Internal transfer with a chosen counterpart account: make sure the other leg exists so the
+      // transfer shows on both accounts. Reuse an existing opposite-amount leg on that account (e.g.
+      // one Synci imported) rather than creating a duplicate.
+      const transferAcct = body.transfer_account_id ? String(body.transfer_account_id) : "";
+      const thisAcct = account_id || prev?.account_id || "";
+      if (transferAcct && transferAcct !== thisAcct && newCategory === INTERNAL_TRANSFER_CATEGORY) {
+        const txDate = date || "";
+        const counterSigned = -signed;
+        const nameOf = (id: string) => (db.prepare("SELECT name FROM ynab_accounts WHERE id = ?").get(id) as { name: string } | undefined)?.name || "";
+        const thisName = nameOf(thisAcct);
+        const counterName = nameOf(transferAcct);
+        const existing = db.prepare(
+          "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND category != 'Internal transfer' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
+        ).get(transferAcct, counterSigned, txDate, txDate) as { ynab_id: string } | undefined;
+        if (existing) {
+          db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
+        } else {
+          db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, '', ?, 1, 'cleared')")
+            .run(user.id, `local_${randomUUID()}`, txDate, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, transferAcct);
+          db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, transferAcct);
+        }
+        db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${counterName}`, transaction_id);
+      }
+
       eventBus.emit("data:updated", { source: "transaction-updated", userId: user.id });
       console.info("[ynab/transaction] Local transaction updated:", transaction_id);
       return NextResponse.json({ success: true });
