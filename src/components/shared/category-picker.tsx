@@ -21,6 +21,10 @@ interface CategoryPickerProps {
   // category and selects it. createLabel formats that row's text for the typed query.
   onCreate?: (name: string) => void;
   createLabel?: (name: string) => string;
+  // Category names most likely for the current payee/description, shown first under a "Suggested"
+  // heading so re-selecting is quick. Hidden while searching.
+  suggestions?: string[];
+  suggestionsLabel?: string;
 }
 
 // Budget-aware category picker: a custom dropdown that lists categories grouped by their budget
@@ -29,7 +33,7 @@ interface CategoryPickerProps {
 // press and dismisses the dialog, and a fixed-positioned panel drifts when the mobile keyboard
 // resizes the viewport. Inline, the dialog simply scrolls to it. The search field is not
 // auto-focused so picking an existing category never forces the keyboard open on mobile.
-export function CategoryPicker({ value, onChange, categories, placeholder, noneLabel, searchPlaceholder, fmt, onCreate, createLabel }: CategoryPickerProps) {
+export function CategoryPicker({ value, onChange, categories, placeholder, noneLabel, searchPlaceholder, fmt, onCreate, createLabel, suggestions, suggestionsLabel }: CategoryPickerProps) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -61,6 +65,9 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
   const exactMatch = categories.some((c) => c.name.toLowerCase() === ql);
   const canCreate = !!onCreate && ql.length > 0 && !exactMatch;
   const doCreate = (name: string) => { onCreate?.(name); onChange(name); setOpen(false); setQ(""); };
+  // Most-likely categories for this payee/description, shown first while not searching.
+  const byName = new Map(categories.map((c) => [c.name, c]));
+  const suggested = (!ql && suggestions ? suggestions.map((n) => byName.get(n)).filter((c): c is PickerCategory => !!c) : []);
 
   return (
     <div className="cat-picker" ref={wrapRef}>
@@ -72,6 +79,24 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
         <div className="cat-picker-panel">
           <input className="cat-picker-search input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
           <ul className="cat-picker-list">
+            {suggested.length > 0 && (
+              <li>
+                <div className="cat-picker-group">{suggestionsLabel || "Suggested"}</div>
+                {suggested.map((c) => (
+                  <button
+                    key={`sug-${c.name}`}
+                    type="button"
+                    className={`cat-picker-option ${c.name === value ? "is-active" : ""}`}
+                    onClick={() => choose(c.name)}
+                  >
+                    <span className="cat-picker-name">{c.name}</span>
+                    {typeof c.available === "number" && (
+                      <span className={`cat-picker-amt ${c.available < -0.005 ? "is-neg" : c.available > 0.005 ? "is-pos" : ""}`}>{fmtAmt(c.available)} €</span>
+                    )}
+                  </button>
+                ))}
+              </li>
+            )}
             {canCreate && (
               <li>
                 <button type="button" className="cat-picker-option cat-picker-create" onClick={() => doCreate(q.trim())}>
