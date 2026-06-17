@@ -1,3 +1,9 @@
+### 2.26.0: 2026-06-17
+
+* Give the AI advisor full real-time context in local mode (balances, bills, daily budget, before-payday) instead of a stripped-down fallback
+* Fix the advisor treating all-accounts net worth as the spendable balance, so it no longer reports a negative checking balance
+* Show AI replies that finished while the app was backgrounded by refetching on focus, instead of only after a full reload
+
 ### 2.25.2: 2026-06-17
 
 * Fix the mobile budget title cap not taking effect due to CSS source order and set it to 14 characters

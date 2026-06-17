@@ -107,6 +107,47 @@ export function ChatInterface() {
 
   }, []);
 
+  // iOS Safari suspends the in-flight POST and the SSE stream while the app is backgrounded, so a
+  // reply that finishes generating in the background is saved server-side but never reaches the
+  // client. Re-fetch the latest messages when the page becomes visible again to pick those up.
+  useEffect(() => {
+    const syncOnVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      fetch("/api/chat/messages")
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data.messages?.length) return;
+          const msgs: Message[] = data.messages.map((m: { id: number; role: string; content: string; sender?: string; image_thumb?: string }) => ({
+            id: m.id.toString(),
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            sender: m.sender,
+            image_thumb: m.image_thumb || undefined,
+          }));
+          setMessages((prev) => {
+            const known = new Set(prev.map((p) => p.id));
+            const additions = msgs.filter((m) => !known.has(m.id) && !prev.some((p) => p.role === m.role && p.content === m.content));
+            if (additions.length === 0) return prev;
+            messageCountRef.current += additions.length;
+            return [...prev, ...additions];
+          });
+          if (data.reactions) setReactions((prev) => ({ ...prev, ...data.reactions }));
+          // If the newest server message is an assistant reply, the AI is no longer "thinking".
+          if (msgs[msgs.length - 1]?.role === "assistant") setLoading(false);
+          setTimeout(scrollToBottom, 50);
+        })
+        .catch(() => {});
+    };
+    document.addEventListener("visibilitychange", syncOnVisible);
+    window.addEventListener("focus", syncOnVisible);
+    window.addEventListener("pageshow", syncOnVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", syncOnVisible);
+      window.removeEventListener("focus", syncOnVisible);
+      window.removeEventListener("pageshow", syncOnVisible);
+    };
+  }, [scrollToBottom]);
+
   // SSE: receive new chat messages in real time
   useEvent("chat:message", useCallback((data: unknown) => {
     const msg = data as { id: number; role: string; content: string; sender: string | null; userId: number | null };
