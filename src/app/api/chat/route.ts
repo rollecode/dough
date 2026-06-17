@@ -28,25 +28,33 @@ export async function POST(request: Request) {
       const { getHouseholdSetting } = await import("@/lib/household");
       const householdProfile = getHouseholdSetting("household_profile") || "";
 
-      if (token && budgetId) {
-        console.info("[chat] Loading YNAB data from cache");
+      {
         try {
           const now = new Date();
 
-          // Use cached data instead of calling YNAB API directly
-          const cached = getDb().prepare("SELECT data FROM ynab_cache WHERE id = 1").get() as { data: string; synced_at: string } | undefined;
-          if (!cached) throw new Error("No cached YNAB data");
-          const ynabData = JSON.parse(cached.data);
-          const { summary, transactions, monthBudget } = ynabData;
-
-          // Trigger background sync if cache is older than 2 hours
-          const cacheAge = Date.now() - new Date(cached.synced_at).getTime();
-          if (cacheAge > 2 * 60 * 60 * 1000) {
-            console.info("[chat] YNAB cache is", Math.round(cacheAge / 60000), "min old, triggering background sync");
-            fetch(new URL("/api/ynab/sync", request.url).toString(), {
-              method: "POST",
-              headers: { cookie: request.headers.get("cookie") || "" },
-            }).catch((err) => console.warn("[chat] Background sync trigger failed:", err));
+          // Source financial data from the YNAB cache when connected, otherwise assemble the same
+          // shape from Dough's own local tables. This runs the full context build (balances, bills,
+          // daily budget, income) in local mode too, instead of the stripped-down fallback below.
+          let summary: any, transactions: any, monthBudget: any;
+          const cached = (token && budgetId)
+            ? (getDb().prepare("SELECT data FROM ynab_cache WHERE id = 1").get() as { data: string; synced_at: string } | undefined)
+            : undefined;
+          if (cached) {
+            console.info("[chat] Loading YNAB data from cache");
+            ({ summary, transactions, monthBudget } = JSON.parse(cached.data));
+            // Trigger background sync if cache is older than 2 hours
+            const cacheAge = Date.now() - new Date(cached.synced_at).getTime();
+            if (cacheAge > 2 * 60 * 60 * 1000) {
+              console.info("[chat] YNAB cache is", Math.round(cacheAge / 60000), "min old, triggering background sync");
+              fetch(new URL("/api/ynab/sync", request.url).toString(), {
+                method: "POST",
+                headers: { cookie: request.headers.get("cookie") || "" },
+              }).catch((err) => console.warn("[chat] Background sync trigger failed:", err));
+            }
+          } else {
+            console.info("[chat] Building local financial context (no YNAB)");
+            const { buildLocalFinancialData } = await import("@/lib/local-financial-data");
+            ({ summary, transactions, monthBudget } = buildLocalFinancialData(getDb()));
           }
 
           // Load excluded accounts for budget calculation
@@ -363,14 +371,15 @@ export async function POST(request: Request) {
 
           console.info("[chat] Context built with real data, balance:", context.totalBalance);
         } catch (err) {
-          console.error("[chat] Failed to fetch YNAB data:", err);
+          console.error("[chat] Failed to build financial context:", err);
         }
       }
     }
 
-    // Fallback: assemble context from local data when YNAB is not connected
+    // Last-resort fallback: only reached if the context build above threw. Keep it minimal but with
+    // a correct spendable (checking+savings) balance, never the all-accounts net worth.
     if (!context) {
-      console.info("[chat] Building local financial context (no YNAB)");
+      console.info("[chat] Building minimal fallback context");
       const { buildLocalFinancialData } = await import("@/lib/local-financial-data");
       const { getHouseholdSetting: getHS } = await import("@/lib/household");
       const dbc = getDb();
@@ -389,8 +398,13 @@ export async function POST(request: Request) {
         .map((a: any) => ({ name: a.name, balance: a.balance, monthlyContribution: iOvMap[a.id]?.monthly_contribution ?? 0, expectedReturn: iOvMap[a.id]?.expected_return ?? 0 }));
       const incomeSources = (dbc.prepare("SELECT name, amount, expected_day FROM income_sources WHERE is_active = 1").all() as any[])
         .map((s: any) => ({ name: s.name, amount: s.amount, expectedDay: s.expected_day }));
+      const fbExcludedRaw = getHS("budget_excluded_accounts");
+      const fbExcluded: string[] = fbExcludedRaw ? JSON.parse(fbExcludedRaw) : [];
+      const fbCheckingSavings = Math.round(local.summary.accounts
+        .filter((a: any) => (a.type === "checking" || a.type === "savings") && !fbExcluded.includes(a.id))
+        .reduce((s: number, a: any) => s + a.balance, 0) * 100) / 100;
       context = {
-        totalBalance: local.summary.totalBalance,
+        totalBalance: fbCheckingSavings,
         monthlyIncome: local.monthBudget.income,
         monthlyExpenses: local.monthBudget.activity,
         todaySpent: 0,
