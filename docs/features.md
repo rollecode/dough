@@ -182,6 +182,8 @@
 - Income matched via payee patterns creates real YNAB transaction
 - Bank account to YNAB account mapping in settings
 - Deduplication via synci_processed table
+- Transfer detection: opposite legs are auto-paired, and an inflow whose payee was previously confirmed as an internal transfer is reclassified as a transfer (learned, not hardcoded) so own-account transfers from non-synced accounts never import as income
+- All recurring due and expected days render as real month-aware dates (day 31 shows as the month's last valid day, day 0 means the last day)
 
 ### Real-time
 

@@ -1,3 +1,9 @@
+### 2.27.0: 2026-06-17
+
+* Render recurring due and income dates as real month-aware dates across the UI and AI prompts, so an impossible date like 31.6 never appears and day 0 means the last day
+* Recognize a Synci inflow as an internal transfer when its payee was previously confirmed as a transfer, so own-account transfers from non-synced accounts stop importing as income
+* Clamp day-of-month handling consistently in the dashboard, summary and chat budget logic
+
 ### 2.26.0: 2026-06-17
 
 * Give the AI advisor full real-time context in local mode (balances, bills, daily budget, before-payday) instead of a stripped-down fallback
