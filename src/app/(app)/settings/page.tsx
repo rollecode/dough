@@ -85,6 +85,8 @@ export default function SettingsPage() {
   const [synciMappings, setSynciMappings] = useState<Record<string, string>>({});
   const [synciMappingSaved, setSynciMappingSaved] = useState(false);
   const [synciLoading, setSynciLoading] = useState(false);
+  const [synciTesting, setSynciTesting] = useState(false);
+  const [synciTest, setSynciTest] = useState("");
   const { t, locale, setLocale, setDecimals, setDateFormat, setTimeFormat, fmtDate } = useLocale();
 
   useEffect(() => {
@@ -1115,6 +1117,32 @@ export default function SettingsPage() {
                 </Button>
                 {synciConnected && (
                   <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={synciTesting}
+                    onClick={async () => {
+                      setSynciTesting(true);
+                      setSynciTest("");
+                      try {
+                        const res = await fetch("/api/synci/accounts");
+                        const data = await res.json();
+                        if (res.ok && Array.isArray(data.accounts)) {
+                          setSynciTest(locale === "fi" ? `Yhteys toimii. ${data.accounts.length} tiliä löytyi.` : `Connection works. Found ${data.accounts.length} accounts.`);
+                        } else {
+                          setSynciTest(locale === "fi" ? "Yhteys ei toimi. Tarkista API-avain." : "Connection failed. Check the API token.");
+                        }
+                      } catch {
+                        setSynciTest(locale === "fi" ? "Yhteys ei toimi. Tarkista API-avain." : "Connection failed. Check the API token.");
+                      } finally {
+                        setSynciTesting(false);
+                      }
+                    }}
+                  >
+                    {synciTesting ? (locale === "fi" ? "Testataan..." : "Testing...") : (locale === "fi" ? "Testaa yhteys" : "Test connection")}
+                  </Button>
+                )}
+                {synciConnected && (
+                  <Button
                     variant="destructive"
                     size="sm"
                     onClick={async () => {
@@ -1134,6 +1162,7 @@ export default function SettingsPage() {
                   </Button>
                 )}
               </div>
+              {synciTest && <p className="settings-help">{synciTest}</p>}
             </div>
             {synciAccounts.length > 0 && (
               <div className="form-field">
@@ -1151,6 +1180,7 @@ export default function SettingsPage() {
                   <div key={acc.id} className="form-field">
                     <Label>{acc.owner} (****{acc.iban.slice(-4)})</Label>
                     <Select
+                      items={Object.fromEntries(allAccounts.map((a) => [a.id, a.name]))}
                       value={synciMappings[acc.id] || ""}
                       onValueChange={async (v) => {
                         if (!v) return;
