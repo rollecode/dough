@@ -1537,11 +1537,11 @@
   white-space: nowrap;
 }
 
-/* Mobile: cap the category title to ~18 characters so long names fit the name column (it keeps its
+/* Mobile: cap the category title to ~14 characters so long names fit the name column (it keeps its
    ellipsis), and hide the description so each row stays single-line. Placed after the base rules so
    source order wins; full name and description remain available in the category inspector. */
 @media (max-width: 540px) {
-  .budget-row-name { max-width: 18ch; }
+  .budget-row-name { max-width: 14ch; }
   .budget-row-desc { display: none; }
 }
 

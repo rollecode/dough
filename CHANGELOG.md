@@ -1,6 +1,6 @@
 ### 2.25.2: 2026-06-17
 
-* Fix the mobile budget title cap not taking effect due to CSS source order and set it to 18 characters
+* Fix the mobile budget title cap not taking effect due to CSS source order and set it to 14 characters
 
 ### 2.25.1: 2026-06-17
 
