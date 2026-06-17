@@ -148,10 +148,9 @@ export async function POST(request: Request) {
             }
             // An inflow matching no household income source is either the incoming leg of an
             // internal transfer (money from another own account) or genuinely external money
-            // (e.g. a client paying through a personal account). Import it provisionally: the
-            // transfer-pairing pass below keeps it if it pairs with an opposite outflow, otherwise
-            // it is removed so it never inflates balances or the daily budget. Previously this was
-            // skipped outright, which dropped the inflow leg and stranded transfers as expenses.
+            // (e.g. a client paying through a personal account). Import it uncategorised: the
+            // transfer-pairing pass below claims it if it pairs with an opposite leg, otherwise it
+            // is categorised as Ready to Assign income (never deleted), so it is always accounted for.
             if (!matchedSourceId) provisionalInflow = true;
           }
           if (localAccountId && firstUser) {
@@ -356,21 +355,20 @@ export async function POST(request: Request) {
         }
       }
 
-      // Sweep unpaired provisional inflows (imported with no category, not income, not a transfer)
-      // that are older than 3 days: by then the opposite transfer leg has had time to arrive in a
-      // later sync, so a still-unpaired one is genuinely external money - remove it and reverse its
-      // balance. Recent ones are kept so a leg arriving in a different sync can still pair.
-      const stale = db.prepare(
-        "SELECT ynab_id, amount, account_id FROM transactions " +
+      // Any inflow that matched no income source and did not pair as a transfer above is real income
+      // (e.g. a client paying through a personal account). Categorise it to Ready to Assign so it is
+      // accounted for and assignable in the budget. Transactions are NEVER deleted here: same-account
+      // transfers are already paired above, and a transfer recognised later can be reclassified from
+      // the edit dialog (which teaches the transfer-payee list for next time).
+      const unrecognised = db.prepare(
+        "SELECT ynab_id FROM transactions " +
           "WHERE ynab_id LIKE 'synci_%' AND amount > 0 AND payee NOT LIKE 'Transfer%' " +
-          "AND COALESCE(category, '') = '' AND date < date('now', '-3 days')"
-      ).all() as { ynab_id: string; amount: number; account_id: string }[];
-      for (const row of stale) {
-        db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(row.ynab_id);
-        db.prepare("UPDATE ynab_accounts SET balance = balance - ?, updated_at = datetime('now') WHERE id = ?").run(row.amount, row.account_id);
-        totalImported--;
+          "AND COALESCE(category, '') = ''"
+      ).all() as { ynab_id: string }[];
+      for (const row of unrecognised) {
+        db.prepare("UPDATE transactions SET category = 'Inflow: Ready to Assign' WHERE ynab_id = ?").run(row.ynab_id);
       }
-      if (stale.length > 0) console.info("[synci/sync] Dropped", stale.length, "unrecognised external inflows older than 3 days");
+      if (unrecognised.length > 0) console.info("[synci/sync] Categorised", unrecognised.length, "unmatched inflows as Ready to Assign income");
     }
 
     // AI complement: categorize freshly imported expenses that Synci left uncategorized (skip
