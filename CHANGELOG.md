@@ -1,3 +1,7 @@
+### 2.25.1: 2026-06-17
+
+* Cap the budget category title and hide its description on mobile so each row fits on one line
+
 ### 2.25.0: 2026-06-17
 
 * Add a debt breakdown donut showing each debt's share, overall payoff progress and amount paid this month

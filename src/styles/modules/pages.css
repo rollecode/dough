@@ -1246,6 +1246,12 @@
 
   /* Drag grips do not work on touch — hide them and reclaim the gutter */
   .budget-grip { display: none; }
+
+  /* Cap the category title to ~15 characters so long names fit the name column (it keeps its
+     ellipsis), and hide the description so each row stays single-line. Full name and description
+     remain available in the category inspector. */
+  .budget-row-name { max-width: 12ch; }
+  .budget-row-desc { display: none; }
 }
 
 /* Keep the budget readable on wide screens: cap the column so the name field doesn't stretch
