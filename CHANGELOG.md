@@ -1,3 +1,8 @@
+### 2.28.0: 2026-06-17
+
+* Show the mapped account name instead of its raw id in the Synci account mapping
+* Add a test-connection button to the Synci settings
+
 ### 2.27.0: 2026-06-17
 
 * Render recurring due and income dates as real month-aware dates across the UI and AI prompts, so an impossible date like 31.6 never appears and day 0 means the last day
