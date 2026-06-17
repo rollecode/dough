@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
-import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, getHouseholdSetting, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { categorizePayee } from "@/lib/ai/categorize";
 import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
@@ -184,6 +184,25 @@ export async function PUT(request: Request) {
         // remove old amount from old account, add new to new account
         db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
         db.prepare("UPDATE ynab_accounts SET balance = balance + ? WHERE id = ?").run(signed, account_id || prev.account_id);
+      }
+
+      // Learn this payee as an internal-transfer payee so future Synci imports with the same payee
+      // are recognized as transfers, not income. Skip the generic transfer descriptors.
+      if (newCategory === INTERNAL_TRANSFER_CATEGORY) {
+        const realPayee = (payee_name || "").trim();
+        if (realPayee && !/^(transfer|starting balance|reconciliation)/i.test(realPayee)) {
+          try {
+            const rawList = getHouseholdSetting("internal_transfer_payees");
+            const list: string[] = rawList ? JSON.parse(rawList) : [];
+            if (!list.some((p) => p.toLowerCase() === realPayee.toLowerCase())) {
+              list.push(realPayee);
+              setHouseholdSetting("internal_transfer_payees", JSON.stringify(list));
+              console.info("[ynab/transaction] Learned an internal-transfer payee");
+            }
+          } catch (e) {
+            console.warn("[ynab/transaction] Failed to record internal-transfer payee:", e);
+          }
+        }
       }
 
       // Internal transfer with a chosen counterpart account: make sure the other leg exists so the

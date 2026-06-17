@@ -332,6 +332,30 @@ export async function POST(request: Request) {
         transfersPaired++;
       }
 
+      // Pass three: an inflow whose payee the household has previously confirmed as an internal
+      // transfer is itself a transfer (e.g. money moved in from an account Synci does not sync, where
+      // the bank shows the owner's own name as the payee). Mark it so it stops counting as income and
+      // is not swept. The payee list is learned from confirmed transfers, never hardcoded.
+      let knownTransferPayees = new Set<string>();
+      try {
+        const raw = getHouseholdSetting("internal_transfer_payees");
+        if (raw) knownTransferPayees = new Set((JSON.parse(raw) as string[]).map((p) => p.toLowerCase().trim()).filter(Boolean));
+      } catch { knownTransferPayees = new Set(); }
+      if (knownTransferPayees.size > 0) {
+        const unmatchedInflows = db.prepare(
+          "SELECT ynab_id, payee FROM transactions " +
+            "WHERE ynab_id LIKE 'synci_%' AND amount > 0 AND payee NOT LIKE 'Transfer%' " +
+            "AND COALESCE(category, '') = '' AND date >= date('now', '-45 days')"
+        ).all() as { ynab_id: string; payee: string }[];
+        for (const inf of unmatchedInflows) {
+          if (paired.has(inf.ynab_id)) continue;
+          if (!inf.payee || !knownTransferPayees.has(inf.payee.toLowerCase().trim())) continue;
+          db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
+          paired.add(inf.ynab_id);
+          transfersPaired++;
+        }
+      }
+
       // Sweep unpaired provisional inflows (imported with no category, not income, not a transfer)
       // that are older than 3 days: by then the opposite transfer leg has had time to arrive in a
       // later sync, so a still-unpaired one is genuinely external money - remove it and reverse its
