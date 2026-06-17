@@ -1,7 +1,7 @@
 ### 2.28.0: 2026-06-17
 
 * Show the mapped account name instead of its raw id in the Synci account mapping
-* Add a test-connection button to the Synci settings
+* Add a test-connection button to the Synci settings, showing the result in bold green when it works and bold red when it fails
 
 ### 2.27.0: 2026-06-17
 

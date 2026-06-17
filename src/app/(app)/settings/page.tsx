@@ -87,6 +87,7 @@ export default function SettingsPage() {
   const [synciLoading, setSynciLoading] = useState(false);
   const [synciTesting, setSynciTesting] = useState(false);
   const [synciTest, setSynciTest] = useState("");
+  const [synciTestOk, setSynciTestOk] = useState(false);
   const { t, locale, setLocale, setDecimals, setDateFormat, setTimeFormat, fmtDate } = useLocale();
 
   useEffect(() => {
@@ -1127,11 +1128,14 @@ export default function SettingsPage() {
                         const res = await fetch("/api/synci/accounts");
                         const data = await res.json();
                         if (res.ok && Array.isArray(data.accounts)) {
+                          setSynciTestOk(true);
                           setSynciTest(locale === "fi" ? `Yhteys toimii. ${data.accounts.length} tiliä löytyi.` : `Connection works. Found ${data.accounts.length} accounts.`);
                         } else {
+                          setSynciTestOk(false);
                           setSynciTest(locale === "fi" ? "Yhteys ei toimi. Tarkista API-avain." : "Connection failed. Check the API token.");
                         }
                       } catch {
+                        setSynciTestOk(false);
                         setSynciTest(locale === "fi" ? "Yhteys ei toimi. Tarkista API-avain." : "Connection failed. Check the API token.");
                       } finally {
                         setSynciTesting(false);
@@ -1162,7 +1166,7 @@ export default function SettingsPage() {
                   </Button>
                 )}
               </div>
-              {synciTest && <p className="settings-help">{synciTest}</p>}
+              {synciTest && <p className={`synci-test-result ${synciTestOk ? "is-ok" : "is-error"}`}>{synciTest}</p>}
             </div>
             {synciAccounts.length > 0 && (
               <div className="form-field">
