@@ -81,7 +81,7 @@ export default function SettingsPage() {
   const [synciToken, setSynciToken] = useState("");
   const [synciSaved, setSynciSaved] = useState(false);
   const [synciConnected, setSynciConnected] = useState(false);
-  const [synciAccounts, setSynciAccounts] = useState<{ id: string; iban: string; owner: string }[]>([]);
+  const [synciAccounts, setSynciAccounts] = useState<{ id: string; iban: string; owner: string; currency?: string; name?: string; customName?: string }[]>([]);
   const [synciMappings, setSynciMappings] = useState<Record<string, string>>({});
   const [synciMappingSaved, setSynciMappingSaved] = useState(false);
   const [synciLoading, setSynciLoading] = useState(false);
@@ -1182,7 +1182,7 @@ export default function SettingsPage() {
                 </p>
                 {synciAccounts.map((acc) => (
                   <div key={acc.id} className="form-field">
-                    <Label>{acc.owner} (****{acc.iban.slice(-4)})</Label>
+                    <Label>{[acc.owner, acc.name, acc.customName].filter(Boolean).join(" · ")}{acc.iban ? ` · ****${acc.iban.slice(-4)}` : ""}</Label>
                     <Select
                       items={Object.fromEntries(allAccounts.map((a) => [a.id, a.name]))}
                       value={synciMappings[acc.id] || ""}

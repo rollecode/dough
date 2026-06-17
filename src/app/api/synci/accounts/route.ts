@@ -28,11 +28,13 @@ export async function GET() {
     const data = await res.json();
     const accounts = (data.data || [])
       .filter((a: { enabled: boolean; iban: string }) => a.enabled && a.iban && !a.iban.includes("***"))
-      .map((a: { id: number; iban: string; owner_name: string; currency: string }) => ({
+      .map((a: { id: number; iban: string; owner_name: string; currency: string; name: string | null; custom_name: string | null }) => ({
         id: String(a.id),
         iban: a.iban,
         owner: a.owner_name || "Unknown",
         currency: a.currency,
+        name: a.name || "",
+        customName: a.custom_name || "",
       }));
 
     // Save accounts list to settings for reference
