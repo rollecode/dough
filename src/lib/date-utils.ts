@@ -43,3 +43,45 @@ export function formatDateShort(dateStr: string): string {
   const d = parseISO(dateStr);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
 }
+
+// Recurring "day of month" handling. A stored day is 1-31, or 0 meaning "last day of month".
+// These helpers resolve such a day to a real, month-aware calendar date so nothing ever renders an
+// impossible date like 31.6 (June has 30 days): day 31 -> 30.6, day 0 -> the month's last day.
+
+// Resolve a day-of-month to a valid day number within a specific month, clamped to its length.
+// Day 0 (or any day past the month's end) becomes the last day of that month.
+export function resolveDayInMonth(dayOfMonth: number, year: number, monthIndex: number): number {
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+  if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > lastDay) return lastDay;
+  return dayOfMonth;
+}
+
+// Clamp a recurring day-of-month to a valid day number within `from`'s month (0/overflow -> last day).
+export function resolveDayThisMonth(dayOfMonth: number, from: Date = new Date()): number {
+  return resolveDayInMonth(dayOfMonth, from.getFullYear(), from.getMonth());
+}
+
+// The concrete date a recurring day falls on within `from`'s own month (clamped, month-aware).
+export function dateForDayInMonth(dayOfMonth: number, from: Date = new Date()): Date {
+  return new Date(from.getFullYear(), from.getMonth(), resolveDayInMonth(dayOfMonth, from.getFullYear(), from.getMonth()));
+}
+
+// The next calendar date a recurring day falls on, on or after `from`. Uses this month if the
+// (clamped) day has not passed yet, otherwise rolls to next month. Day 0 = last day of month.
+export function nextOccurrence(dayOfMonth: number, from: Date = new Date()): Date {
+  const y = from.getFullYear();
+  const m = from.getMonth();
+  const dThis = resolveDayInMonth(dayOfMonth, y, m);
+  if (dThis >= from.getDate()) return new Date(y, m, dThis);
+  return new Date(y, m + 1, resolveDayInMonth(dayOfMonth, y, m + 1));
+}
+
+// Format a Date as Finnish-style d.M.yyyy (no leading zeros).
+export function formatDate(date: Date): string {
+  return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
+}
+
+// Compact d.M. (no year) for tight UI labels.
+export function formatDayShort(date: Date): string {
+  return `${date.getDate()}.${date.getMonth() + 1}.`;
+}

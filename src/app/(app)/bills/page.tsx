@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { resolveDayThisMonth } from "@/lib/date-utils";
 import { useLocale } from "@/lib/locale-context";
 import { useEvent } from "@/lib/use-events";
 import { Card } from "@/components/ui/card";
@@ -298,7 +299,7 @@ export default function BillsPage() {
                     </button>
                   </div>
                   <p className="list-item-meta">
-                    {bill.category ? `${bill.category} · ` : ""}{locale === "fi" ? "Erääntyy" : t.bills.dueOn} {bill.due_day}. {t.bills.dayOfMonth}
+                    {bill.category ? `${bill.category} · ` : ""}{locale === "fi" ? "Erääntyy" : t.bills.dueOn} {resolveDayThisMonth(bill.due_day)}. {t.bills.dayOfMonth}
                     {bill.patterns.length > 0 && (
                       <span className="list-item-patterns"> – {bill.patterns.map((p) => p.payee_pattern).join(", ")}</span>
                     )}

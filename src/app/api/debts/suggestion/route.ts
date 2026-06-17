@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
+import { dateForDayInMonth, formatDate } from "@/lib/date-utils";
 import { spawn } from "child_process";
 
 export async function GET(request: Request) {
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       const rate = override?.interest_rate ?? 0;
       const payment = override?.minimum_payment ?? 0;
       const dueDay = override?.due_day ?? 0;
-      return `${a.name}: ${balance.toFixed(0)} euros${rate > 0 ? ` (${rate}% APR)` : ""}${payment > 0 ? `, ${payment} euros/month` : ""}${dueDay > 0 ? ` (due ${dueDay}th)` : ""}`;
+      return `${a.name}: ${balance.toFixed(0)} euros${rate > 0 ? ` (${rate}% APR)` : ""}${payment > 0 ? `, ${payment} euros/month` : ""}${dueDay > 0 ? ` (due ${formatDate(dateForDayInMonth(dueDay))})` : ""}`;
     });
 
     const householdProfile = getHouseholdSetting("household_profile") || "";

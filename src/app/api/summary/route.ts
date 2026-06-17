@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId, getHouseholdSetting } from "@/lib/household";
 import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
+import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
 import { spawn } from "child_process";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -161,7 +162,7 @@ export async function GET(request: Request) {
     );
 
     const upcomingIncome = incomeSources
-      .filter((i) => i.expected_day > now.getDate())
+      .filter((i) => resolveDayInMonth(i.expected_day, now.getFullYear(), now.getMonth()) > now.getDate())
       .reduce((s, i) => s + i.amount, 0);
 
     const totalExpectedMonthlyIncome = Math.max(monthIncomeTotal, incomeSources.reduce((s, i) => s + i.amount, 0));
@@ -185,7 +186,7 @@ export async function GET(request: Request) {
       .join(", ");
 
     const incomeList = incomeSources.length > 0
-      ? incomeSources.map((i) => `${i.name}: ${i.amount} euros (day ${i.expected_day})`).join(", ")
+      ? incomeSources.map((i) => `${i.name}: ${i.amount} euros (around ${formatDate(dateForDayInMonth(i.expected_day, now))})`).join(", ")
       : "No income sources configured";
 
     // Get debts with overrides
@@ -223,8 +224,13 @@ export async function GET(request: Request) {
     const projectedRemainingExpenses = Math.round(unpaidBillsAmount + (dailyDiscretionary * daysLeft));
     const projectedTotalExpenses = Math.round(monthActivity + projectedRemainingExpenses);
 
-    // Daily budget via shared cash flow simulation
-    const resolveDay = (day: number) => day === 0 ? daysInMonth : day;
+    // Daily budget via shared cash flow simulation. resolveDay handles day 0 (= last day) and clamps
+    // any day past the month's end, so e.g. day 31 in June resolves to 30. dateOfDay/dateOfDayNextMonth
+    // render a real calendar date so the prompt never carries an impossible date like 31.6.
+    const resolveDay = (day: number) => resolveDayInMonth(day, now.getFullYear(), now.getMonth());
+    const dateOfDay = (day: number) => formatDate(dateForDayInMonth(day, now));
+    const nextMonthFrom = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const dateOfDayNextMonth = (day: number) => formatDate(dateForDayInMonth(day, nextMonthFrom));
     const { calculateDailyBudget } = await import("@/lib/daily-budget");
 
     const incomeMatches = db
@@ -285,7 +291,7 @@ Pre-calculated analysis:
 - Current checking+savings balance: ${Math.round(checkingSavings)} euros
 - Days passed: ${daysPassed}, days left in month: ${daysLeft}
 - Income received so far: ${Math.round(monthIncomeTotal)} euros
-- Income still coming: ${Math.round(upcomingIncome)} euros (${incomeSources.filter((i) => i.expected_day > now.getDate()).map((i) => `${i.name}: ${i.amount} euros on day ${i.expected_day}`).join(", ") || "none"})
+- Income still coming: ${Math.round(upcomingIncome)} euros (${incomeSources.filter((i) => resolveDay(i.expected_day) > now.getDate()).map((i) => `${i.name}: ${i.amount} euros on ${dateOfDay(i.expected_day)}`).join(", ") || "none"})
 - Total expected monthly income: ${totalExpectedMonthlyIncome} euros
 - Spending so far this month: ${Math.round(monthActivity)} euros
 - Of which fixed bills already paid: ${Math.round(paidBillsAmount)} euros
@@ -303,19 +309,19 @@ Pre-calculated analysis:
 - Top individual expenses: ${topExpenses}
 - Bills this month: ${recurringBills.length > 0 ? recurringBills.map((b) => {
       const isPaid = matchedBillIds.has(b.id);
-      const isOverdue = !isPaid && b.due_day < now.getDate();
-      return `${b.name}: ${b.amount} euros (due ${b.due_day}th${isPaid ? " - PAID" : isOverdue ? " - OVERDUE" : " - upcoming"})`;
+      const isOverdue = !isPaid && resolveDay(b.due_day) < now.getDate();
+      return `${b.name}: ${b.amount} euros (due ${dateOfDay(b.due_day)}${isPaid ? " - PAID" : isOverdue ? " - OVERDUE" : " - upcoming"})`;
     }).join(", ") : "none configured"}
 - Upcoming next month obligations (before next income): ${(() => {
       const nextIncDay = incomeSources.length > 0 ? Math.min(...incomeSources.map((i) => i.expected_day || 31)) : 31;
       const nextBills = recurringBills.filter((b) => b.due_day <= nextIncDay);
       const nextDebts = debtAccounts.filter((d) => d.dueDay <= nextIncDay && d.payment > 0);
-      const items = [...nextBills.map((b) => `${b.name}: ${b.amount} euros (day ${b.due_day})`), ...nextDebts.map((d) => `${d.name}: ${d.payment} euros (day ${d.dueDay})`)];
-      return items.length > 0 ? items.join(", ") + ` — total ${Math.round(nextBills.reduce((s, b) => s + b.amount, 0) + nextDebts.reduce((s, d) => s + d.payment, 0))} euros before next income on day ${nextIncDay}` : "none";
+      const items = [...nextBills.map((b) => `${b.name}: ${b.amount} euros (${dateOfDayNextMonth(b.due_day)})`), ...nextDebts.map((d) => `${d.name}: ${d.payment} euros (${dateOfDayNextMonth(d.dueDay)})`)];
+      return items.length > 0 ? items.join(", ") + ` — total ${Math.round(nextBills.reduce((s, b) => s + b.amount, 0) + nextDebts.reduce((s, d) => s + d.payment, 0))} euros before next income on ${dateOfDayNextMonth(nextIncDay)}` : "none";
     })()}
 - Total monthly bills: ${recurringBills.reduce((s, b) => s + b.amount, 0)} euros
 - Income sources: ${incomeList}
-- Debts: ${debtAccounts.length > 0 ? debtAccounts.map((d) => `${d.name}: ${d.balance} euros${d.rate > 0 ? ` (${d.rate}% APR)` : ""}${d.payment > 0 ? `, ${d.payment} euros/month` : ""}${d.dueDay > 0 ? ` (due ${d.dueDay}th)` : ""}`).join(", ") : "none"}
+- Debts: ${debtAccounts.length > 0 ? debtAccounts.map((d) => `${d.name}: ${d.balance} euros${d.rate > 0 ? ` (${d.rate}% APR)` : ""}${d.payment > 0 ? `, ${d.payment} euros/month` : ""}${d.dueDay > 0 ? ` (due ${dateOfDay(d.dueDay)})` : ""}`).join(", ") : "none"}
 - Total debt: ${debtAccounts.reduce((s: number, d: { balance: number }) => s + d.balance, 0)} euros
 - Investments: ${investmentAccounts.length > 0 ? investmentAccounts.map((i) => `${i.name}: ${i.balance} euros${i.monthly > 0 ? `, ${i.monthly} euros/month` : ""}${i.returnPct > 0 ? ` (${i.returnPct}% return)` : ""}`).join(", ") : "none"}
 - Total investment value: ${investmentAccounts.reduce((s: number, i: { balance: number }) => s + i.balance, 0)} euros

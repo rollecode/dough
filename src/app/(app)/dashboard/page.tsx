@@ -251,7 +251,8 @@ export default function DashboardPage() {
   // Upcoming income = active, unmatched income sources with expected_day still ahead
   const today = now.getDate();
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const resolveDay = (day: number) => day === 0 ? lastDayOfMonth : day;
+  // day 0 = last day of month; also clamp any day past the month's end (e.g. 31 in June -> 30)
+  const resolveDay = (day: number) => day === 0 ? lastDayOfMonth : Math.min(day, lastDayOfMonth);
   const upcomingIncome = incomes
     .filter((i) => i.is_active && resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
     .reduce((s, i) => s + i.amount, 0);
@@ -669,7 +670,7 @@ export default function DashboardPage() {
           const next = incomes
             .filter((i) => i.is_active && resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
             .sort((a, b) => a.expected_day - b.expected_day)[0];
-          if (next) return `${next.expected_day}.${now.getMonth() + 1}. – ${next.name}`;
+          if (next) return `${resolveDay(next.expected_day)}.${now.getMonth() + 1}. – ${next.name}`;
           // Wrap to next month
           const nextMonth = incomes.filter((i) => i.is_active).sort((a, b) => resolveDay(a.expected_day) - resolveDay(b.expected_day))[0];
           if (!nextMonth) return "";

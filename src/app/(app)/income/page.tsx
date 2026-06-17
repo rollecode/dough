@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { resolveDayInMonth } from "@/lib/date-utils";
 import { useLocale } from "@/lib/locale-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -207,7 +208,12 @@ export default function IncomePage() {
     } catch (err) { console.error("[income] Delete error:", err); }
   };
 
-  const formatDay = (day: number) => day === 0 ? (locale === "fi" ? "kuun viimeinen" : "last day") : `${day}.`;
+  // Clamp to the current month so a day past its end (e.g. 31 in June) never shows as an impossible date.
+  const formatDay = (day: number) => {
+    if (day === 0) return locale === "fi" ? "kuun viimeinen" : "last day";
+    const now = new Date();
+    return `${resolveDayInMonth(day, now.getFullYear(), now.getMonth())}.`;
+  };
 
   const active = incomes.filter((i) => i.is_active);
   const monthlyTotal = active.reduce((s, i) => s + i.amount, 0);

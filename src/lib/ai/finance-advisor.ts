@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import { getHouseholdSetting } from "@/lib/household";
 import { getAiModel } from "./model";
 import { DEFAULT_CHAT_GUIDELINES } from "./default-prompts";
+import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
 
 interface FinancialContext {
   totalBalance: number;
@@ -41,6 +42,10 @@ function buildSystemPrompt(ctx: FinancialContext): string {
   const dayOfMonth = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = daysInMonth - dayOfMonth;
+  // Resolve a stored day-of-month (0 = last day) to this month's real day and date, so the prompt
+  // never carries an impossible date like 31.6.
+  const resolvedDay = (day: number) => resolveDayInMonth(day, now.getFullYear(), now.getMonth());
+  const dateOfDay = (day: number) => formatDate(dateForDayInMonth(day, now));
 
   return `You are Dougie, a personal AI financial advisor for the Dough app.${ctx.householdProfile ? ` Household: ${ctx.householdProfile}.` : ""} You have access to their real financial data. Your name is Dougie but do not repeat it or use it unnecessarily. Just be natural.
 
@@ -65,8 +70,8 @@ Current financial snapshot:
 - Days left in month: ${ctx.daysUntilNextIncome}
 - Income RECEIVED so far this month: ${ctx.monthlyIncome} euros
 - Total EXPECTED monthly income: ${ctx.incomeSources.reduce((s, i) => s + i.amount, 0)} euros
-- Income sources: ${ctx.incomeSources.map(i => `${i.name}: ${i.amount} euros (day ${i.expectedDay})`).join(", ") || "none configured"}
-- MONEY TIMELINE: The household has ${ctx.totalBalance} euros NOW. The daily budget is based ONLY on current balance (no future income counted). ${ctx.incomeSources.filter(i => i.expectedDay > dayOfMonth).map(i => `${i.name} (${i.amount} euros) arrives day ${i.expectedDay}`).join(". ") || "No more income this month"}. When income arrives, budget recalculates automatically. Until then, they must live within ${ctx.dailyBudget} euros/day from current balance. Be conservative.
+- Income sources: ${ctx.incomeSources.map(i => `${i.name}: ${i.amount} euros (around ${dateOfDay(i.expectedDay)})`).join(", ") || "none configured"}
+- MONEY TIMELINE: The household has ${ctx.totalBalance} euros NOW. The daily budget is based ONLY on current balance (no future income counted). ${ctx.incomeSources.filter(i => resolvedDay(i.expectedDay) > dayOfMonth).map(i => `${i.name} (${i.amount} euros) arrives ${dateOfDay(i.expectedDay)}`).join(". ") || "No more income this month"}. When income arrives, budget recalculates automatically. Until then, they must live within ${ctx.dailyBudget} euros/day from current balance. Be conservative.
 - Monthly expenses so far (excluding transfers): ${ctx.monthlyExpenses} euros
 - TODAY'S discretionary spending: ${ctx.todaySpent} euros. Remaining today: ${Math.max(0, ctx.dailyBudget - ctx.todaySpent).toFixed(2)} euros.
 - TODAY'S fixed costs paid (bills, debts, investments): ${(ctx as any).todayFixedCosts || 0} euros. These are already accounted for in the budget and should NOT be counted against the daily budget.
@@ -76,7 +81,7 @@ ${ctx.accounts.length > 0 ? `Accounts (ALWAYS consider ALL accounts when giving 
 ${ctx.accounts.map(a => `- ${a.name}: ${a.balance} euros (${a.type})${a.note ? `, ${a.note}` : ""}${(a as Record<string, unknown>).excludedFromBudget ? " [excluded from daily budget]" : ""}`).join("\n")}` : ""}
 
 Upcoming bills and subscriptions this month:
-${ctx.upcomingBills.length > 0 ? ctx.upcomingBills.map(b => `- ${b.name}: ${b.amount} euros (due ${b.dueDay}th${b.status ? ` - ${b.status.toUpperCase()}` : ""}${(b as Record<string, unknown>).type === "subscription" ? " [subscription]" : " [bill]"}${(b as Record<string, unknown>).isPriority ? " ⚠ MUST-PAY" : ""})`).join("\n") : "- None configured"}
+${ctx.upcomingBills.length > 0 ? ctx.upcomingBills.map(b => `- ${b.name}: ${b.amount} euros (due ${dateOfDay(b.dueDay)}${b.status ? ` - ${b.status.toUpperCase()}` : ""}${(b as Record<string, unknown>).type === "subscription" ? " [subscription]" : " [bill]"}${(b as Record<string, unknown>).isPriority ? " ⚠ MUST-PAY" : ""})`).join("\n") : "- None configured"}
 - Total unpaid obligations: ${ctx.upcomingBills.filter(b => b.status !== "paid").reduce((s, b) => s + b.amount, 0).toFixed(0)} euros
 - Must-pay unpaid: ${ctx.upcomingBills.filter(b => b.status !== "paid" && (b as Record<string, unknown>).isPriority).reduce((s, b) => s + b.amount, 0).toFixed(0)} euros
 Note: Items marked MUST-PAY are always reserved from the budget. Other bills can be delayed if needed.
@@ -85,7 +90,7 @@ Recent transactions (last 10, with dates):
 ${ctx.recentTransactions.slice(0, 10).map(t => `- ${t.date}: ${t.payee} - ${Math.abs(t.amount)} euros (${t.category})${t.spender ? ` [${t.spender}]` : ""}`).join("\n")}
 
 Debts:
-${ctx.debts.length > 0 ? ctx.debts.map(d => `- ${d.name}: ${d.remaining} euros remaining${d.rate > 0 ? ` (${d.rate}% APR)` : ""}${d.minimumPayment ? `, ${d.minimumPayment} euros/month` : ""}${d.dueDay ? ` (due ${d.dueDay}th)` : ""}`).join("\n") : "- None"}
+${ctx.debts.length > 0 ? ctx.debts.map(d => `- ${d.name}: ${d.remaining} euros remaining${d.rate > 0 ? ` (${d.rate}% APR)` : ""}${d.minimumPayment ? `, ${d.minimumPayment} euros/month` : ""}${d.dueDay ? ` (due ${dateOfDay(d.dueDay)})` : ""}`).join("\n") : "- None"}
 
 Investments:
 ${ctx.investments.length > 0 ? ctx.investments.map(i => `- ${i.name}: ${i.balance} euros${i.monthlyContribution > 0 ? `, ${i.monthlyContribution} euros/month contribution` : ""}${i.expectedReturn > 0 ? `, ${i.expectedReturn}% expected return` : ""}`).join("\n") : "- None"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { resolveDayThisMonth } from "@/lib/date-utils";
 import { useLocale } from "@/lib/locale-context";
 import { useEvent } from "@/lib/use-events";
 import { Card } from "@/components/ui/card";
@@ -252,7 +253,7 @@ export default function SubscriptionsPage() {
                     </button>
                   </div>
                   <p className="subscription-card-meta">
-                    {locale === "fi" ? "Veloitus" : "Billing"} {sub.due_day}. {locale === "fi" ? "päivä" : ""}
+                    {locale === "fi" ? "Veloitus" : "Billing"} {resolveDayThisMonth(sub.due_day)}. {locale === "fi" ? "päivä" : ""}
                     {sub.patterns.length > 0 && <span className="list-item-patterns"> – {sub.patterns.map((p) => p.pattern).join(", ")}</span>}
                   </p>
                 </div>

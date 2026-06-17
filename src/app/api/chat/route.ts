@@ -220,7 +220,8 @@ export async function POST(request: Request) {
             .prepare("SELECT id, name, amount, expected_day FROM income_sources WHERE is_active = 1 ORDER BY expected_day ASC")
             .all() as { id: number; name: string; amount: number; expected_day: number }[];
 
-          const resolveDay = (day: number) => day === 0 ? daysInMonth : day;
+          // day 0 = last day of month; also clamp any day past the month's end (e.g. 31 in June -> 30)
+          const resolveDay = (day: number) => day === 0 ? daysInMonth : Math.min(day, daysInMonth);
 
           // Daily budget via shared cash flow simulation — respect bills setting
           const { calculateDailyBudget } = await import("@/lib/daily-budget");
@@ -280,7 +281,7 @@ export async function POST(request: Request) {
             .join(", ");
 
           const incomeBeforePayday = incomeWithIds
-            .filter((i) => i.expected_day >= today && i.expected_day < daysInMonth && !matchedIncomeIds.has(i.id))
+            .filter((i) => { const d = resolveDay(i.expected_day); return d >= today && d < daysInMonth && !matchedIncomeIds.has(i.id); })
             .reduce((s, i) => s + i.amount, 0);
 
           // Available before payday = current balance + small incomes before payday - bills - debts
