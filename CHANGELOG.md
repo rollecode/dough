@@ -1,3 +1,8 @@
+### 2.29.0: 2026-06-17
+
+* Categorise unmatched Synci inflows as Ready to Assign income instead of deleting them, so income is never silently removed and always counts in the budget
+* Show owner, account name, custom name and the account number tail in the Synci account mapping so accounts that share a number are distinguishable
+
 ### 2.28.0: 2026-06-17
 
 * Show the mapped account name instead of its raw id in the Synci account mapping
