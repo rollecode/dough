@@ -347,8 +347,7 @@ export async function POST(request: Request) {
       // transfer is itself a transfer (e.g. money moved in from an account Synci does not sync, where
       // the bank shows the owner's own name as the payee). Mark it so it stops counting as income.
       // The payee list is learned from confirmed transfers, never hardcoded. Matching is on sorted
-      // name tokens so a reordered name (e.g. "Laukkarinen Rolle Roni Mikael" vs the other order)
-      // still matches.
+      // name tokens so a reordered name (surname-first vs first-name-first) still matches.
       const normPayee = (p: string) => p.toLowerCase().trim().split(/\s+/).filter(Boolean).sort().join(" ");
       let knownTransferPayees = new Set<string>();
       try {

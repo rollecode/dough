@@ -36,7 +36,7 @@ import { F } from "@/components/ui/f";
 
 type FilterType = "all" | "income" | "expenses" | "transfers";
 
-// URL-friendly slug for an account name, e.g. "Veeran tili" -> "veeran-tili". Used so an account's
+// URL-friendly slug for an account name, e.g. "My Checking" -> "my-checking". Used so an account's
 // transactions are deep-linkable at /transactions/<slug>.
 export function accountSlug(name: string): string {
   return name.toLowerCase()
