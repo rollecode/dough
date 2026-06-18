@@ -4,12 +4,12 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 
-const ACTION_WIDTH = 76; // px of edit action revealed on a full swipe
-const OPEN_THRESHOLD = 40; // px past which a swipe snaps open instead of back
+const ACTION_WIDTH = 56; // px of the narrow edit action revealed on a full swipe
+const OPEN_THRESHOLD = 28; // px past which a swipe snaps open instead of back
 
-// A list row that navigates on tap and reveals an edit action when swiped left or right
-// (iPhone-style). Editing is rare here, so it is tucked behind the swipe. On desktop, where there
-// is no swipe, the edit button appears on hover instead.
+// A list row that navigates on tap and reveals a narrow edit action when swiped left or right
+// (iPhone-style). Works with both touch and the mouse via pointer events. Editing is rare here, so
+// it is tucked behind the swipe.
 export function SwipeRow({
   href,
   onEdit,
@@ -28,37 +28,45 @@ export function SwipeRow({
   const router = useRouter();
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
   const startX = useRef(0);
   const startY = useRef(0);
   const base = useRef(0);
   const moved = useRef(false);
-  const locked = useRef<"none" | "horizontal" | "vertical">("none");
+  const axis = useRef<"none" | "x" | "y">("none");
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if ((e.target as HTMLElement).closest(".acct-grip")) return; // leave the reorder grip alone
+    startX.current = e.clientX;
+    startY.current = e.clientY;
     base.current = offset;
     moved.current = false;
-    locked.current = "none";
+    axis.current = "none";
+    draggingRef.current = true;
     setDragging(true);
   };
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    const dx = e.touches[0].clientX - startX.current;
-    const dy = e.touches[0].clientY - startY.current;
-    if (locked.current === "none" && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
-      locked.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
+    if (axis.current === "none" && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+      axis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      if (axis.current === "x") {
+        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      }
     }
-    if (locked.current !== "horizontal") return; // let the page scroll vertically
+    if (axis.current !== "x") return; // vertical drag: let the page scroll
     moved.current = true;
     setOffset(Math.max(-ACTION_WIDTH, Math.min(ACTION_WIDTH, base.current + dx)));
   };
 
-  const onTouchEnd = () => {
+  const endDrag = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
     setDragging(false);
-    if (offset > OPEN_THRESHOLD) setOffset(ACTION_WIDTH);
-    else if (offset < -OPEN_THRESHOLD) setOffset(-ACTION_WIDTH);
-    else setOffset(0);
+    setOffset((o) => (o > OPEN_THRESHOLD ? ACTION_WIDTH : o < -OPEN_THRESHOLD ? -ACTION_WIDTH : 0));
   };
 
   const handleClick = () => {
@@ -81,12 +89,12 @@ export function SwipeRow({
       <button type="button" className="swipe-row-edit is-right" onClick={handleEdit} aria-label={editLabel} tabIndex={-1}><Pencil /></button>
       <div
         className={`swipe-row-fg ${rowClassName} ${dragging ? "is-swiping" : ""}`}
-        // Only drive the transform inline during an actual touch swipe; at rest leave it unset so
-        // the desktop hover-peek (CSS) can slide the row aside without the inline value overriding it.
+        // Inline transform only while actively swiping; otherwise unset so it sits flush at rest.
         style={offset !== 0 ? { transform: `translateX(${offset}px)` } : undefined}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
         onClick={handleClick}
       >
         {children}

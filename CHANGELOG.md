@@ -1,3 +1,7 @@
+### 2.32.2: 2026-06-18
+
+* Make the account edit a narrow swipe action that also works with the mouse, revealing a purple edit pill flush to the edge with a rounded inner side; no hover behavior
+
 ### 2.32.1: 2026-06-18
 
 * Make the account edit affordance a swipe everywhere: touch swipes the row, desktop hover peeks a recessed purple edit pill in from the side instead of overlaying the balance
