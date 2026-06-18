@@ -487,6 +487,14 @@ function initializeDb(db: Database.Database) {
     console.info("[db] Adding debt_account_id column to categories");
     db.exec("ALTER TABLE categories ADD COLUMN debt_account_id TEXT");
   }
+  if (categoryCols.length > 0 && !categoryCols.some((c) => c.name === "savings_goal_id")) {
+    console.info("[db] Adding savings_goal_id column to categories");
+    db.exec("ALTER TABLE categories ADD COLUMN savings_goal_id INTEGER");
+  }
+  if (categoryCols.length > 0 && !categoryCols.some((c) => c.name === "investment_account_id")) {
+    console.info("[db] Adding investment_account_id column to categories");
+    db.exec("ALTER TABLE categories ADD COLUMN investment_account_id TEXT");
+  }
 
   // Add session_version to users (bumping it invalidates all existing session tokens)
   const sessionVerCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];

@@ -11,10 +11,25 @@ export async function GET() {
     const db = getDb();
     const goals = db
       .prepare("SELECT * FROM savings_goals ORDER BY created_at ASC")
-      .all();
+      .all() as { id: number; saved_amount: number }[];
 
-    console.debug("[savings-goals] Loaded", (goals as unknown[]).length, "savings goals");
-    return NextResponse.json({ goals });
+    // A goal linked to a budget category derives its saved progress from what has been assigned to
+    // that category (so assigning in Budget reflects here). Unlinked goals keep their stored amount.
+    // This is read-time derivation - it never writes, so balances and stored data stay untouched.
+    const linkRows = db
+      .prepare("SELECT id AS category_id, savings_goal_id FROM categories WHERE savings_goal_id IS NOT NULL")
+      .all() as { category_id: number; savings_goal_id: number }[];
+    const assignedByGoal = new Map<number, number>();
+    for (const r of linkRows) {
+      const v = (db.prepare("SELECT COALESCE(SUM(budgeted), 0) AS v FROM monthly_category_budgets WHERE category_id = ?").get(r.category_id) as { v: number }).v || 0;
+      assignedByGoal.set(r.savings_goal_id, (assignedByGoal.get(r.savings_goal_id) || 0) + v);
+    }
+    const withDerived = goals.map((g) =>
+      assignedByGoal.has(g.id) ? { ...g, saved_amount: Math.round(assignedByGoal.get(g.id)! * 100) / 100 } : g
+    );
+
+    console.debug("[savings-goals] Loaded", withDerived.length, "savings goals,", assignedByGoal.size, "linked to budget");
+    return NextResponse.json({ goals: withDerived });
   } catch (error) {
     console.error("[savings-goals] GET error:", error);
     return NextResponse.json({ goals: [] }, { status: 500 });

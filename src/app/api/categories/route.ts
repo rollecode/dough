@@ -78,16 +78,20 @@ export async function PUT(request: Request) {
     if (body.color !== undefined) { updates.push("color = ?"); values.push(String(body.color).trim()); }
     if (body.is_active !== undefined) { updates.push("is_active = ?"); values.push(body.is_active ? 1 : 0); }
     if (body.sort_order !== undefined) { updates.push("sort_order = ?"); values.push(parseInt(String(body.sort_order), 10) || 0); }
-    // Link/unlink to a subscription, bill or debt - mutually exclusive, so setting one clears the
-    // others. null = unlink. History in monthly_category_budgets and transactions is untouched,
-    // so unlinking never disturbs past budget data.
-    if (body.subscription_id !== undefined || body.bill_id !== undefined || body.debt_account_id !== undefined) {
+    // Link/unlink to a subscription, bill, debt, savings goal or investment - mutually exclusive, so
+    // setting one clears the others. null = unlink. History in monthly_category_budgets and
+    // transactions is untouched, so unlinking never disturbs past budget data.
+    if (body.subscription_id !== undefined || body.bill_id !== undefined || body.debt_account_id !== undefined || body.savings_goal_id !== undefined || body.investment_account_id !== undefined) {
       const sid = body.subscription_id != null ? (parseInt(String(body.subscription_id), 10) || null) : null;
       const bid = body.bill_id != null ? (parseInt(String(body.bill_id), 10) || null) : null;
       const did = body.debt_account_id != null ? String(body.debt_account_id) : null;
+      const gid = body.savings_goal_id != null ? (parseInt(String(body.savings_goal_id), 10) || null) : null;
+      const iid = body.investment_account_id != null ? String(body.investment_account_id) : null;
       updates.push("subscription_id = ?"); values.push(sid);
       updates.push("bill_id = ?"); values.push(bid);
       updates.push("debt_account_id = ?"); values.push(did);
+      updates.push("savings_goal_id = ?"); values.push(gid);
+      updates.push("investment_account_id = ?"); values.push(iid);
     }
 
     if (updates.length === 0) return NextResponse.json({ success: true });

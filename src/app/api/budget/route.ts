@@ -15,6 +15,8 @@ interface CategoryRow {
   subscription_id: number | null;
   bill_id: number | null;
   debt_account_id: string | null;
+  savings_goal_id: number | null;
+  investment_account_id: string | null;
 }
 
 interface BudgetedRow {
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
 
     const db = getDb();
     const cats = db
-      .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active, subscription_id, bill_id, debt_account_id FROM categories ORDER BY group_name, sort_order, name")
+      .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active, subscription_id, bill_id, debt_account_id, savings_goal_id, investment_account_id FROM categories ORDER BY group_name, sort_order, name")
       .all() as CategoryRow[];
 
     // Apply saved group ordering (stable sort keeps within-group sort_order from the query)
@@ -106,6 +108,19 @@ export async function GET(request: Request) {
         "SELECT a.id, a.name, COALESCE(o.minimum_payment, 0) AS amount FROM ynab_accounts a LEFT JOIN debt_overrides o ON o.ynab_account_id = a.id"
       ).all() as { id: string; name: string; amount: number }[]).map((d) => [d.id, d])
     );
+    // Investments supply their monthly contribution as the category target (display/target-only).
+    const investmentMap = new Map(
+      (db.prepare(
+        "SELECT a.id, a.name, COALESCE(o.monthly_contribution, 0) AS amount FROM ynab_accounts a LEFT JOIN investment_overrides o ON o.ynab_account_id = a.id WHERE a.type = 'otherAsset' AND a.closed = 0"
+      ).all() as { id: string; name: string; amount: number }[]).map((i) => [i.id, i])
+    );
+    // Savings goals supply a by-date target (reach the goal amount by its date). Progress is derived
+    // from assignments in the savings-goals API, so assigning here reflects there without mutation.
+    const savingsGoalMap = new Map(
+      (db.prepare(
+        "SELECT id, name, target_amount, COALESCE(target_date, '') AS target_date FROM savings_goals WHERE is_active = 1"
+      ).all() as { id: number; name: string; target_amount: number; target_date: string }[]).map((g) => [g.id, g])
+    );
 
     const snoozedRows = db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[];
     const snoozedSet = new Set(snoozedRows.map((r) => r.category_id));
@@ -116,16 +131,22 @@ export async function GET(request: Request) {
       const carry = carryoverThrough(db, c.id, c.name, month);
       const available = Math.round((carry + b - a) * 100) / 100;
       const t = targetMap.get(c.id);
-      // A linked subscription/bill/debt supplies the target (its monthly amount) and display
-      // name, overriding any manual target. Links are mutually exclusive.
+      // A linked subscription/bill/debt/investment/savings goal supplies the target and display
+      // name, overriding any manual target. Links are mutually exclusive. A savings goal is special:
+      // it sets a by-date target (reach the goal amount by its date); the others set a monthly amount.
       const linkedSub = c.subscription_id ? subMap.get(c.subscription_id) : undefined;
       const linkedBill = !linkedSub && c.bill_id ? billMap.get(c.bill_id) : undefined;
       const linkedDebt = !linkedSub && !linkedBill && c.debt_account_id ? debtMap.get(c.debt_account_id) : undefined;
-      const linked = linkedSub || linkedBill || linkedDebt;
-      const linked_type = linkedSub ? "subscription" : linkedBill ? "bill" : linkedDebt ? "debt" : "";
-      const target_amount = linked && linked.amount > 0 ? linked.amount : (linked ? 0 : (t?.monthly_amount || 0));
-      const target_cadence = linked ? "monthly" : (t?.cadence || "monthly");
-      const target_date = linked ? "" : (t?.target_date || "");
+      const linkedInvest = !linkedSub && !linkedBill && !linkedDebt && c.investment_account_id ? investmentMap.get(c.investment_account_id) : undefined;
+      const linkedGoal = !linkedSub && !linkedBill && !linkedDebt && !linkedInvest && c.savings_goal_id ? savingsGoalMap.get(c.savings_goal_id) : undefined;
+      const linked = linkedSub || linkedBill || linkedDebt || linkedInvest;
+      const goalByDate = !!(linkedGoal && linkedGoal.target_date);
+      const linked_type = linkedSub ? "subscription" : linkedBill ? "bill" : linkedDebt ? "debt" : linkedInvest ? "investment" : linkedGoal ? "savings" : "";
+      const target_amount = linkedGoal
+        ? (goalByDate ? (linkedGoal.target_amount || 0) : 0)
+        : (linked && linked.amount > 0 ? linked.amount : (linked ? 0 : (t?.monthly_amount || 0)));
+      const target_cadence = goalByDate ? "by_date" : (linked ? "monthly" : (t?.cadence || "monthly"));
+      const target_date = goalByDate ? (linkedGoal!.target_date) : (linked ? "" : (t?.target_date || ""));
       // The amount needed this month. A "by_date" target spreads (goal − already saved) over the
       // months left; every other cadence distributes its per-period amount across the month.
       const target_monthly = target_amount > 0
@@ -157,9 +178,11 @@ export async function GET(request: Request) {
         subscription_id: c.subscription_id ?? null,
         bill_id: c.bill_id ?? null,
         debt_account_id: c.debt_account_id ?? null,
+        savings_goal_id: c.savings_goal_id ?? null,
+        investment_account_id: c.investment_account_id ?? null,
         subscription_name: linkedSub?.name || "",
         linked_type,
-        linked_name: linked?.name || "",
+        linked_name: (linked || linkedGoal)?.name || "",
       };
     });
 
