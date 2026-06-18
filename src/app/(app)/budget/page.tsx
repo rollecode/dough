@@ -50,8 +50,10 @@ interface BudgetCategory {
   subscription_id: number | null;
   bill_id: number | null;
   debt_account_id: string | null;
+  savings_goal_id: number | null;
+  investment_account_id: string | null;
   subscription_name: string;
-  linked_type: "" | "subscription" | "bill" | "debt";
+  linked_type: "" | "subscription" | "bill" | "debt" | "savings" | "investment";
   linked_name: string;
 }
 
@@ -155,6 +157,8 @@ export default function BudgetPage() {
   const [subscriptions, setSubscriptions] = useState<{ id: number; name: string; amount: number }[]>([]);
   const [bills, setBills] = useState<{ id: number; name: string; amount: number }[]>([]);
   const [debts, setDebts] = useState<{ id: string; name: string; amount: number }[]>([]);
+  const [savingsGoalsLink, setSavingsGoalsLink] = useState<{ id: number; name: string; amount: number }[]>([]);
+  const [investmentsLink, setInvestmentsLink] = useState<{ id: string; name: string; amount: number }[]>([]);
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [inspectorId, setInspectorId] = useState<number | null>(null);
   const [catSaved, setCatSaved] = useState(false);
@@ -231,6 +235,16 @@ export default function BudgetPage() {
     fetch("/api/debts").then((r) => r.json()).then((d) => {
       if (Array.isArray(d.debts)) {
         setDebts(d.debts.map((x: { id: string; name: string; minimumPayment: number }) => ({ id: x.id, name: x.name, amount: x.minimumPayment || 0 })));
+      }
+    }).catch(() => {});
+    fetch("/api/savings-goals").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.goals)) {
+        setSavingsGoalsLink(d.goals.filter((g: { is_active: number }) => g.is_active).map((g: { id: number; name: string; target_amount: number }) => ({ id: g.id, name: g.name, amount: g.target_amount || 0 })));
+      }
+    }).catch(() => {});
+    fetch("/api/investments").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d.investments)) {
+        setInvestmentsLink(d.investments.map((x: { id: string; name: string; monthlyContribution?: number }) => ({ id: x.id, name: x.name, amount: x.monthlyContribution || 0 })));
       }
     }).catch(() => {});
   }, []);
@@ -474,15 +488,17 @@ export default function BudgetPage() {
     }
   };
 
-  // Link a category to a subscription/bill/debt, or unlink ("none"). Links are mutually
-  // exclusive server-side; unlinking never touches budget history.
+  // Link a category to a subscription/bill/debt/savings goal/investment, or unlink ("none"). Links
+  // are mutually exclusive server-side; unlinking never touches budget history.
   const linkCategory = async (id: number, link: string) => {
-    const body: { id: number; subscription_id: number | null; bill_id: number | null; debt_account_id: string | null } = {
-      id, subscription_id: null, bill_id: null, debt_account_id: null,
+    const body: { id: number; subscription_id: number | null; bill_id: number | null; debt_account_id: string | null; savings_goal_id: number | null; investment_account_id: string | null } = {
+      id, subscription_id: null, bill_id: null, debt_account_id: null, savings_goal_id: null, investment_account_id: null,
     };
     if (link.startsWith("sub:")) body.subscription_id = Number(link.slice(4));
     else if (link.startsWith("bill:")) body.bill_id = Number(link.slice(5));
     else if (link.startsWith("debt:")) body.debt_account_id = link.slice(5);
+    else if (link.startsWith("goal:")) body.savings_goal_id = Number(link.slice(5));
+    else if (link.startsWith("inv:")) body.investment_account_id = link.slice(4);
     try {
       await fetch("/api/categories", {
         method: "PUT",
@@ -1042,9 +1058,13 @@ export default function BudgetPage() {
             const linkedSubIds = new Set(cats.filter((o) => o.id !== c.id && o.subscription_id != null).map((o) => o.subscription_id));
             const linkedBillIds = new Set(cats.filter((o) => o.id !== c.id && o.bill_id != null).map((o) => o.bill_id));
             const linkedDebtIds = new Set(cats.filter((o) => o.id !== c.id && o.debt_account_id != null).map((o) => o.debt_account_id));
+            const linkedGoalIds = new Set(cats.filter((o) => o.id !== c.id && o.savings_goal_id != null).map((o) => o.savings_goal_id));
+            const linkedInvIds = new Set(cats.filter((o) => o.id !== c.id && o.investment_account_id != null).map((o) => o.investment_account_id));
             const availSubs = subscriptions.filter((s) => !linkedSubIds.has(s.id));
             const availBills = bills.filter((b) => !linkedBillIds.has(b.id));
             const availDebts = debts.filter((d) => !linkedDebtIds.has(d.id));
+            const availGoals = savingsGoalsLink.filter((g) => !linkedGoalIds.has(g.id));
+            const availInvest = investmentsLink.filter((i) => !linkedInvIds.has(i.id));
             return (
               <>
                 <SheetHeader className="insp-header">
@@ -1112,13 +1132,15 @@ export default function BudgetPage() {
                         <span className="insp-linked-name">{c.linked_name}</span>
                         <Button type="button" variant="outline" size="sm" onClick={() => linkCategory(c.id, "none")}>{locale === "fi" ? "Poista linkitys" : "Unlink"}</Button>
                       </div>
-                    ) : (availSubs.length > 0 || availBills.length > 0 || availDebts.length > 0) ? (
+                    ) : (availSubs.length > 0 || availBills.length > 0 || availDebts.length > 0 || availGoals.length > 0 || availInvest.length > 0) ? (
                       <Select value="" onValueChange={(v) => v && linkCategory(c.id, v)}>
-                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kausitilaukseen, laskuun tai velkaan" : "Link to a subscription, bill or debt"} /></SelectTrigger>
+                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kausitilaukseen, laskuun, velkaan, säästötavoitteeseen tai sijoitukseen" : "Link to a subscription, bill, debt, savings goal or investment"} /></SelectTrigger>
                         <SelectContent>
                           {availSubs.map((s) => <SelectItem key={`sub:${s.id}`} value={`sub:${s.id}`}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
                           {availBills.map((b) => <SelectItem key={`bill:${b.id}`} value={`bill:${b.id}`}>{b.name} · {fmt(b.amount)} €</SelectItem>)}
                           {availDebts.map((d) => <SelectItem key={`debt:${d.id}`} value={`debt:${d.id}`}>{d.name}{d.amount > 0 ? ` · ${fmt(d.amount)} €` : ""}</SelectItem>)}
+                          {availGoals.map((g) => <SelectItem key={`goal:${g.id}`} value={`goal:${g.id}`}>{g.name}{g.amount > 0 ? ` · ${fmt(g.amount)} €` : ""}</SelectItem>)}
+                          {availInvest.map((i) => <SelectItem key={`inv:${i.id}`} value={`inv:${i.id}`}>{i.name}{i.amount > 0 ? ` · ${fmt(i.amount)} €` : ""}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     ) : (
@@ -1135,6 +1157,12 @@ export default function BudgetPage() {
                         {c.linked_type === "debt" && (c.target_amount > 0
                           ? (locale === "fi" ? `Velasta: ${fmt(c.target_amount)} € / kk` : `From debt: ${fmt(c.target_amount)} € / mo`)
                           : (locale === "fi" ? "Velalla ei ole kuukausierää." : "The debt has no monthly payment set."))}
+                        {c.linked_type === "investment" && (c.target_amount > 0
+                          ? (locale === "fi" ? `Sijoituksesta: ${fmt(c.target_amount)} € / kk` : `From investment: ${fmt(c.target_amount)} € / mo`)
+                          : (locale === "fi" ? "Sijoituksella ei ole kuukausierää." : "The investment has no monthly contribution set."))}
+                        {c.linked_type === "savings" && (c.target_monthly > 0
+                          ? (locale === "fi" ? `Säästötavoitteesta: ${fmt(c.target_monthly)} € / kk tavoitepäivään` : `From savings goal: ${fmt(c.target_monthly)} € / mo to hit the date`)
+                          : (locale === "fi" ? "Mitä budjetoit, lisätään säästötavoitteen edistymiseen." : "What you assign adds to the savings goal's progress."))}
                       </p>
                     ) : targetEditing ? (
                       <div className="insp-target-edit">
