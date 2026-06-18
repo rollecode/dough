@@ -181,7 +181,7 @@
 - Automatic bank income detection via Synci REST API polling (every 30 minutes)
 - Income matched via payee patterns creates real YNAB transaction
 - Bank account to YNAB account mapping in settings
-- Deduplication via synci_processed table
+- Deduplication via synci_processed table, keyed on the bank's own transaction reference so a bank reconnect (which re-issues Synci ids) never re-imports duplicates
 - Transfer detection: opposite legs are auto-paired, and an inflow whose payee was previously confirmed as an internal transfer is reclassified as a transfer (learned, not hardcoded) so own-account transfers from non-synced accounts never import as income
 - Unmatched inflows are categorised as Ready to Assign income, never deleted, so all money stays accounted for
 - Account mapping labels show owner, account name, custom name and the account number tail to tell apart accounts that share a number

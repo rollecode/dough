@@ -1,3 +1,8 @@
+### 2.30.0: 2026-06-18
+
+* Deduplicate Synci imports on the bank's own transaction reference so reconnecting a bank never re-imports transactions as duplicates
+* Match learned transfer payees regardless of name word order so a reordered name is still recognised as a transfer, not income
+
 ### 2.29.0: 2026-06-17
 
 * Categorise unmatched Synci inflows as Ready to Assign income instead of deleting them, so income is never silently removed and always counts in the budget
