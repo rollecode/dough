@@ -1,3 +1,8 @@
+### 2.32.0: 2026-06-18
+
+* Link a budget category to a savings goal: the goal sets a by-date target and its progress is derived from what you assign, so assigning in Budget reflects in the goal
+* Link a budget category to an investment, using its monthly contribution as the target (target and display only, no balance changes)
+
 ### 2.31.0: 2026-06-18
 
 * Tap an account on the Accounts tab to open its transactions; swipe the row left or right to reveal an edit button (hover on desktop)
