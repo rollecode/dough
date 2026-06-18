@@ -1,3 +1,7 @@
+### 2.32.1: 2026-06-18
+
+* Make the account edit affordance a swipe everywhere: touch swipes the row, desktop hover peeks a recessed purple edit pill in from the side instead of overlaying the balance
+
 ### 2.32.0: 2026-06-18
 
 * Link a budget category to a savings goal: the goal sets a by-date target and its progress is derived from what you assign, so assigning in Budget reflects in the goal

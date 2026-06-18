@@ -81,14 +81,15 @@ export function SwipeRow({
       <button type="button" className="swipe-row-edit is-right" onClick={handleEdit} aria-label={editLabel} tabIndex={-1}><Pencil /></button>
       <div
         className={`swipe-row-fg ${rowClassName} ${dragging ? "is-swiping" : ""}`}
-        style={{ transform: `translateX(${offset}px)` }}
+        // Only drive the transform inline during an actual touch swipe; at rest leave it unset so
+        // the desktop hover-peek (CSS) can slide the row aside without the inline value overriding it.
+        style={offset !== 0 ? { transform: `translateX(${offset}px)` } : undefined}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onClick={handleClick}
       >
         {children}
-        <button type="button" className="swipe-row-hover-edit" onClick={handleEdit} aria-label={editLabel}><Pencil /></button>
       </div>
     </div>
   );
