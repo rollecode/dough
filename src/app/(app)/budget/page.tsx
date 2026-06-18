@@ -254,7 +254,12 @@ export default function BudgetPage() {
     if (!data?.categories) { setLocalGroups([]); return; }
     const map = new Map<string, { key: string; label: string; items: BudgetCategory[] }>();
     for (const c of data.categories) {
-      if (!c.is_active || c.snoozed) continue;
+      if (c.snoozed) continue;
+      // A hidden category still shows (with a badge) when money flows through it this month, so an
+      // overspent or assigned hidden category surfaces here and in the Overspent filter instead of
+      // vanishing. Hidden categories with no footprint stay in the Hidden section below.
+      const hasFootprint = c.activity !== 0 || c.budgeted !== 0 || c.available < -eps;
+      if (!c.is_active && !hasFootprint) continue;
       const key = c.group_name || "";
       if (!map.has(key)) map.set(key, { key, label: key || (locale === "fi" ? "Muut" : "Other"), items: [] });
       map.get(key)!.items.push(c);
@@ -975,7 +980,9 @@ export default function BudgetPage() {
 
       {(() => {
         if (filter !== "all") return null;
-        const hiddenCats = (data?.categories || []).filter((c) => !c.is_active);
+        // Footprint hidden categories now appear in their group with a badge, so only list the
+        // truly dormant hidden ones here.
+        const hiddenCats = (data?.categories || []).filter((c) => !c.is_active && c.activity === 0 && c.budgeted === 0 && c.available >= -eps);
         if (hiddenCats.length === 0) return null;
         return (
           <Card className="list-card list-card-divider">
@@ -1409,6 +1416,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
       <button type="button" className="budget-row-main" onClick={onOpen}>
         <span className="budget-row-nameline">
           <span className="budget-row-name">{cat.linked_type ? cat.linked_name : cat.name}</span>
+          {!cat.is_active && <span className="account-badge is-muted">{locale === "fi" ? "Piilotettu" : "Hidden"}</span>}
           {cat.linked_type === "subscription" && (() => {
             const b = getBrandConfig(cat.subscription_name);
             return <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>;
