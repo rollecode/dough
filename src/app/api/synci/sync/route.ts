@@ -105,9 +105,21 @@ export async function POST(request: Request) {
 
         if (!txId) continue;
 
-        // Skip if already processed
+        // Dedup. Synci re-issues its own transaction id when a bank is deleted and reconnected, so
+        // the same bank transaction would otherwise import again under a new id. Dedup also on the
+        // bank's own stable reference (institution_transaction_id) plus the amount, which survives a
+        // reconnect. The two legs of a transfer share that reference but differ in amount, so both
+        // still import. Nothing is deleted here - a duplicate is simply not imported again.
         const synciTxId = `synci_${txId}`;
-        const alreadyProcessed = db.prepare("SELECT synci_tx_id FROM synci_processed WHERE synci_tx_id = ?").get(synciTxId);
+        const instId = tx.external_identifiers?.institution_transaction_id ? String(tx.external_identifiers.institution_transaction_id) : "";
+        const bankFingerprint = instId ? `bank_${instId}_${amount.toFixed(2)}` : "";
+        const markProcessed = () => {
+          for (const key of [synciTxId, bankFingerprint].filter(Boolean)) {
+            db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(key);
+          }
+        };
+        const alreadyProcessed = db.prepare("SELECT synci_tx_id FROM synci_processed WHERE synci_tx_id = ?").get(synciTxId)
+          || (bankFingerprint ? db.prepare("SELECT synci_tx_id FROM synci_processed WHERE synci_tx_id = ?").get(bankFingerprint) : undefined);
         if (alreadyProcessed) continue;
 
         const matchMonth = txDate ? `${txDate.split("-")[0]}-${txDate.split("-")[1]}` : currentMonth;
@@ -128,7 +140,7 @@ export async function POST(request: Request) {
           ).get(amount, importDate, importDate);
           if (manualDup) {
             console.info("[synci/sync] Skipping duplicate of an existing transaction:", payee, amount, "on", importDate);
-            db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
+            markProcessed();
             continue;
           }
           // Recognise household income by pattern. A matched inflow is categorised to Ready to
@@ -173,12 +185,12 @@ export async function POST(request: Request) {
               .run(matchedSourceId, amount, matchMonth);
             totalMatched++;
           }
-          db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
+          markProcessed();
           continue;
         }
 
         // YNAB MODE (unchanged): income only, created in YNAB then mirrored
-        if (amount <= 0) { db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId); continue; }
+        if (amount <= 0) { markProcessed(); continue; }
 
         console.info("[synci/sync] Income found:", payee, amount, "EUR on", txDate);
 
@@ -259,7 +271,7 @@ export async function POST(request: Request) {
         }
 
         // Mark as processed regardless of YNAB creation
-        db.prepare("INSERT OR IGNORE INTO synci_processed (synci_tx_id) VALUES (?)").run(synciTxId);
+        markProcessed();
       }
     }
 
@@ -333,12 +345,15 @@ export async function POST(request: Request) {
 
       // Pass three: an inflow whose payee the household has previously confirmed as an internal
       // transfer is itself a transfer (e.g. money moved in from an account Synci does not sync, where
-      // the bank shows the owner's own name as the payee). Mark it so it stops counting as income and
-      // is not swept. The payee list is learned from confirmed transfers, never hardcoded.
+      // the bank shows the owner's own name as the payee). Mark it so it stops counting as income.
+      // The payee list is learned from confirmed transfers, never hardcoded. Matching is on sorted
+      // name tokens so a reordered name (e.g. "Laukkarinen Rolle Roni Mikael" vs the other order)
+      // still matches.
+      const normPayee = (p: string) => p.toLowerCase().trim().split(/\s+/).filter(Boolean).sort().join(" ");
       let knownTransferPayees = new Set<string>();
       try {
         const raw = getHouseholdSetting("internal_transfer_payees");
-        if (raw) knownTransferPayees = new Set((JSON.parse(raw) as string[]).map((p) => p.toLowerCase().trim()).filter(Boolean));
+        if (raw) knownTransferPayees = new Set((JSON.parse(raw) as string[]).map(normPayee).filter(Boolean));
       } catch { knownTransferPayees = new Set(); }
       if (knownTransferPayees.size > 0) {
         const unmatchedInflows = db.prepare(
@@ -348,7 +363,7 @@ export async function POST(request: Request) {
         ).all() as { ynab_id: string; payee: string }[];
         for (const inf of unmatchedInflows) {
           if (paired.has(inf.ynab_id)) continue;
-          if (!inf.payee || !knownTransferPayees.has(inf.payee.toLowerCase().trim())) continue;
+          if (!inf.payee || !knownTransferPayees.has(normPayee(inf.payee))) continue;
           db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
           paired.add(inf.ynab_id);
           transfersPaired++;
