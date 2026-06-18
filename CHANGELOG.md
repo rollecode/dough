@@ -1,3 +1,8 @@
+### 2.31.0: 2026-06-18
+
+* Tap an account on the Accounts tab to open its transactions; swipe the row left or right to reveal an edit button (hover on desktop)
+* Surface hidden categories that have spending or assignments in the budget view and the Overspent filter, with a Hidden badge
+
 ### 2.30.0: 2026-06-18
 
 * Deduplicate Synci imports on the bank's own transaction reference so reconnecting a bank never re-imports transactions as duplicates
