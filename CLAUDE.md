@@ -1,16 +1,20 @@
 ## Public repository
 
-This is a public open source repository. NEVER commit, hardcode, or reference any of the following:
+This is a public open source repository. NEVER commit, hardcode, or reference any of the following anywhere in the source, including code comments, docstrings, log strings, test fixtures, commit messages, and example values:
 
-- Real names, emails, usernames, or personal details of any person
+- Real or legal names of any person, including family members and account owners (e.g. never write a full legal name like "Firstname Middlename Lastname")
+- Emails, usernames, phone numbers, or personal details of any person
 - Real financial data: account balances, transaction amounts, salary figures, budget IDs
+- Real account names, payees, or account-number tails (e.g. an account named after a person)
 - API keys, tokens, passwords, secrets, or credentials (always use env vars)
 - Real server URLs, IP addresses, domain names, or private infrastructure details
-- Real YNAB budget IDs, account IDs, or category IDs
+- Real YNAB budget IDs, account IDs, category IDs, or Synci account/transaction IDs
 - File paths containing usernames (e.g. `/home/username/`)
 - Any data that could identify a specific person or their financial situation
 
-All examples in code, docs, and comments must use generic placeholders. When in doubt, do not include it.
+This applies in COMMENTS too. Never illustrate something with a real value: a comment, example, or sample must use a fictional, generic placeholder (e.g. "My Checking", "checking", "Example Bank", "Firstname Lastname"), never a real name or real account. Real data lives only in the database and environment variables, both gitignored, never in source. When in doubt, leave it out.
+
+Before committing, scan the staged diff for personal data (names, balances, IBANs, tokens, account/transaction ids, IPs, domains). `git grep -i` the working tree for known real names and identifiers as a final check.
 
 ## Commits and code style
 
