@@ -1,0 +1,79 @@
+/* Module: swipe-row — iPhone-style swipe-to-edit list row (tap navigates, swipe reveals edit) */
+
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Edit action revealed behind the row when swiped. One on each side. */
+.swipe-row-edit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.swipe-row-edit.is-left { left: 0; }
+.swipe-row-edit.is-right { right: 0; }
+
+.swipe-row.is-active .swipe-row-edit { opacity: 1; }
+
+.swipe-row-edit svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* Foreground row that slides. Carries the list-item layout classes too. */
+.swipe-row-fg {
+  position: relative;
+  z-index: 1;
+  background: var(--glass-bg, var(--card));
+  transition: transform 0.22s ease;
+  touch-action: pan-y;
+}
+
+.swipe-row-fg.is-swiping {
+  transition: none;
+}
+
+/* Desktop-only edit affordance, since there is no swipe with a mouse. */
+.swipe-row-hover-edit {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: var(--accent);
+  color: var(--foreground);
+  cursor: pointer;
+  z-index: 2;
+}
+
+@media (hover: hover) {
+  .swipe-row-fg:hover .swipe-row-hover-edit {
+    display: inline-flex;
+  }
+  .swipe-row-hover-edit:hover {
+    background: color-mix(in srgb, var(--accent) 70%, var(--foreground) 10%);
+  }
+}
+
+.swipe-row-hover-edit svg {
+  width: 1rem;
+  height: 1rem;
+}

@@ -17,6 +17,7 @@ import {
 import { Plus, Loader2, GripVertical, Trash2, Sparkles, ArrowRight } from "lucide-react";
 import { F } from "@/components/ui/f";
 import { accountSlug } from "@/app/(app)/transactions/page";
+import { SwipeRow } from "@/components/accounts/swipe-row";
 
 interface Account {
   id: string;
@@ -250,11 +251,13 @@ export default function AccountsPage() {
       {orderedOpen.length > 0 && (
         <Card className="list-card list-card-divider">
           {orderedOpen.map((a, idx) => (
-            <div
+            <SwipeRow
               key={a.id}
-              className={`list-item acct-row ${dragIdx === idx ? "is-dragging" : ""}`}
-              onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}
+              href={`/transactions/${accountSlug(a.name)}`}
+              onEdit={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}
               onDragOver={(e) => handleAcctDragOver(e, idx)}
+              rowClassName={`list-item acct-row ${dragIdx === idx ? "is-dragging" : ""}`}
+              editLabel={locale === "fi" ? "Muokkaa" : "Edit"}
             >
               <button
                 type="button"
@@ -278,7 +281,7 @@ export default function AccountsPage() {
               <div className="list-item-end">
                 <p className={`list-item-amount-value ${a.balance < -0.005 ? "is-negative" : a.balance > 0.005 ? "is-positive" : ""}`}><F v={a.balance} s=" €" /></p>
               </div>
-            </div>
+            </SwipeRow>
           ))}
         </Card>
       )}
@@ -288,7 +291,13 @@ export default function AccountsPage() {
           <p className="list-group-header">{locale === "fi" ? "Suljetut" : "Closed"}</p>
           <Card className="list-card list-card-divider">
             {closed.map((a) => (
-              <div key={a.id} className="list-item" onClick={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}>
+              <SwipeRow
+                key={a.id}
+                href={`/transactions/${accountSlug(a.name)}`}
+                onEdit={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}
+                rowClassName="list-item"
+                editLabel={locale === "fi" ? "Muokkaa" : "Edit"}
+              >
                 <div className="list-item-body">
                   <p className="list-item-name is-inactive">{a.name}</p>
                   <p className="list-item-meta">{typeLabel(a.type, locale)}</p>
@@ -296,7 +305,7 @@ export default function AccountsPage() {
                 <div className="list-item-end">
                   <p className={`list-item-amount-value ${a.balance < -0.005 ? "is-negative" : a.balance > 0.005 ? "is-positive" : ""}`}><F v={a.balance} s=" €" /></p>
                 </div>
-              </div>
+              </SwipeRow>
             ))}
           </Card>
         </>
