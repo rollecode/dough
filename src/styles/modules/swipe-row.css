@@ -24,7 +24,6 @@
   transition: opacity 140ms ease;
 }
 
-.swipe-row-edit.is-left { left: 0; border-radius: 0 0.875rem 0.875rem 0; }
 .swipe-row-edit.is-right { right: 0; border-radius: 0.875rem 0 0 0.875rem; }
 
 .swipe-row.is-active .swipe-row-edit { opacity: 1; }

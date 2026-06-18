@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 
 const ACTION_WIDTH = 56; // px of the narrow edit action revealed on a full swipe
 const OPEN_THRESHOLD = 28; // px past which a swipe snaps open instead of back
 
-// A list row that navigates on tap and reveals a narrow edit action when swiped left or right
+// A list row that navigates on tap and reveals a narrow edit action when swiped right-to-left
 // (iPhone-style). Works with both touch and the mouse via pointer events. Editing is rare here, so
-// it is tucked behind the swipe.
+// it is tucked behind the swipe; clicking/tapping outside the row closes it again.
 export function SwipeRow({
   href,
   onEdit,
@@ -28,12 +28,23 @@ export function SwipeRow({
   const router = useRouter();
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const startX = useRef(0);
   const startY = useRef(0);
   const base = useRef(0);
   const moved = useRef(false);
   const axis = useRef<"none" | "x" | "y">("none");
+
+  // When open, a pointer down anywhere outside the row closes it (undo the swipe).
+  useEffect(() => {
+    if (offset === 0) return;
+    const onDocDown = (e: PointerEvent) => {
+      if (rowRef.current && !rowRef.current.contains(e.target as Node)) setOffset(0);
+    };
+    document.addEventListener("pointerdown", onDocDown);
+    return () => document.removeEventListener("pointerdown", onDocDown);
+  }, [offset]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -59,14 +70,15 @@ export function SwipeRow({
     }
     if (axis.current !== "x") return; // vertical drag: let the page scroll
     moved.current = true;
-    setOffset(Math.max(-ACTION_WIDTH, Math.min(ACTION_WIDTH, base.current + dx)));
+    // Only the right-to-left direction reveals the edit action; clamp the rest closed.
+    setOffset(Math.max(-ACTION_WIDTH, Math.min(0, base.current + dx)));
   };
 
   const endDrag = () => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
     setDragging(false);
-    setOffset((o) => (o > OPEN_THRESHOLD ? ACTION_WIDTH : o < -OPEN_THRESHOLD ? -ACTION_WIDTH : 0));
+    setOffset((o) => (o < -OPEN_THRESHOLD ? -ACTION_WIDTH : 0));
   };
 
   const handleClick = () => {
@@ -81,11 +93,11 @@ export function SwipeRow({
     onEdit();
   };
 
-  const active = dragging || offset !== 0;
+  // Show the pill only once the row has actually moved, so a plain click never flashes it.
+  const active = offset !== 0;
 
   return (
-    <div className={`swipe-row ${active ? "is-active" : ""}`} onDragOver={onDragOver}>
-      <button type="button" className="swipe-row-edit is-left" onClick={handleEdit} aria-label={editLabel} tabIndex={-1}><Pencil /></button>
+    <div ref={rowRef} className={`swipe-row ${active ? "is-active" : ""}`} onDragOver={onDragOver}>
       <button type="button" className="swipe-row-edit is-right" onClick={handleEdit} aria-label={editLabel} tabIndex={-1}><Pencil /></button>
       <div
         className={`swipe-row-fg ${rowClassName} ${dragging ? "is-swiping" : ""}`}

@@ -1,6 +1,6 @@
 ### 2.32.2: 2026-06-18
 
-* Make the account edit a narrow swipe action that also works with the mouse, revealing a purple edit pill flush to the edge with a rounded inner side; no hover behavior
+* Make the account edit a narrow right-to-left swipe (touch and mouse) revealing a purple edit pill flush to the edge with a rounded inner side; tap or click outside to close it, no hover behavior
 
 ### 2.32.1: 2026-06-18
 
