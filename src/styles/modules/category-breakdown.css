@@ -19,7 +19,7 @@
 }
 
 .category-breakdown-title {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--muted-foreground);
   text-transform: none;
@@ -75,7 +75,7 @@
 }
 
 .category-breakdown-donut-label {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
   text-transform: none;
   letter-spacing: 0;

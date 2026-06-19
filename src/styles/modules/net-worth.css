@@ -118,7 +118,7 @@
 .net-worth-card-icon[data-color="negative"] { color: var(--negative); }
 
 .net-worth-card-label {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--muted-foreground);
 }

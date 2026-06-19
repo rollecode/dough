@@ -195,7 +195,7 @@ export function SpendingFlow({
           textAnchor="middle"
           dominantBaseline="middle"
           fill="#0a0a10"
-          fontSize={11}
+          fontSize={12}
           fontWeight={600}
           style={{ fontVariantNumeric: "tabular-nums" }}
         >

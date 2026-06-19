@@ -97,7 +97,7 @@ function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: {
             return (
               <div className="chart-tooltip">
                 <p className="chart-tooltip-label">{label}</p>
-                <p className="chart-tooltip-value" style={{ color, fontSize: "0.6875rem" }}>{fmtFn(val)} {currency}</p>
+                <p className="chart-tooltip-value" style={{ color, fontSize: "0.75rem" }}>{fmtFn(val)} {currency}</p>
               </div>
             );
           }}

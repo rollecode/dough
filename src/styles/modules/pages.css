@@ -132,7 +132,7 @@
 }
 
 .cat-picker-group {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -810,7 +810,7 @@
 }
 
 .budget-ready-label {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   line-height: 1;
   margin: 7px 0 0 0;
@@ -934,7 +934,7 @@
 /* Header row inside an assign/cover menu (e.g. "Kata budjetin ylitys") */
 .budget-assign-menu-title {
   padding: 0.375rem 0.625rem 0.4375rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted-foreground);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
@@ -1549,7 +1549,7 @@
   display: flex;
   align-items: center;
   gap: 0.4375rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
 }
 
 .budget-target-progress {
@@ -2221,7 +2221,7 @@
 .input.match-pattern-input-sm {
   height: 1.5rem;
   width: 4rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   padding: 0 0.375rem;
 }
 
@@ -2270,7 +2270,7 @@
 }
 
 .badge-toggle-muted {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
   border: 1px solid var(--border);
   border-radius: 9999px;
@@ -2668,7 +2668,7 @@
 }
 
 .list-edit-label {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
   margin-bottom: 0.25rem;
   display: block;
@@ -3172,7 +3172,7 @@
   bottom: calc(100% + 0.375rem);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1;
@@ -3358,7 +3358,7 @@
 }
 
 .batch-item-meta {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
@@ -3372,7 +3372,7 @@
 
 .batch-account-select {
   height: 1.5rem;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   padding: 0 0.25rem;
   border-radius: 0.25rem;
   border: 1px solid var(--input);

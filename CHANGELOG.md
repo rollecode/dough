@@ -1,6 +1,7 @@
 ### 3.0.3: 2026-06-19
 
 * Make budget filters pretty, path-based URLs (/budget/overspent, /budget/underfunded, /budget/available) so a filtered view is linkable, bookmarkable and survives a refresh
+* Bump the smallest 11px UI and chart text up to 12px, and enlarge breakdown chart titles from 12px to 14px for readability
 
 ### 3.0.2: 2026-06-19
 

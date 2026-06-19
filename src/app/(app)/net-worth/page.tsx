@@ -293,7 +293,7 @@ export default function NetWorthPage() {
                 <g>
                   <path d={`M${bx + 2},${by + bh - 2} L${bx + 9},${by + bh - 2} L${bx + 2},${by + bh + 5} Z`} fill={dotColor} />
                   <rect x={bx} y={by} width={bubbleW} height={bh} rx={5} fill={dotColor} />
-                  <text x={bx + bubbleW / 2} y={by + bh / 2 + 1} textAnchor="middle" dominantBaseline="middle" fill="#0a0a10" fontSize={11} fontWeight={600} style={{ fontVariantNumeric: "tabular-nums" }}>
+                  <text x={bx + bubbleW / 2} y={by + bh / 2 + 1} textAnchor="middle" dominantBaseline="middle" fill="#0a0a10" fontSize={12} fontWeight={600} style={{ fontVariantNumeric: "tabular-nums" }}>
                     {bubbleText}
                   </text>
                 </g>

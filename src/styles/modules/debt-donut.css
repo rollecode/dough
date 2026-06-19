@@ -19,7 +19,7 @@
 }
 
 .debt-donut-title {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--muted-foreground);
   margin-bottom: 0.5rem;
@@ -73,7 +73,7 @@
 }
 
 .debt-donut-sub {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--muted-foreground);
 }
 
