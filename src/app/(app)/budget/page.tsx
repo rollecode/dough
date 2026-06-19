@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CategorySelect } from "@/components/shared/category-select";
+import { SearchableSelect, type SearchableOption } from "@/components/shared/searchable-select";
 
 interface BudgetCategory {
   id: number;
@@ -1153,18 +1154,26 @@ export default function BudgetPage() {
                         <span className="insp-linked-name">{c.linked_name}</span>
                         <Button type="button" variant="outline" size="sm" onClick={() => linkCategory(c.id, "none")}>{locale === "fi" ? "Poista linkitys" : "Unlink"}</Button>
                       </div>
-                    ) : (availSubs.length > 0 || availBills.length > 0 || availDebts.length > 0 || availGoals.length > 0 || availInvest.length > 0) ? (
-                      <Select value="" onValueChange={(v) => v && linkCategory(c.id, v)}>
-                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kohteeseen" : "Link to an item"} /></SelectTrigger>
-                        <SelectContent>
-                          {availSubs.map((s) => <SelectItem key={`sub:${s.id}`} value={`sub:${s.id}`}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
-                          {availBills.map((b) => <SelectItem key={`bill:${b.id}`} value={`bill:${b.id}`}>{b.name} · {fmt(b.amount)} €</SelectItem>)}
-                          {availDebts.map((d) => <SelectItem key={`debt:${d.id}`} value={`debt:${d.id}`}>{d.name}{d.amount > 0 ? ` · ${fmt(d.amount)} €` : ""}</SelectItem>)}
-                          {availGoals.map((g) => <SelectItem key={`goal:${g.id}`} value={`goal:${g.id}`}>{g.name}{g.amount > 0 ? ` · ${fmt(g.amount)} €` : ""}</SelectItem>)}
-                          {availInvest.map((i) => <SelectItem key={`inv:${i.id}`} value={`inv:${i.id}`}>{i.name}{i.amount > 0 ? ` · ${fmt(i.amount)} €` : ""}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    ) : (
+                    ) : (availSubs.length > 0 || availBills.length > 0 || availDebts.length > 0 || availGoals.length > 0 || availInvest.length > 0) ? (() => {
+                      const amt = (n: number) => <span className="cat-picker-amt">{fmt(n)} €</span>;
+                      const linkOptions: SearchableOption[] = [
+                        ...availSubs.map((s) => ({ value: `sub:${s.id}`, label: s.name, group: locale === "fi" ? "Kausitilaukset" : "Subscriptions", meta: amt(s.amount) })),
+                        ...availBills.map((b) => ({ value: `bill:${b.id}`, label: b.name, group: locale === "fi" ? "Laskut" : "Bills", meta: amt(b.amount) })),
+                        ...availDebts.map((d) => ({ value: `debt:${d.id}`, label: d.name, group: locale === "fi" ? "Velat" : "Debts", meta: d.amount > 0 ? amt(d.amount) : undefined })),
+                        ...availGoals.map((g) => ({ value: `goal:${g.id}`, label: g.name, group: locale === "fi" ? "Säästötavoitteet" : "Savings goals", meta: g.amount > 0 ? amt(g.amount) : undefined })),
+                        ...availInvest.map((i) => ({ value: `inv:${i.id}`, label: i.name, group: locale === "fi" ? "Sijoitukset" : "Investments", meta: i.amount > 0 ? amt(i.amount) : undefined })),
+                      ];
+                      return (
+                        <SearchableSelect
+                          value=""
+                          onChange={(v) => v && linkCategory(c.id, v)}
+                          options={linkOptions}
+                          placeholder={locale === "fi" ? "Linkitä kohteeseen" : "Link to an item"}
+                          searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"}
+                          emptyLabel={locale === "fi" ? "Ei osumia" : "No matches"}
+                        />
+                      );
+                    })() : (
                       <p className="settings-help">{locale === "fi" ? "Ei linkitettävää." : "Nothing to link to yet."}</p>
                     )}
                   </div>
