@@ -81,7 +81,7 @@
 - An overspent category always appears in its group and the Overspent filter even when snoozed or hidden, so the overspend can be seen and covered
 - Delete a category with leftover-money reallocation (move to Ready to Assign or another category; cover an overspent category first); categories with history are archived, unused ones removed
 - Delete a category group from its header, keeping its categories without a group
-- Move money between categories and cover overspending, capped at the source's available balance
+- Move money between categories and cover overspending, capped at the source's available balance; the move and fund popovers have a category search box to filter long lists
 - Cover-from popout on overspent amounts and filters for all, overspent and money available
 - Filters are deep-linkable at pretty paths (/budget/overspent, /budget/underfunded, /budget/available) so a filtered view is shareable and restored on refresh
 - Smooth drag-and-drop reorder with a dashed drop placeholder; drag a category into another group to move it

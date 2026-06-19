@@ -1393,6 +1393,8 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   const [coverOpen, setCoverOpen] = useState(false);
   const [moveOutOpen, setMoveOutOpen] = useState(false);
   const [moveOutAmount, setMoveOutAmount] = useState("");
+  // Search query for the fund/move category lists, reset each time a popover opens.
+  const [pickFilter, setPickFilter] = useState("");
   const availCellRef = useRef<HTMLSpanElement>(null);
   const [dropUp, setDropUp] = useState(false);
   // Open the popover upward when there isn't room for it below (last rows near the viewport bottom)
@@ -1631,12 +1633,14 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           <>
             {/* Underfunded target: clicking opens a fund menu - top up the remaining target
                 amount from Ready to Assign or move it from another category. */}
-            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { if (!fundOpen) decideDrop(); setFundOpen((o) => !o); }} aria-label={locale === "fi" ? "Rahoita tavoite" : "Fund target"} aria-haspopup="menu" aria-expanded={fundOpen}>
+            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { if (!fundOpen) { decideDrop(); setPickFilter(""); } setFundOpen((o) => !o); }} aria-label={locale === "fi" ? "Rahoita tavoite" : "Fund target"} aria-haspopup="menu" aria-expanded={fundOpen}>
               <F v={cat.available} />
             </button>
             {fundOpen && (() => {
               const amount = stillNeeded;
               const sources = siblings.filter((o) => o.is_active && o.id !== cat.id && o.available > 0.005);
+              const fl = pickFilter.trim().toLowerCase();
+              const shownSources = fl ? sources.filter((o) => o.name.toLowerCase().includes(fl)) : sources;
               return (
                 <>
                   <div className="budget-calc-backdrop" onClick={() => setFundOpen(false)} />
@@ -1644,6 +1648,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                     <div className="budget-cover-title">
                       {locale === "fi" ? "Rahoita tavoite" : "Fund target"} <span className="budget-cover-amt"><F v={amount} s=" €" /></span>
                     </div>
+                    <input className="budget-cover-search input" value={pickFilter} onChange={(e) => setPickFilter(e.target.value)} placeholder={locale === "fi" ? "Hae kategoriaa…" : "Search category…"} aria-label={locale === "fi" ? "Hae kategoriaa" : "Search categories"} />
                     <div className="budget-cover-list">
                       {readyToAssign > 0.005 && (
                         <button type="button" className="budget-cover-item" onClick={() => { onCover("rta", Math.min(amount, readyToAssign)); setFundOpen(false); }}>
@@ -1651,7 +1656,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                           <span className="budget-cover-src"><F v={readyToAssign} s=" €" /></span>
                         </button>
                       )}
-                      {sources.map((o) => (
+                      {shownSources.map((o) => (
                         <button key={o.id} type="button" className="budget-cover-item" onClick={() => { onCover(o.id, Math.min(amount, o.available)); setFundOpen(false); }}>
                           <span className="budget-cover-name">{o.name}</span>
                           <span className="budget-cover-src"><F v={o.available} s=" €" /></span>
@@ -1659,6 +1664,9 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
                       ))}
                       {readyToAssign <= 0.005 && sources.length === 0 && (
                         <p className="budget-cover-empty">{locale === "fi" ? "Ei rahaa siirrettäväksi" : "No money available"}</p>
+                      )}
+                      {sources.length > 0 && shownSources.length === 0 && (
+                        <p className="budget-cover-empty">{locale === "fi" ? "Ei osumia" : "No matches"}</p>
                       )}
                     </div>
                   </div>
@@ -1668,28 +1676,34 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           </>
         ) : cat.available > eps ? (
           <>
-            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { if (!moveOutOpen) decideDrop(); setMoveOutAmount(fmt(cat.available)); setMoveOutOpen((o) => !o); }} aria-label={locale === "fi" ? "Siirrä rahaa kategoriaan" : "Move money to a category"} aria-haspopup="menu" aria-expanded={moveOutOpen}>
+            <button type="button" className={`budget-pill ${pillClass} budget-pill-btn`} onClick={() => { if (!moveOutOpen) { decideDrop(); setPickFilter(""); } setMoveOutAmount(fmt(cat.available)); setMoveOutOpen((o) => !o); }} aria-label={locale === "fi" ? "Siirrä rahaa kategoriaan" : "Move money to a category"} aria-haspopup="menu" aria-expanded={moveOutOpen}>
               <F v={cat.available} />
             </button>
             {moveOutOpen && (() => {
               const dests = siblings.filter((o) => o.is_active && o.id !== cat.id);
               const amt = evalExpression(moveOutAmount) ?? 0;
+              const fl = pickFilter.trim().toLowerCase();
+              const shownDests = fl ? dests.filter((o) => o.name.toLowerCase().includes(fl)) : dests;
               return (
                 <>
                   <div className="budget-calc-backdrop" onClick={() => setMoveOutOpen(false)} />
                   <div className={`budget-cover-popover ${dropUp ? "is-up" : ""}`}>
                     <div className="budget-cover-title">{locale === "fi" ? "Siirrä kategoriaan:" : "Move to category:"}</div>
                     <Input className="budget-moveout-amount" value={moveOutAmount} onChange={(e) => setMoveOutAmount(e.target.value)} inputMode="decimal" placeholder="0.00" aria-label={locale === "fi" ? "Summa" : "Amount"} />
+                    <input className="budget-cover-search input" value={pickFilter} onChange={(e) => setPickFilter(e.target.value)} placeholder={locale === "fi" ? "Hae kategoriaa…" : "Search category…"} aria-label={locale === "fi" ? "Hae kategoriaa" : "Search categories"} />
                     <div className="budget-cover-list">
                       <button type="button" className="budget-cover-item" onClick={() => { if (amt > 0) onMoveOut("rta", amt); setMoveOutOpen(false); }}>
                         <span className="budget-cover-name">{locale === "fi" ? "Budjetoimatta" : "Ready to assign"}</span>
                       </button>
-                      {dests.map((o) => (
+                      {shownDests.map((o) => (
                         <button key={o.id} type="button" className="budget-cover-item" onClick={() => { if (amt > 0) onMoveOut(o.id, amt); setMoveOutOpen(false); }}>
                           <span className="budget-cover-name">{o.name}</span>
                           <span className="budget-cover-src"><F v={o.available} s=" €" /></span>
                         </button>
                       ))}
+                      {dests.length > 0 && shownDests.length === 0 && (
+                        <p className="budget-cover-empty">{locale === "fi" ? "Ei osumia" : "No matches"}</p>
+                      )}
                     </div>
                   </div>
                 </>

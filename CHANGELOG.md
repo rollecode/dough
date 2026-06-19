@@ -1,3 +1,7 @@
+### 3.0.4: 2026-06-19
+
+* Add a category search box to the Move money and Fund target popovers in budget so a long category list can be filtered quickly
+
 ### 3.0.3: 2026-06-19
 
 * Make budget filters pretty, path-based URLs (/budget/overspent, /budget/underfunded, /budget/available) so a filtered view is linkable, bookmarkable and survives a refresh
