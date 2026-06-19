@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CategorySelect } from "@/components/shared/category-select";
 
 interface BudgetCategory {
   id: number;
@@ -1279,16 +1280,15 @@ export default function BudgetPage() {
                               </button>
                               <span className="insp-move-dir-label">{dirLabel}</span>
                             </div>
-                            <Select value={moveOther} onValueChange={(v) => v && setMoveOther(v)}>
-                              <SelectTrigger className="insp-move-select">
-                                <SelectValue placeholder={dirLabel} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {others.map((o) => (
-                                  <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <CategorySelect
+                              value={moveOther}
+                              onChange={setMoveOther}
+                              categories={others}
+                              placeholder={dirLabel}
+                              searchPlaceholder={locale === "fi" ? "Hae kategoriaa…" : "Search category…"}
+                              emptyLabel={locale === "fi" ? "Ei osumia" : "No matches"}
+                              fmt={fmt}
+                            />
                             <Input value={moveDraft} onChange={(e) => setMoveDraft(e.target.value)} placeholder="0.00" inputMode="decimal" className="insp-move-amount" />
                             <div className="insp-actions">
                               <Button type="button" size="sm" onClick={() => {
