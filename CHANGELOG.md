@@ -1,3 +1,7 @@
+### 3.0.5: 2026-06-20
+
+* Focus the search box when a category or account picker opens, so you can type to filter immediately
+
 ### 3.0.4: 2026-06-19
 
 * Add a category search box to the budget Move money and Fund target pickers (both the quick popovers and the inspector move dropdown) so a long category list can be filtered quickly

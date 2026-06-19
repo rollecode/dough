@@ -28,6 +28,7 @@ export function SearchableSelect({ value, onChange, options, placeholder, search
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -37,6 +38,9 @@ export function SearchableSelect({ value, onChange, options, placeholder, search
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
+
+  // Focus the search box on open so you can start typing to filter immediately.
+  useEffect(() => { if (open) searchRef.current?.focus(); }, [open]);
 
   const ql = q.trim().toLowerCase();
   const filtered = ql
@@ -62,7 +66,7 @@ export function SearchableSelect({ value, onChange, options, placeholder, search
       </button>
       {open && (
         <div className="cat-picker-panel">
-          <input className="cat-picker-search input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
+          <input ref={searchRef} className="cat-picker-search input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
           <ul className="cat-picker-list">
             {groups.length === 0 && <li className="cat-picker-empty">{emptyLabel}</li>}
             {groups.map((g) => (

@@ -31,12 +31,13 @@ interface CategoryPickerProps {
 // group and shows each one's available amount. The panel renders inline (in flow) inside its
 // wrapper, not in a body portal: inside a modal a body-portalled panel is treated as an outside
 // press and dismisses the dialog, and a fixed-positioned panel drifts when the mobile keyboard
-// resizes the viewport. Inline, the dialog simply scrolls to it. The search field is not
-// auto-focused so picking an existing category never forces the keyboard open on mobile.
+// resizes the viewport. Inline, the dialog simply scrolls to it. The search field is focused on
+// open so you can type to filter immediately.
 export function CategoryPicker({ value, onChange, categories, placeholder, noneLabel, searchPlaceholder, fmt, onCreate, createLabel, suggestions, suggestionsLabel }: CategoryPickerProps) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +47,9 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
+
+  // Focus the search box on open so you can start typing to filter immediately.
+  useEffect(() => { if (open) searchRef.current?.focus(); }, [open]);
 
   const ql = q.trim().toLowerCase();
   const filtered = ql
@@ -77,7 +81,7 @@ export function CategoryPicker({ value, onChange, categories, placeholder, noneL
       </button>
       {open && (
         <div className="cat-picker-panel">
-          <input className="cat-picker-search input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
+          <input ref={searchRef} className="cat-picker-search input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={searchPlaceholder} />
           <ul className="cat-picker-list">
             {suggested.length > 0 && (
               <li>
