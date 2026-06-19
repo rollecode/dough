@@ -4,6 +4,7 @@
 * Fix Age of Money freezing at the last YNAB sync in local mode; it now uses the live local runway (how long your money lasts) so it updates with cash and spending
 * Shorten the budget category link dropdown placeholder so it no longer overflows the field
 * Make the budget category link dropdown searchable, grouped by type (subscriptions, bills, debts, savings goals, investments)
+* Deleting a category with transactions now asks which category to move them to and reassigns every transaction (retroactively) plus merges its budget there, instead of just hiding the category; a category with no transactions deletes directly
 
 ### 3.0.3: 2026-06-19
 

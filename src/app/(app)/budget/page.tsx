@@ -58,6 +58,7 @@ interface BudgetCategory {
   subscription_name: string;
   linked_type: "" | "subscription" | "bill" | "debt" | "savings" | "investment";
   linked_name: string;
+  tx_count: number;
 }
 
 interface BudgetData {
@@ -638,38 +639,48 @@ export default function BudgetPage() {
     }
   };
 
-  // Delete a category. Any leftover available money is moved out first (back to Ready to
-  // Assign or into another category), and an overspent category is covered first, so no
-  // money is orphaned. dest: "rta" | another category id.
+  // Delete a category. With transactions, it folds wholesale into the chosen category: the API
+  // reassigns every transaction and merges its monthly budgets there, so the target keeps both the
+  // spending and the budget and nothing is orphaned. With no transactions, any leftover available
+  // money is settled first (back to Ready to Assign or into another category, or an overspend is
+  // covered) and then the empty category is removed. dest: "rta" | another category id.
   const deleteCategory = async (c: BudgetCategory, dest: number | "rta") => {
     try {
-      const avail = c.available;
-      if (avail > eps) {
-        if (dest === "rta") {
-          await fetch("/api/budget", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ month, category_id: c.id, budgeted: Math.round((c.budgeted - avail) * 100) / 100 }),
-          });
-        } else {
+      if (c.tx_count > 0 && typeof dest === "number") {
+        await fetch("/api/categories", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: c.id, reassign_to: dest }),
+        });
+      } else {
+        const avail = c.available;
+        if (avail > eps) {
+          if (dest === "rta") {
+            await fetch("/api/budget", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ month, category_id: c.id, budgeted: Math.round((c.budgeted - avail) * 100) / 100 }),
+            });
+          } else {
+            await fetch("/api/budget/move", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ month, from_category_id: c.id, to_category_id: dest, amount: avail }),
+            });
+          }
+        } else if (avail < -eps && typeof dest === "number") {
           await fetch("/api/budget/move", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ month, from_category_id: c.id, to_category_id: dest, amount: avail }),
+            body: JSON.stringify({ month, from_category_id: dest, to_category_id: c.id, amount: Math.round(-avail * 100) / 100 }),
           });
         }
-      } else if (avail < -eps && typeof dest === "number") {
-        await fetch("/api/budget/move", {
-          method: "POST",
+        await fetch("/api/categories", {
+          method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ month, from_category_id: dest, to_category_id: c.id, amount: Math.round(-avail * 100) / 100 }),
+          body: JSON.stringify({ id: c.id }),
         });
       }
-      await fetch("/api/categories", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: c.id }),
-      });
       setDeleteOpen(false);
       setDeleteDest("rta");
       setInspectorId(null);
@@ -1329,42 +1340,66 @@ export default function BudgetPage() {
                     </Button>
                     {deleteOpen ? (
                       <div className="insp-delete">
-                        {c.available > eps && (
+                        {c.tx_count > 0 ? (
+                          /* Has transactions: they must move to another category (retroactively, all
+                             of them), and any remaining money follows to the same category. */
                           <>
-                            <span className="insp-delete-note">{locale === "fi" ? `Kategoriassa on ${fmt(c.available)} €. Mihin se siirretään?` : `This category holds ${fmt(c.available)} €. Move it where?`}</span>
-                            <Select items={{ rta: locale === "fi" ? "Budjetoimatta" : "Ready to Assign", ...Object.fromEntries((data?.categories || []).filter((o) => o.is_active && o.id !== c.id).map((o) => [String(o.id), o.name])) }} value={deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
-                              <SelectTrigger className="insp-move-select"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="rta">{locale === "fi" ? "Budjetoimatta" : "Ready to Assign"}</SelectItem>
-                                {(data?.categories || []).filter((o) => o.is_active && o.id !== c.id).map((o) => (
-                                  <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <span className="insp-delete-note">{locale === "fi" ? `Tässä kategoriassa on ${c.tx_count} tapahtumaa. Mihin kategoriaan ne siirretään?` : `This category has ${c.tx_count} transactions. Which category should they move to?`}</span>
+                            <CategorySelect
+                              value={deleteDest === "rta" ? "" : deleteDest}
+                              onChange={setDeleteDest}
+                              categories={(data?.categories || []).filter((o) => o.is_active && o.id !== c.id)}
+                              placeholder={locale === "fi" ? "Valitse kategoria" : "Pick a category"}
+                              searchPlaceholder={locale === "fi" ? "Hae kategoriaa…" : "Search category…"}
+                              emptyLabel={locale === "fi" ? "Ei osumia" : "No matches"}
+                              fmt={fmt}
+                            />
+                            <span className="insp-delete-note">{locale === "fi" ? "Kategoria ja sen budjetti yhdistetään valittuun kategoriaan." : "This category and its budget fold into the chosen one."}</span>
                           </>
-                        )}
-                        {c.available < -eps && (
+                        ) : (
+                          /* No transactions: deletes directly. Only remaining money needs a home. */
                           <>
-                            <span className="insp-delete-note">{locale === "fi" ? `Kategoria on ylitetty ${fmt(Math.abs(c.available))} €. Mistä kate otetaan?` : `Overspent by ${fmt(Math.abs(c.available))} €. Cover it from where?`}</span>
-                            <Select value={deleteDest === "rta" ? "" : deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
-                              <SelectTrigger className="insp-move-select"><SelectValue placeholder={locale === "fi" ? "Valitse kategoria" : "Pick a category"} /></SelectTrigger>
-                              <SelectContent>
-                                {(data?.categories || []).filter((o) => o.is_active && o.id !== c.id && o.available > eps).map((o) => (
-                                  <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {c.available > eps && (
+                              <>
+                                <span className="insp-delete-note">{locale === "fi" ? `Kategoriassa on ${fmt(c.available)} €. Mihin se siirretään?` : `This category holds ${fmt(c.available)} €. Move it where?`}</span>
+                                <Select items={{ rta: locale === "fi" ? "Budjetoimatta" : "Ready to Assign", ...Object.fromEntries((data?.categories || []).filter((o) => o.is_active && o.id !== c.id).map((o) => [String(o.id), o.name])) }} value={deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
+                                  <SelectTrigger className="insp-move-select"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="rta">{locale === "fi" ? "Budjetoimatta" : "Ready to Assign"}</SelectItem>
+                                    {(data?.categories || []).filter((o) => o.is_active && o.id !== c.id).map((o) => (
+                                      <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </>
+                            )}
+                            {c.available < -eps && (
+                              <>
+                                <span className="insp-delete-note">{locale === "fi" ? `Kategoria on ylitetty ${fmt(Math.abs(c.available))} €. Mistä kate otetaan?` : `Overspent by ${fmt(Math.abs(c.available))} €. Cover it from where?`}</span>
+                                <Select value={deleteDest === "rta" ? "" : deleteDest} onValueChange={(v) => v && setDeleteDest(v)}>
+                                  <SelectTrigger className="insp-move-select"><SelectValue placeholder={locale === "fi" ? "Valitse kategoria" : "Pick a category"} /></SelectTrigger>
+                                  <SelectContent>
+                                    {(data?.categories || []).filter((o) => o.is_active && o.id !== c.id && o.available > eps).map((o) => (
+                                      <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </>
+                            )}
+                            {Math.abs(c.available) <= eps && (
+                              <span className="insp-delete-note">{locale === "fi" ? "Tässä kategoriassa ei ole tapahtumia. Se poistetaan suoraan." : "This category has no transactions. It will be deleted directly."}</span>
+                            )}
                           </>
                         )}
                         <div className="insp-actions">
-                          <Button type="button" variant="destructive" size="sm" disabled={c.available < -eps && (deleteDest === "rta" || !deleteDest)} onClick={() => deleteCategory(c, deleteDest === "rta" ? "rta" : Number(deleteDest))}>
+                          <Button type="button" variant="destructive" size="sm" disabled={(deleteDest === "rta" || !deleteDest) && (c.tx_count > 0 || c.available < -eps)} onClick={() => deleteCategory(c, deleteDest === "rta" ? "rta" : Number(deleteDest))}>
                             {locale === "fi" ? "Poista" : "Delete"}
                           </Button>
                           <Button type="button" variant="ghost" size="sm" onClick={() => { setDeleteOpen(false); setDeleteDest("rta"); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
                         </div>
                       </div>
                     ) : (
-                      <Button type="button" variant="ghost" size="sm" className="insp-hide insp-delete-btn" onClick={() => { setDeleteOpen(true); setDeleteDest("rta"); }}>
+                      <Button type="button" variant="ghost" size="sm" className="insp-hide insp-delete-btn" onClick={() => { setDeleteOpen(true); setDeleteDest(c.tx_count > 0 ? "" : "rta"); }}>
                         <Trash2 className="icon-sm" />{locale === "fi" ? "Poista kategoria" : "Delete category"}
                       </Button>
                     )}

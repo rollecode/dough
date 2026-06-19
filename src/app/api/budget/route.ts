@@ -125,6 +125,11 @@ export async function GET(request: Request) {
     const snoozedRows = db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[];
     const snoozedSet = new Set(snoozedRows.map((r) => r.category_id));
 
+    // Lifetime transaction count per category (matched by name, like the rest of the budget), so the
+    // delete flow knows when it must reassign a category's transactions before removing it.
+    const txCountRows = db.prepare("SELECT category AS name, COUNT(*) AS c FROM transactions GROUP BY category").all() as { name: string; c: number }[];
+    const txCountMap = new Map(txCountRows.map((r) => [r.name, r.c]));
+
     const rows = cats.map((c) => {
       const b = budgeted.get(c.id) || 0;
       const a = activity.get(c.name) || 0;
@@ -183,6 +188,7 @@ export async function GET(request: Request) {
         subscription_name: linkedSub?.name || "",
         linked_type,
         linked_name: (linked || linkedGoal)?.name || "",
+        tx_count: txCountMap.get(c.name) || 0,
       };
     });
 

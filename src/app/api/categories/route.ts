@@ -163,36 +163,52 @@ export async function DELETE(request: Request) {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-    const { id } = await request.json();
+    const { id, reassign_to } = await request.json();
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
     const db = getDb();
     const cat = db.prepare("SELECT name FROM categories WHERE id = ?").get(id) as { name: string } | undefined;
     if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
 
-    // A category with any history (transactions assigned to it, or assigned amounts in any
-    // month) cannot be erased without orphaning that history, so it is archived (hidden).
-    // A never-used category is removed outright. Targets and snoozes are cleared either way
-    // so a deleted category stops nudging the budget.
+    // A category with transactions has them moved (retroactively, every one) to the chosen target
+    // category first, mirroring how a rename rewrites transaction history; then it is removed for
+    // real. A category with no transactions is deleted outright. Either way targets, snoozes,
+    // monthly budgets and opening balances go with it (also covered by ON DELETE CASCADE).
     const txCount = (db.prepare("SELECT COUNT(*) AS c FROM transactions WHERE category = ?").get(cat.name) as { c: number }).c;
-    const budgetCount = (db.prepare("SELECT COUNT(*) AS c FROM monthly_category_budgets WHERE category_id = ?").get(id) as { c: number }).c;
-    const hasHistory = txCount > 0 || budgetCount > 0;
+
+    let targetName: string | null = null;
+    if (txCount > 0) {
+      if (reassign_to == null) return NextResponse.json({ error: "A category with transactions needs a reassign target" }, { status: 400 });
+      if (Number(reassign_to) === Number(id)) return NextResponse.json({ error: "Cannot reassign a category to itself" }, { status: 400 });
+      const target = db.prepare("SELECT name FROM categories WHERE id = ?").get(reassign_to) as { name: string } | undefined;
+      if (!target) return NextResponse.json({ error: "Reassign target not found" }, { status: 404 });
+      targetName = target.name;
+    }
 
     const run = db.transaction(() => {
+      if (targetName) {
+        const res = db.prepare("UPDATE transactions SET category = ? WHERE category = ?").run(targetName, cat.name);
+        console.info("[categories] Reassigned", res.changes, "transactions from", cat.name, "to", targetName);
+        // Merge this category's monthly budgets into the target so it inherits the budget along with
+        // the spending (otherwise the target would look overspent in months this one had funded).
+        const merged = db.prepare(
+          `INSERT INTO monthly_category_budgets (month, category_id, budgeted)
+           SELECT month, ?, budgeted FROM monthly_category_budgets WHERE category_id = ?
+           ON CONFLICT(month, category_id) DO UPDATE SET budgeted = budgeted + excluded.budgeted, updated_at = datetime('now')`
+        ).run(reassign_to, id);
+        console.info("[categories] Merged", merged.changes, "monthly budgets into target", targetName);
+      }
       db.prepare("DELETE FROM category_targets WHERE category_id = ?").run(id);
       db.prepare("DELETE FROM category_snoozes WHERE category_id = ?").run(id);
-      if (hasHistory) {
-        db.prepare("UPDATE categories SET is_active = 0, updated_at = datetime('now') WHERE id = ?").run(id);
-      } else {
-        db.prepare("DELETE FROM monthly_category_budgets WHERE category_id = ?").run(id);
-        db.prepare("DELETE FROM categories WHERE id = ?").run(id);
-      }
+      db.prepare("DELETE FROM category_opening_balances WHERE category_id = ?").run(id);
+      db.prepare("DELETE FROM monthly_category_budgets WHERE category_id = ?").run(id);
+      db.prepare("DELETE FROM categories WHERE id = ?").run(id);
     });
     run();
 
-    console.info("[categories]", hasHistory ? "Archived" : "Hard-deleted", "id", id, cat.name);
+    console.info("[categories] Deleted id", id, cat.name, "transactions reassigned:", txCount);
     eventBus.emit("data:updated", { source: "categories-deleted" });
-    return NextResponse.json({ success: true, archived: hasHistory });
+    return NextResponse.json({ success: true, deleted: true, reassigned: txCount });
   } catch (error) {
     console.error("[categories] DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
