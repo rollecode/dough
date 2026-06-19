@@ -1155,7 +1155,7 @@ export default function BudgetPage() {
                       </div>
                     ) : (availSubs.length > 0 || availBills.length > 0 || availDebts.length > 0 || availGoals.length > 0 || availInvest.length > 0) ? (
                       <Select value="" onValueChange={(v) => v && linkCategory(c.id, v)}>
-                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kausitilaukseen, laskuun, velkaan, säästötavoitteeseen tai sijoitukseen" : "Link to a subscription, bill, debt, savings goal or investment"} /></SelectTrigger>
+                        <SelectTrigger className="insp-link-trigger"><SelectValue placeholder={locale === "fi" ? "Linkitä kohteeseen" : "Link to an item"} /></SelectTrigger>
                         <SelectContent>
                           {availSubs.map((s) => <SelectItem key={`sub:${s.id}`} value={`sub:${s.id}`}>{s.name} · {fmt(s.amount)} €</SelectItem>)}
                           {availBills.map((b) => <SelectItem key={`bill:${b.id}`} value={`bill:${b.id}`}>{b.name} · {fmt(b.amount)} €</SelectItem>)}

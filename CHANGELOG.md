@@ -2,6 +2,7 @@
 
 * Add a category search box to the budget Move money and Fund target pickers (both the quick popovers and the inspector move dropdown) so a long category list can be filtered quickly
 * Fix Age of Money freezing at the last YNAB sync in local mode; it now uses the live local runway (how long your money lasts) so it updates with cash and spending
+* Shorten the budget category link dropdown placeholder so it no longer overflows the field
 
 ### 3.0.3: 2026-06-19
 
