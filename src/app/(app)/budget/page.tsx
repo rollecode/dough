@@ -179,7 +179,19 @@ export default function BudgetPage() {
   const [dropGroupAt, setDropGroupAt] = useState<number | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [showSnoozed, setShowSnoozed] = useState(false);
-  const [filter, setFilter] = useState<"all" | "overspent" | "available" | "underfunded">("all");
+  const [filter, setFilterState] = useState<"all" | "overspent" | "available" | "underfunded">("all");
+  // Mirror the active filter in the URL so a filtered view (e.g. /budget?filter=overspent) is
+  // linkable and bookmarkable, and read it back on load. Uses the History API so it doesn't trigger
+  // a route change or reload.
+  useEffect(() => {
+    const f = new URLSearchParams(window.location.search).get("filter");
+    if (f === "overspent" || f === "available" || f === "underfunded") setFilterState(f);
+  }, []);
+  const setFilter = useCallback((f: "all" | "overspent" | "available" | "underfunded") => {
+    setFilterState(f);
+    const url = f === "all" ? window.location.pathname : `${window.location.pathname}?filter=${f}`;
+    window.history.replaceState(null, "", url);
+  }, []);
   const [autoOpen, setAutoOpen] = useState(false);
   const [autoAmounts, setAutoAmounts] = useState<{ underfunded: number; last_assigned: number; last_spent: number } | null>(null);
   const [coverAllOpen, setCoverAllOpen] = useState(false);

@@ -1,3 +1,7 @@
+### 3.0.1: 2026-06-19
+
+* Reflect the active budget filter in the URL (e.g. /budget?filter=overspent) so a filtered view is linkable, shareable and restored on load
+
 ### 3.0.0: 2026-06-19
 
 * Add a "Your progress" chart on Investments showing your actual total value over time, a point added each time you save a value, beside the existing forecast (stacked on mobile)
