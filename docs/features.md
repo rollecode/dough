@@ -70,7 +70,7 @@
 - Carryover: positive available rolls forward, overspending does not drag into the next month
 - Ready to Assign carries forward across months (cumulative); within YNAB's synced range it uses YNAB's own per-month figure adjusted for local edits, and it extends the carry-forward into not-yet-synced future months so budgeting ahead stays seamless
 - Assigning money to a future month lowers the current Ready to Assign (single global figure, like YNAB)
-- Age of Money box (YNAB's own per-month figure) plus a 12-month history line chart with the current month as a dashed reference
+- Age of Money box: YNAB's own per-month figure with a 12-month history line chart in YNAB mode; in local mode (no YNAB sync) it falls back to the live local runway (how long your money lasts at the current spending rate) so it keeps updating with cash and spending instead of freezing at the last sync
 - Activity is net: refunds and other inflows to a category reduce its spending and raise available, like YNAB
 - Per-category targets per day, week, month or year; the amount is distributed into the month's need, with progress, single-month snooze and clear
 - Auto-assign (Quick Budget): fund to targets, copy last month's assigned, or copy last month's spending

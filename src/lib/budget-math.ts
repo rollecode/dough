@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { getBudgetMode } from "./household";
 
 // Shared budget math so the move/cover endpoint validates against the same available
 // balance the budget page shows. Mirrors the carryover model in app/api/budget/route.ts:
@@ -117,6 +118,28 @@ export function moneyLastsDays(db: ReturnType<typeof getDb>): number | null {
   if (spent <= 0 || cash <= 0) return null;
   const perDay = spent / 30;
   return Math.max(0, Math.round(cash / perDay));
+}
+
+// Age of Money figure plus its monthly history, for the budget page and dashboard. In YNAB mode
+// this is YNAB's own per-month figure (synced into ynab_month_budget): the viewed month's value
+// when given, else the latest non-null, with the live local runway as a last resort. In local mode
+// YNAB no longer syncs, so any stored figure is stale (frozen at the last sync) - use the live
+// "money lasts X days" runway and return no history so the chart shows the current stat, not frozen
+// data. Centralised here so every consumer (api/budget, api/age-of-money) behaves the same.
+export function ageOfMoneyData(db: ReturnType<typeof getDb>, month?: string): { ageOfMoney: number | null; history: { month: string; age: number }[] } {
+  if (getBudgetMode() === "local") {
+    const ageOfMoney = moneyLastsDays(db);
+    console.debug("[budget-math] age of money (local runway):", ageOfMoney);
+    return { ageOfMoney, history: [] };
+  }
+  const history = db
+    .prepare("SELECT month, age_of_money AS age FROM ynab_month_budget WHERE age_of_money IS NOT NULL ORDER BY month ASC")
+    .all() as { month: string; age: number }[];
+  const forMonth = month ? history.find((h) => h.month === month)?.age : undefined;
+  const latest = history.length > 0 ? history[history.length - 1].age : undefined;
+  const ageOfMoney = forMonth ?? latest ?? moneyLastsDays(db);
+  console.debug("[budget-math] age of money (ynab):", ageOfMoney, "months:", history.length);
+  return { ageOfMoney, history };
 }
 
 export function daysInMonth(month: string): number {
