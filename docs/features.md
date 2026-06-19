@@ -141,7 +141,8 @@
 - From YNAB otherAsset accounts, or added manually
 - Editable monthly contribution amount and expected return percentage
 - Ticker tracking with Yahoo Finance and Seligson fund scraping
-- Compound growth projection chart
+- Two side-by-side charts (stacked on mobile): a compound-growth forecast and "Your progress" - your actual total value over time, one point per manual value save
+- Reconcile value by hand; an "Added now" field logs new money so profit is real (profit = current value minus what you put in, with a percentage). Investments are never treated as spending accounts and never appear in the Accounts tab
 - Monthly contributions included in dashboard month status
 
 ### Subscriptions

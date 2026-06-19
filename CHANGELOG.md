@@ -1,3 +1,8 @@
+### 3.0.0: 2026-06-19
+
+* Add a "Your progress" chart on Investments showing your actual total value over time, a point added each time you save a value, beside the existing forecast (stacked on mobile)
+* Show real investment profit (current value minus what you put in, with a percentage), tracking contributions via an "Added now" field at reconcile so market re-values are not counted as deposits
+
 ### 2.32.2: 2026-06-18
 
 * Make the account edit a narrow right-to-left swipe (touch and mouse) revealing a purple edit pill flush to the edge with a rounded inner side; tap or click outside to close it, no hover behavior
