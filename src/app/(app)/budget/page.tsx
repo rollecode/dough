@@ -280,11 +280,13 @@ export default function BudgetPage() {
     if (!data?.categories) { setLocalGroups([]); return; }
     const map = new Map<string, { key: string; label: string; items: BudgetCategory[] }>();
     for (const c of data.categories) {
-      if (c.snoozed) continue;
-      // A hidden category still shows (with a badge) when money flows through it this month, so an
-      // overspent or assigned hidden category surfaces here and in the Overspent filter instead of
-      // vanishing. Hidden categories with no footprint stay in the Hidden section below.
-      const hasFootprint = c.activity !== 0 || c.budgeted !== 0 || c.available < -eps;
+      // An overspent category must always stay reachable so it can be seen and covered, even when it
+      // is snoozed or hidden. Otherwise: snoozed categories are tucked into their own section, and a
+      // hidden category only appears when money flows through it (activity/budget), so it surfaces
+      // here and in the Overspent filter instead of vanishing.
+      const overspent = c.available < -eps;
+      const hasFootprint = c.activity !== 0 || c.budgeted !== 0 || overspent;
+      if (c.snoozed && !overspent) continue;
       if (!c.is_active && !hasFootprint) continue;
       const key = c.group_name || "";
       if (!map.has(key)) map.set(key, { key, label: key || (locale === "fi" ? "Muut" : "Other"), items: [] });
@@ -987,7 +989,9 @@ export default function BudgetPage() {
         // Hidden/snoozed categories belong only under the "Kaikki" (all) filter, not the
         // overspent / money-available views which should show active budget rows only.
         if (filter !== "all") return null;
-        const snoozedCats = (data?.categories || []).filter((c) => c.is_active && c.snoozed);
+        // Overspent snoozed categories now appear in their group (so they can be covered), so list
+        // only the non-overspent snoozed ones here to avoid showing them twice.
+        const snoozedCats = (data?.categories || []).filter((c) => c.is_active && c.snoozed && !(c.available < -eps));
         if (snoozedCats.length === 0) return null;
         return (
           <Card className="list-card list-card-divider">
