@@ -2589,6 +2589,26 @@
   margin-top: 0.5rem;
 }
 
+/* Forecast (left) and progress (right) side by side on desktop, stacked on mobile. */
+.invest-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .invest-charts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.investment-progress-hint {
+  margin-top: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
 .chart-range-filter {
   display: flex;
   gap: 0.25rem;

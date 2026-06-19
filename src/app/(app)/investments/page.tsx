@@ -38,12 +38,17 @@ interface InvestmentData {
   id: string;
   name: string;
   balance: number;
+  invested: number;
+  profit: number;
   monthlyContribution: number;
   expectedReturn: number;
   monthlyTransferred: number;
   notes: string;
   ticker: string;
+  added?: number; // transient: money added this save, entered in the "Added now" field
 }
+
+interface ProgressPoint { date: string; value: number; invested: number }
 
 interface SparkPoint { t: number; c: number }
 
@@ -144,6 +149,9 @@ function calculateProjection(
 export default function InvestmentsPage() {
   const { t, locale, fmt, mask } = useLocale();
   const [investments, setInvestments] = useState<InvestmentData[]>([]);
+  const [progress, setProgress] = useState<ProgressPoint[]>([]);
+  const [totalInvested, setTotalInvested] = useState(0);
+  const [totalProfit, setTotalProfit] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [projectionYears, setProjectionYears] = useState(20);
@@ -153,8 +161,15 @@ export default function InvestmentsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const addFormRef = useRef<HTMLFormElement>(null);
 
+  const applyData = (data: { investments?: InvestmentData[]; progress?: ProgressPoint[]; totalInvested?: number; totalProfit?: number }) => {
+    if (data.investments) setInvestments(data.investments);
+    if (Array.isArray(data.progress)) setProgress(data.progress);
+    if (typeof data.totalInvested === "number") setTotalInvested(data.totalInvested);
+    if (typeof data.totalProfit === "number") setTotalProfit(data.totalProfit);
+  };
+
   const loadInvestments = () => {
-    fetch("/api/investments").then((r) => r.json()).then((data) => { if (data.investments) setInvestments(data.investments); }).catch(() => {});
+    fetch("/api/investments").then((r) => r.json()).then(applyData).catch(() => {});
   };
 
   const handleAddInvestment = async (e: React.FormEvent) => {
@@ -174,11 +189,12 @@ export default function InvestmentsPage() {
         body: JSON.stringify({ name, type: "otherAsset", balance }),
       });
       const j = await res.json();
-      if (res.ok && j.id && (monthly || ret)) {
+      if (res.ok && j.id) {
         await fetch("/api/investments", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ynab_account_id: j.id, monthly_contribution: monthly, expected_return: ret }),
+          // Seed cost basis from the starting value so profit begins at zero.
+          body: JSON.stringify({ ynab_account_id: j.id, monthly_contribution: monthly, expected_return: ret, init_contributed: balance }),
         });
       }
       form.reset();
@@ -194,10 +210,8 @@ export default function InvestmentsPage() {
     fetch("/api/investments")
       .then((r) => r.json())
       .then((data) => {
-        if (data.investments) {
-          console.info("[investments] Loaded", data.investments.length, "investment accounts");
-          setInvestments(data.investments);
-        }
+        if (data.investments) console.info("[investments] Loaded", data.investments.length, "investment accounts");
+        applyData(data);
       })
       .catch((err) => console.error("[investments] Load error:", err))
       .finally(() => setLoading(false));
@@ -222,24 +236,23 @@ export default function InvestmentsPage() {
 
   const saveOverride = async (inv: InvestmentData) => {
     setSaving(inv.id);
-    console.info("[investments] Saving override for", inv.name);
+    console.info("[investments] Saving value for", inv.name, "added:", inv.added || 0);
     try {
-      // Persist the account value and the investment override
-      await fetch("/api/accounts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: inv.id, balance: inv.balance }),
-      });
+      // One call updates the value (balance), grows the cost basis by any money added now, and records
+      // a progress snapshot. No separate accounts write - investments are not regular accounts.
       await fetch("/api/investments", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ynab_account_id: inv.id,
+          value: inv.balance,
+          added: inv.added || 0,
           monthly_contribution: inv.monthlyContribution,
           expected_return: inv.expectedReturn,
           ticker: inv.ticker,
         }),
       });
+      loadInvestments(); // refresh profit and the progress chart
     } catch (err) {
       console.error("[investments] Save error:", err);
     } finally {
@@ -362,6 +375,7 @@ export default function InvestmentsPage() {
 
       {/* Projection chart */}
       {investments.length > 0 && (
+        <div className="invest-charts-grid">
         <div className="form-stack">
           <div className="payoff-header">
             <h2 className="payoff-title">{t.investments.projectedGrowth}</h2>
@@ -428,6 +442,67 @@ export default function InvestmentsPage() {
             )}
           </Card>
         </div>
+
+        {/* Your progress: actual total value over time + profit, fed by manual value saves */}
+        <div className="form-stack">
+          <div className="payoff-header">
+            <h2 className="payoff-title">{locale === "fi" ? "Edistyminen" : "Your progress"}</h2>
+          </div>
+          <Card className="metric-card">
+            <div className="payoff-stats">
+              <div>
+                <span className="payoff-stats-label">{locale === "fi" ? "Arvo nyt" : "Value now"} </span>
+                <span className="payoff-stats-value"><F v={totalValue} /></span>
+              </div>
+              <div>
+                <span className="payoff-stats-label">{locale === "fi" ? "Sijoitettu" : "Invested"} </span>
+                <span className="payoff-stats-value"><F v={totalInvested} /></span>
+              </div>
+              <div>
+                <span className="payoff-stats-label">{locale === "fi" ? "Tuotto" : "Profit"} </span>
+                <span className="payoff-stats-value" data-color={totalProfit >= 0 ? "positive" : "negative"}>
+                  {totalProfit >= 0 ? "+" : ""}<F v={totalProfit} />{totalInvested > 0 ? ` (${totalProfit >= 0 ? "+" : ""}${Math.round((totalProfit / totalInvested) * 1000) / 10}%)` : ""}
+                </span>
+              </div>
+            </div>
+            {progress.length > 1 ? (
+              <>
+                <ChartContainer height={250}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={progress} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="progressGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#4ade80" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#4ade80" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => { const p = String(v).split("-"); return `${Number(p[2])}.${Number(p[1])}.`; }} interval="preserveStartEnd" />
+                      <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={55} />
+                      <Tooltip
+                        content={({ active, payload, label }) =>
+                          active && payload?.length ? (
+                            <div className="chart-tooltip">
+                              <p className="chart-tooltip-label">{(() => { const p = String(label).split("-"); return `${Number(p[2])}.${Number(p[1])}.${p[0]}`; })()}</p>
+                              <p className="chart-tooltip-value text-positive">{fmt(Number(payload[0].value))} €</p>
+                              <p className="chart-tooltip-value text-foreground">{locale === "fi" ? "Sijoitettu" : "Invested"}: {fmt(Number(payload[1]?.value ?? 0))} €</p>
+                            </div>
+                          ) : null
+                        }
+                      />
+                      <Area type="monotone" dataKey="value" stroke="#4ade80" strokeWidth={2} fill="url(#progressGrad)" />
+                      <Area type="monotone" dataKey="invested" stroke="#818cf8" strokeWidth={1.5} fill="none" strokeDasharray="4 4" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+                <p className="investment-progress-hint">{locale === "fi" ? "Voit päivittää edistymistä tallentamalla arvon." : "You can update progress by saving a value."}</p>
+              </>
+            ) : (
+              <p className="investment-progress-hint">{locale === "fi" ? "Tallenna sijoituksen arvo aloittaaksesi edistymisen seurannan." : "Save an investment value to start tracking your progress."}</p>
+            )}
+          </Card>
+        </div>
+        </div>
       )}
 
       {/* Range filter + Investment accounts list */}
@@ -481,6 +556,17 @@ export default function InvestmentsPage() {
                     step="1"
                     value={inv.balance || ""}
                     onChange={(e) => updateInvestment(inv.id, "balance", parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    className="list-edit-input"
+                  />
+                </div>
+                <div className="list-edit-field">
+                  <Label className="list-edit-label">{locale === "fi" ? "Lisätty nyt €" : "Added now €"}</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={inv.added || ""}
+                    onChange={(e) => updateInvestment(inv.id, "added", parseFloat(e.target.value) || 0)}
                     placeholder="0"
                     className="list-edit-input"
                   />
