@@ -1,6 +1,7 @@
 ### 3.0.5: 2026-06-20
 
 * Focus the search box when a category or account picker opens, so you can type to filter immediately
+* Make the account picker in the add-transaction modal searchable (type to filter accounts), matching the category picker
 
 ### 3.0.4: 2026-06-19
 

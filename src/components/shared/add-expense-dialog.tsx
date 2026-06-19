@@ -12,7 +12,7 @@ import { titleCasePayee } from "@/lib/text-utils";
 import { PayeeInput } from "@/components/shared/payee-input";
 import { CategoryPicker } from "@/components/shared/category-picker";
 import { DateField } from "@/components/ui/date-field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/shared/searchable-select";
 import { F } from "@/components/ui/f";
 
 // Human label for a duplicate candidate's date: today / tomorrow / d.m.yyyy.
@@ -343,9 +343,8 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     onOpenChange(v);
   };
 
-  // Value -> label map so the account Select shows the account name (not the raw id) even when the
-  // value is set programmatically (the spending account is preselected from the profile).
-  const accountItems: Record<string, string> = Object.fromEntries(allAccounts.map((a) => [a.id, a.name]));
+  // Account dropdown options (searchable), reused by the account and transfer pickers.
+  const accountOptions = allAccounts.map((a) => ({ value: a.id, label: a.name }));
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -432,23 +431,27 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
 
               <div className="form-field">
                 <Label>{txType === "transfer" ? (locale === "fi" ? "Miltä tililtä" : "From account") : (locale === "fi" ? "Tili" : "Account")}</Label>
-                <Select items={accountItems} value={linkedAccountId} onValueChange={(v) => { if (v) { setLinkedAccountId(v); const a = allAccounts.find((x) => x.id === v); setLinkedAccountName(a?.name || ""); } }}>
-                  <SelectTrigger className="tx-account-trigger"><SelectValue placeholder={locale === "fi" ? "Valitse tili" : "Select account"} /></SelectTrigger>
-                  <SelectContent>
-                    {allAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={linkedAccountId}
+                  onChange={(v) => { if (v) { setLinkedAccountId(v); const a = allAccounts.find((x) => x.id === v); setLinkedAccountName(a?.name || ""); } }}
+                  options={accountOptions}
+                  placeholder={locale === "fi" ? "Valitse tili" : "Select account"}
+                  searchPlaceholder={locale === "fi" ? "Hae tiliä…" : "Search account…"}
+                  emptyLabel={locale === "fi" ? "Ei osumia" : "No matches"}
+                />
               </div>
 
               {txType === "transfer" && (
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Mille tilille" : "To account"}</Label>
-                  <Select items={accountItems} value={toAccountId} onValueChange={(v) => v && setToAccountId(v)}>
-                    <SelectTrigger className="tx-account-trigger"><SelectValue placeholder={locale === "fi" ? "Valitse tili" : "Select account"} /></SelectTrigger>
-                    <SelectContent>
-                      {allAccounts.filter((a) => a.id !== linkedAccountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={toAccountId}
+                    onChange={(v) => v && setToAccountId(v)}
+                    options={accountOptions.filter((a) => a.value !== linkedAccountId)}
+                    placeholder={locale === "fi" ? "Valitse tili" : "Select account"}
+                    searchPlaceholder={locale === "fi" ? "Hae tiliä…" : "Search account…"}
+                    emptyLabel={locale === "fi" ? "Ei osumia" : "No matches"}
+                  />
                 </div>
               )}
 

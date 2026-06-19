@@ -55,7 +55,7 @@
 - Filter by all, expenses, income or transfers, and by account (chips)
 - Deep-linkable per account at `/transactions/<account>`, with a link from the edit-account modal
 - Search by payee or category
-- Add an expense, income, or a transfer between accounts, with AI auto-categorization and a duplicate check
+- Add an expense, income, or a transfer between accounts, with AI auto-categorization and a duplicate check; the account and category pickers are searchable and focus their search box on open so you can type to filter
 - Receipt or statement photo/PDF: the AI reads it and adds one or many transactions, each with an editable category and a possible-duplicate flag
 - Payee and description fields autocomplete from earlier entries (rendered in a portal so they are not clipped by the modal)
 - Edit a transaction's category from the edit dialog (writes back to YNAB when connected, plus local data)
