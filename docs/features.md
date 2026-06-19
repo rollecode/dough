@@ -83,6 +83,7 @@
 - Delete a category group from its header, keeping its categories without a group
 - Move money between categories and cover overspending, capped at the source's available balance
 - Cover-from popout on overspent amounts and filters for all, overspent and money available
+- Filters are deep-linkable at pretty paths (/budget/overspent, /budget/underfunded, /budget/available) so a filtered view is shareable and restored on refresh
 - Smooth drag-and-drop reorder with a dashed drop placeholder; drag a category into another group to move it
 - Renaming a category rewrites its transaction history so its activity is not lost
 - Hidden categories and snoozed categories sections at the bottom

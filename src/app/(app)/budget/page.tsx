@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
+import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -179,17 +180,20 @@ export default function BudgetPage() {
   const [dropGroupAt, setDropGroupAt] = useState<number | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [showSnoozed, setShowSnoozed] = useState(false);
+  const pathname = usePathname();
   const [filter, setFilterState] = useState<"all" | "overspent" | "available" | "underfunded">("all");
-  // Mirror the active filter in the URL so a filtered view (e.g. /budget?filter=overspent) is
-  // linkable and bookmarkable, and read it back on load. Uses the History API so it doesn't trigger
-  // a route change or reload.
+  // Mirror the active filter in a pretty path (e.g. /budget/overspent) so a filtered view is
+  // linkable and bookmarkable, and read it back from the path on load. The [filter] route
+  // re-exports this page so deep links and refreshes resolve; switching filters uses the History
+  // API so it doesn't trigger a route change or reload.
   useEffect(() => {
-    const f = new URLSearchParams(window.location.search).get("filter");
-    if (f === "overspent" || f === "available" || f === "underfunded") setFilterState(f);
-  }, []);
+    const seg = pathname.startsWith("/budget/") ? pathname.slice("/budget/".length) : "";
+    if (seg === "overspent" || seg === "available" || seg === "underfunded") setFilterState(seg);
+    else setFilterState("all");
+  }, [pathname]);
   const setFilter = useCallback((f: "all" | "overspent" | "available" | "underfunded") => {
     setFilterState(f);
-    const url = f === "all" ? window.location.pathname : `${window.location.pathname}?filter=${f}`;
+    const url = f === "all" ? "/budget" : `/budget/${f}`;
     window.history.replaceState(null, "", url);
   }, []);
   const [autoOpen, setAutoOpen] = useState(false);

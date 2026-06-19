@@ -1,3 +1,7 @@
+### 3.0.3: 2026-06-19
+
+* Make budget filters pretty, path-based URLs (/budget/overspent, /budget/underfunded, /budget/available) so a filtered view is linkable, bookmarkable and survives a refresh
+
 ### 3.0.2: 2026-06-19
 
 * Show overspent categories in the Overspent filter and budget view even when they are snoozed or hidden, so an unplanned overspend can always be seen and covered (previously a snoozed overspent category was counted but never listed, leaving the filter empty)
