@@ -92,6 +92,7 @@
 ### Accounts
 
 - Manage accounts without YNAB: add, edit, close and delete manual accounts
+- Closed accounts are collapsed into a toggle section (like hidden budget categories), expandable on demand
 - Mark a spending account and exclude accounts from the budget
 - Per-account AI notes and source badges for manual, Synci and YNAB accounts
 - AI balance check: enter the real bank balance and the AI explains likely duplicates or missing entries from the last few days, each shown with an inline delete

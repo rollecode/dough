@@ -2,6 +2,7 @@
 
 * Focus the search box when a category or account picker opens, so you can type to filter immediately
 * Make the account picker in the add-transaction modal searchable (type to filter accounts), matching the category picker
+* Collapse closed accounts on the Accounts tab into a toggle (like hidden budget categories) instead of always listing them
 
 ### 3.0.4: 2026-06-19
 

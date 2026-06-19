@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2, GripVertical, Trash2, Sparkles, ArrowRight } from "lucide-react";
+import { Plus, Loader2, GripVertical, Trash2, Sparkles, ArrowRight, ChevronDown } from "lucide-react";
 import { F } from "@/components/ui/f";
 import { accountSlug } from "@/app/(app)/transactions/page";
 import { SwipeRow } from "@/components/accounts/swipe-row";
@@ -51,6 +51,7 @@ export default function AccountsPage() {
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [editNote, setEditNote] = useState("");
   const [trueBalance, setTrueBalance] = useState("");
+  const [showClosed, setShowClosed] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [reconcile, setReconcile] = useState<{ diff: number; explanation: string; suspects: { id: string; date: string; payee: string; amount: number }[] } | null>(null);
   const addFormRef = useRef<HTMLFormElement>(null);
@@ -287,28 +288,30 @@ export default function AccountsPage() {
       )}
 
       {closed.length > 0 && (
-        <>
-          <p className="list-group-header">{locale === "fi" ? "Suljetut" : "Closed"}</p>
-          <Card className="list-card list-card-divider">
-            {closed.map((a) => (
-              <SwipeRow
-                key={a.id}
-                href={`/transactions/${accountSlug(a.name)}`}
-                onEdit={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}
-                rowClassName="list-item"
-                editLabel={locale === "fi" ? "Muokkaa" : "Edit"}
-              >
-                <div className="list-item-body">
-                  <p className="list-item-name is-inactive">{a.name}</p>
-                  <p className="list-item-meta">{typeLabel(a.type, locale)}</p>
-                </div>
-                <div className="list-item-end">
-                  <p className={`list-item-amount-value ${a.balance < -0.005 ? "is-negative" : a.balance > 0.005 ? "is-positive" : ""}`}><F v={a.balance} s=" €" /></p>
-                </div>
-              </SwipeRow>
-            ))}
-          </Card>
-        </>
+        <Card className="list-card list-card-divider">
+          <button type="button" className="budget-hidden-toggle" onClick={() => setShowClosed((s) => !s)}>
+            <ChevronDown className={`budget-hidden-chevron ${showClosed ? "is-open" : ""}`} />
+            <span>{locale === "fi" ? "Suljetut tilit" : "Closed accounts"}</span>
+            <span className="budget-hidden-count">{closed.length}</span>
+          </button>
+          {showClosed && closed.map((a) => (
+            <SwipeRow
+              key={a.id}
+              href={`/transactions/${accountSlug(a.name)}`}
+              onEdit={() => { setEditTarget(a); setEditNote(notes[a.id] || ""); setReconcile(null); setTrueBalance(""); }}
+              rowClassName="list-item"
+              editLabel={locale === "fi" ? "Muokkaa" : "Edit"}
+            >
+              <div className="list-item-body">
+                <p className="list-item-name is-inactive">{a.name}</p>
+                <p className="list-item-meta">{typeLabel(a.type, locale)}</p>
+              </div>
+              <div className="list-item-end">
+                <p className={`list-item-amount-value ${a.balance < -0.005 ? "is-negative" : a.balance > 0.005 ? "is-positive" : ""}`}><F v={a.balance} s=" €" /></p>
+              </div>
+            </SwipeRow>
+          ))}
+        </Card>
       )}
 
       {/* Edit dialog */}
