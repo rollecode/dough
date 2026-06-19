@@ -127,6 +127,15 @@ function initializeDb(db: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- One row per day: a snapshot of total investment value and total contributed (cost basis),
+    -- written each time an investment value is saved. Drives the "Your progress" chart.
+    CREATE TABLE IF NOT EXISTS investment_progress (
+      date TEXT PRIMARY KEY,
+      total_value REAL NOT NULL DEFAULT 0,
+      total_contributed REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS payee_matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       source_type TEXT NOT NULL CHECK (source_type IN ('income', 'bill', 'investment', 'subscription')),
@@ -403,6 +412,12 @@ function initializeDb(db: Database.Database) {
   if (!investCols.some((c) => c.name === "ticker")) {
     console.info("[db] Adding ticker column to investment_overrides");
     db.exec("ALTER TABLE investment_overrides ADD COLUMN ticker TEXT DEFAULT ''");
+  }
+  // Cost basis (money put in). NULL = untracked, in which case profit treats the current value as
+  // the baseline so it starts at zero until the user logs contributions via "Added now".
+  if (!investCols.some((c) => c.name === "contributed")) {
+    console.info("[db] Adding contributed column to investment_overrides");
+    db.exec("ALTER TABLE investment_overrides ADD COLUMN contributed REAL");
   }
 
   // Migrate transactions to shared (one copy per ynab_id, no user_id in unique constraint)
