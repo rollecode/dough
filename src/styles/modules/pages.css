@@ -2919,6 +2919,13 @@
   color: var(--muted-foreground);
 }
 
+/* Inline form/error message, e.g. a failed receipt parse. Wraps (unlike .text-negative). */
+.form-error {
+  font-size: 0.8125rem;
+  line-height: 1.1rem;
+  color: var(--negative);
+}
+
 .settings-account-list {
   display: flex;
   flex-direction: column;

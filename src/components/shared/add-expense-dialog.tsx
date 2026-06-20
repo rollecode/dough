@@ -78,6 +78,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [receiptType, setReceiptType] = useState("");
   const [batchTransactions, setBatchTransactions] = useState<{ payee: string; amount: string; date: string; account_id: string; account_name: string; category: string; dup: boolean }[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [payees, setPayees] = useState<string[]>([]);
   const [memos, setMemos] = useState<string[]>([]);
@@ -163,6 +164,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     if (!file) return;
     console.info("[add-expense] Receipt uploaded:", file.name, file.type);
     setReceiptParsing(true);
+    setReceiptError(null);
     setReceiptPreview(URL.createObjectURL(file));
     setReceiptType(file.type);
 
@@ -176,6 +178,11 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
           body: JSON.stringify({ image: base64, media_type: file.type }),
         });
         const data = await res.json();
+        if (!res.ok || data.error) {
+          console.error("[add-expense] Receipt parse failed:", data.error);
+          setReceiptError(data.error || (locale === "fi" ? "Kuitin luku epäonnistui" : "Could not read the receipt"));
+          return;
+        }
         if (data.transactions && data.transactions.length > 1) {
           const base = data.transactions.map((tx: { payee: string; amount: string; date?: string; account?: string }) => {
             const payee = titleCasePayee(tx.payee || "");
@@ -220,6 +227,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
         }
       } catch (err) {
         console.error("[add-expense] Receipt parse error:", err);
+        setReceiptError(locale === "fi" ? "Kuitin luku epäonnistui (verkkovirhe)" : "Could not read the receipt (network error)");
       } finally {
         setReceiptParsing(false);
       }
@@ -357,9 +365,11 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleReceiptUpload} hidden />
             <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={receiptParsing} className="w-full">
               {receiptParsing ? <Loader2 className="icon-sm animate-spin" /> : <Paperclip className="icon-sm" />}
-              {receiptParsing ? (locale === "fi" ? "Luetaan..." : "Reading...") : (locale === "fi" ? "Liitä kuitti tai tiliote" : "Attach receipt or statement")}
+              {receiptParsing ? (locale === "fi" ? "Ladataan, odota hetki..." : "Loading, please wait...") : (locale === "fi" ? "Liitä kuitti tai tiliote" : "Attach receipt or statement")}
             </Button>
           </div>
+
+          {receiptError && <p className="form-error">{receiptError}</p>}
 
           {receiptPreview && (
             receiptType === "application/pdf"
