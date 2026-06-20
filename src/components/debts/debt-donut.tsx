@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { F } from "@/components/ui/f";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -24,6 +25,7 @@ const DEBT_COLORS = ["#f87171", "#fb923c", "#fbbf24", "#c084fc", "#f472b6", "#60
 // still owed and the overall percentage paid off. Beats a flat list: composition and progress at once.
 export function DebtDonut({ debts }: { debts: DebtSlice[] }) {
   const { fmt, locale, mask } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
 
   const withColor = debts
     .filter((d) => d.balance > 0)
@@ -60,6 +62,7 @@ export function DebtDonut({ debts }: { debts: DebtSlice[] }) {
                   ))}
                 </Pie>
                 <Tooltip
+                  trigger={tooltipTrigger}
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const d = payload[0].payload as DebtSlice & { color?: string; name: string; value?: number };

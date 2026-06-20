@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,6 +69,7 @@ interface TickerData {
 let tickerChartId = 0;
 
 function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: { data: SparkPoint[]; dataMax?: SparkPoint[]; positive: boolean; currency: string; fmt: (v: number) => string; range: "1W" | "6M" | "MAX" }) {
+  const tooltipTrigger = useTooltipTrigger();
   const now = Date.now() / 1000;
   const cutoff = range === "1W" ? now - 7 * 86400 : range === "6M" ? now - 183 * 86400 : 0;
   const source = range === "MAX" && dataMax && dataMax.length > 1 ? dataMax : data;
@@ -90,6 +92,7 @@ function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: {
         </defs>
         <YAxis hide />
         <Tooltip
+          trigger={tooltipTrigger}
           content={({ active, payload }) => {
             if (!active || !payload?.length) return null;
             const val = Number(payload[0].value);
@@ -148,6 +151,7 @@ function calculateProjection(
 
 export default function InvestmentsPage() {
   const { t, locale, fmt, mask } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
   const [investments, setInvestments] = useState<InvestmentData[]>([]);
   const [progress, setProgress] = useState<ProgressPoint[]>([]);
   const [totalInvested, setTotalInvested] = useState(0);
@@ -424,6 +428,7 @@ export default function InvestmentsPage() {
                     <XAxis dataKey="year" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}${locale === "fi" ? "v" : "y"}`} />
                     <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={55} />
                     <Tooltip
+                      trigger={tooltipTrigger}
                       content={({ active, payload, label }) =>
                         active && payload?.length ? (
                           <div className="chart-tooltip">
@@ -480,6 +485,7 @@ export default function InvestmentsPage() {
                       <XAxis dataKey="date" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => { const p = String(v).split("-"); return `${Number(p[2])}.${Number(p[1])}.`; }} interval="preserveStartEnd" />
                       <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={55} />
                       <Tooltip
+                        trigger={tooltipTrigger}
                         content={({ active, payload, label }) =>
                           active && payload?.length ? (
                             <div className="chart-tooltip">

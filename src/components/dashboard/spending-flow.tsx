@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import {
   AreaChart,
   Area,
@@ -59,6 +60,7 @@ export function SpendingFlow({
   dailyBudget,
 }: SpendingFlowProps) {
   const { locale, fmt } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
   const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
 
   useEffect(() => {
@@ -220,6 +222,7 @@ export function SpendingFlow({
             <XAxis dataKey="label" hide />
             <YAxis hide />
             <Tooltip
+              trigger={tooltipTrigger}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const actual = payload.find((p) => p.dataKey === "actual" || p.dataKey === "projected");

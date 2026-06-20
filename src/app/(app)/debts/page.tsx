@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ interface DebtData {
 // Compact actual-balance history sparkline for one debt.
 function DebtSparkline({ data, uid }: { data: { month: string; balance: number }[]; uid: string }) {
   const { fmt } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
   return (
     <div className="debt-spark">
       <ResponsiveContainer width="100%" height={56}>
@@ -74,6 +76,7 @@ function DebtSparkline({ data, uid }: { data: { month: string; balance: number }
             </linearGradient>
           </defs>
           <Tooltip
+            trigger={tooltipTrigger}
             content={({ active, payload, label }) =>
               active && payload?.length ? (
                 <div className="chart-tooltip">
@@ -127,6 +130,7 @@ function calculatePayoff(debts: DebtData[], extraPayment: number, sortFn: (a: De
 
 export default function DebtsPage() {
   const { t, locale, fmt, mask } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
   const [debts, setDebts] = useState<DebtData[]>([]);
   const [loading, setLoading] = useState(true);
   const [extraPayment, setExtraPayment] = useState(50);
@@ -565,6 +569,7 @@ export default function DebtsPage() {
                           <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                           <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={50} />
                           <Tooltip
+                            trigger={tooltipTrigger}
                             content={({ active, payload, label }) =>
                               active && payload?.length ? (
                                 <div className="chart-tooltip">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { useYnab } from "@/lib/ynab-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ function nwColor(value: number): string {
 
 export default function NetWorthPage() {
   const { t, locale, fmt, mask } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
   const { data: ynabData } = useYnab();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,6 +318,7 @@ export default function NetWorthPage() {
                       <YAxis hide domain={[(dataMin: number) => Math.min(dataMin, 0) - 200, (dataMax: number) => Math.max(dataMax, 0) + 200]} />
                       <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
                       <Tooltip
+                        trigger={tooltipTrigger}
                         content={({ active, payload, label }) => {
                           if (!active || !payload?.length) return null;
                           const nw = payload.find((p) => p.dataKey === "netWorth" && p.value != null);
@@ -452,6 +455,7 @@ export default function NetWorthPage() {
                     <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={55} domain={["dataMin", "dataMax"]} />
                     <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
                     <Tooltip
+                      trigger={tooltipTrigger}
                       content={({ active, payload, label }) =>
                         active && payload?.length ? (
                           <div className="chart-tooltip">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { Card } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid } from "recharts";
@@ -10,6 +11,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 // are at least two months of data (so it stays hidden in local mode where YNAB hasn't synced it).
 export function AgeOfMoneyChart() {
   const { locale } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
   const [history, setHistory] = useState<{ month: string; age: number }[]>([]);
   const [current, setCurrent] = useState<number | null>(null);
 
@@ -54,6 +56,7 @@ export function AgeOfMoneyChart() {
             <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} width={28} allowDecimals={false} domain={[0, (m: number) => Math.max(m, 10)]} />
             <Tooltip
+              trigger={tooltipTrigger}
               cursor={{ stroke: "rgba(255,255,255,0.1)" }}
               contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: "0.5rem", fontSize: "0.8125rem" }}
               labelStyle={{ color: "var(--muted-foreground)" }}

@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { F } from "@/components/ui/f";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -20,6 +21,7 @@ interface CategoryBreakdownProps {
 
 export function CategoryBreakdown({ categories, total, currency = "€" }: CategoryBreakdownProps) {
   const { t, fmt } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
 
   function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: Category }> }) {
     if (active && payload && payload.length) {
@@ -47,7 +49,7 @@ export function CategoryBreakdown({ categories, total, currency = "€" }: Categ
                     <Cell key={index} fill={entry.color} stroke="transparent" />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} trigger={tooltipTrigger} />
               </PieChart>
             </ResponsiveContainer>
           </ChartContainer>

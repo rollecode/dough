@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { useLocale } from "@/lib/locale-context";
+import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import {
   AreaChart,
   Area,
@@ -19,6 +20,7 @@ interface SpendingChartProps {
 
 export function SpendingChart({ data }: SpendingChartProps) {
   const { t, fmt, mask } = useLocale();
+  const tooltipTrigger = useTooltipTrigger();
 
   function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string }>; label?: string }) {
     if (active && payload && payload.length) {
@@ -59,7 +61,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
             <XAxis dataKey="date" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={50} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} trigger={tooltipTrigger} />
             <Area type="monotone" dataKey="savingsTarget" stroke="#4ade80" strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.5} fill="url(#savingsTargetGradient)" />
             <Area type="monotone" dataKey="spent" stroke="#818cf8" strokeWidth={2} fill="url(#spentGradient)" />
           </AreaChart>
