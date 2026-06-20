@@ -23,3 +23,15 @@
 .chart-tooltip-value-mb {
   margin-bottom: 0.25rem;
 }
+
+/* Slightly larger tooltip text on phones, where the default sizes read small under a fingertip. */
+@media (max-width: 639px) {
+  .chart-tooltip-label {
+    font-size: 14px;
+  }
+
+  .chart-tooltip-value {
+    font-size: 1rem;
+    line-height: 1.4rem;
+  }
+}

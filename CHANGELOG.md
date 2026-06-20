@@ -3,6 +3,7 @@
 * Surface the real reason a receipt or statement scan fails (e.g. Claude not authenticated) instead of the scan silently doing nothing
 * Show receipt scan errors in red in the add-transaction dialog, and make the attach button read "Loading, please wait..." while scanning
 * Bring up chart tooltips on a single tap on touch devices (they only appeared on hover or drag before)
+* Slightly larger chart tooltip text on phones
 
 ### 3.0.5: 2026-06-20
 
