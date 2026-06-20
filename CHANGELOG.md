@@ -1,3 +1,8 @@
+### 3.0.6: 2026-06-20
+
+* Surface the real reason a receipt or statement scan fails (e.g. Claude not authenticated) instead of the scan silently doing nothing
+* Show receipt scan errors in red in the add-transaction dialog, and make the attach button read "Loading, please wait..." while scanning
+
 ### 3.0.5: 2026-06-20
 
 * Focus the search box when a category or account picker opens, so you can type to filter immediately

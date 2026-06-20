@@ -50,27 +50,45 @@ export async function queryClaudeWithImage(
     proc.stderr.on("data", (data: Buffer) => { stderr += data.toString(); });
 
     proc.on("close", (code: number) => {
-      if (code !== 0) {
-        console.error("[claude-image] CLI exited with code", code, stderr);
-        resolve({ text: "", error: `Claude exited with code ${code}` });
-        return;
-      }
+      if (stderr.trim()) console.error("[claude-image] stderr:", stderr.trim());
 
-      // Parse stream-json output to find the result
+      // Parse stream-json output for the result line. The CLI emits a result even when it fails
+      // (e.g. an auth/API error) and then exits non-zero, so we read it regardless of the exit code
+      // to surface the real reason ("Failed to authenticate", a 401, etc.) instead of a bare code.
       const lines = stdout.split("\n").filter(Boolean);
+      let resultText = "";
+      let resultError = "";
       for (const line of lines) {
         try {
           const parsed = JSON.parse(line);
-          if (parsed.type === "result" && parsed.result) {
-            console.info("[claude-image] Got result, length:", parsed.result.length);
-            resolve({ text: parsed.result.trim() });
-            return;
+          if (parsed.type === "result") {
+            if (parsed.is_error || parsed.api_error_status) {
+              resultError = (typeof parsed.result === "string" && parsed.result.trim())
+                || `Claude API error${parsed.api_error_status ? ` ${parsed.api_error_status}` : ""}`;
+            } else if (parsed.result) {
+              resultText = String(parsed.result).trim();
+            }
           }
         } catch {
           // skip non-JSON lines
         }
       }
 
+      if (resultText) {
+        console.info("[claude-image] Got result, length:", resultText.length);
+        resolve({ text: resultText });
+        return;
+      }
+      if (resultError) {
+        console.error("[claude-image] Result error:", resultError);
+        resolve({ text: "", error: resultError });
+        return;
+      }
+      if (code !== 0) {
+        console.error("[claude-image] CLI exited with code", code);
+        resolve({ text: "", error: `Claude exited with code ${code}` });
+        return;
+      }
       console.warn("[claude-image] No result found in output");
       resolve({ text: "", error: "No result in output" });
     });
