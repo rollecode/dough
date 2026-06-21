@@ -1,3 +1,7 @@
+### 3.0.11: 2026-06-20
+
+* Set the mobile metric info-icon gap to 10px
+
 ### 3.0.10: 2026-06-20
 
 * Give the metric info icons a small 6px gap from their text on phones (the previous 4px read as nearly flush)
