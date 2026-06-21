@@ -1,3 +1,7 @@
+### 3.0.7: 2026-06-20
+
+* Rework chart tooltips to trigger on touch: a tap (or drag) maps to the nearest data point and shows the tooltip directly, instead of relying on iOS Safari firing mouse events it does not produce on a tap. Live on the dashboard spending-flow, spending and cash-flow charts; remaining charts to follow
+
 ### 3.0.6: 2026-06-20
 
 * Surface the real reason a receipt or statement scan fails (e.g. Claude not authenticated) instead of the scan silently doing nothing

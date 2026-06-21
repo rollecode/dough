@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
+import { useTouchTooltip } from "@/components/charts/use-touch-tooltip";
 import {
   AreaChart,
   Area,
@@ -207,9 +208,11 @@ export function SpendingFlow({
     );
   };
 
+  const tt = useTouchTooltip(data.length);
+
   return (
     <div className={`spending-flow ${daysPassed <= 1 ? "is-first-day" : ""}`}>
-      <div className="spending-flow-chart">
+      <div className="spending-flow-chart" {...tt.handlers} style={{ touchAction: "pan-y" }}>
         <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={data} margin={{ top: 36, right: 4, left: 0, bottom: 0 }}>
             <defs>
@@ -221,7 +224,9 @@ export function SpendingFlow({
             </defs>
             <XAxis dataKey="label" hide />
             <YAxis hide />
+            {tt.reporter}
             <Tooltip
+              {...tt.tooltipProps}
               trigger={tooltipTrigger}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;

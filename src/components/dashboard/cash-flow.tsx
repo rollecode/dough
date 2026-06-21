@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
+import { useTouchTooltip } from "@/components/charts/use-touch-tooltip";
 import {
   BarChart,
   Bar,
@@ -44,6 +45,7 @@ function IncomeBarShape(props: { x?: number; y?: number; width?: number; height?
 export function CashFlowChart({ data }: CashFlowProps) {
   const { t, locale, fmt, mask } = useLocale();
   const tooltipTrigger = useTooltipTrigger();
+  const tt = useTouchTooltip(data.length);
 
   function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string }>; label?: string }) {
     if (active && payload && payload.length) {
@@ -85,6 +87,7 @@ export function CashFlowChart({ data }: CashFlowProps) {
     <Card className="cash-flow-card">
       <h3 className="cash-flow-title">{t.dashboard.monthlyCashFlow}</h3>
       <ChartContainer height={280}>
+        <div {...tt.wrapperProps}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 10, right: 4, left: 0, bottom: 0 }}>
             <defs>
@@ -96,13 +99,15 @@ export function CashFlowChart({ data }: CashFlowProps) {
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
             <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={50} />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} trigger={tooltipTrigger} />
+            {tt.reporter}
+            <Tooltip {...tt.tooltipProps} content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} trigger={tooltipTrigger} />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
             <Bar dataKey="income" stackId="income" shape={<IncomeBarShape />} barSize={20} />
             <Bar dataKey="upcomingIncome" stackId="income" fill="url(#upcoming-income-pattern)" radius={[4, 4, 0, 0]} barSize={20} />
             <Bar dataKey="expenses" fill="#f87171" radius={[4, 4, 0, 0]} barSize={20} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </ChartContainer>
     </Card>
   );
