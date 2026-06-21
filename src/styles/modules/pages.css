@@ -3234,6 +3234,14 @@
   }
 }
 
+/* Touch: tapping an amount toggles this class (see TouchTooltips), since the hover rule above never
+   fires on a touch screen. */
+.amt-tip.is-open::after,
+.amt-tip.is-open::before {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Capitalize filter buttons */
 .capitalize { text-transform: capitalize; }
 

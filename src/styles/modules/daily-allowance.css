@@ -210,6 +210,13 @@
   margin-left: 0.5rem;
 }
 
+/* Tuck the info icon a bit closer to the text on phones. */
+@media (max-width: 639px) {
+  .metric-info-wrap {
+    margin-left: 0.25rem;
+  }
+}
+
 .metric-info-popup {
   position: absolute;
   top: calc(100% + 0.5rem);

@@ -1,3 +1,9 @@
+### 3.0.9: 2026-06-20
+
+* Show the exact-amount tooltips on touch: tap an amount to reveal its precise value (they were hover-only, so never appeared on a phone), tap elsewhere to dismiss
+* Move the metric info icons a little closer to their text on phones
+* Stop a chart tap being canceled on iOS: a leftover "clickable" marking made the device synthesize a mousemove that dismissed the tap-driven tooltip
+
 ### 3.0.8: 2026-06-20
 
 * Fix the touch chart tooltips so they stay visible after a tap (they were being cleared the instant the finger lifted, so nothing showed on a real tap); dismiss by tapping elsewhere, and desktop hover is unaffected
