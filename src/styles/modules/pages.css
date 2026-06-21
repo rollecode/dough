@@ -440,6 +440,11 @@
   margin-top: 0.625rem;
 }
 
+.reconcile-apply {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
 .reconcile-diff {
   font-size: 0.875rem;
   font-weight: 600;

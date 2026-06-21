@@ -1,3 +1,8 @@
+### 3.0.12: 2026-06-21
+
+* Add a "Set balance to the bank balance" action to the account balance check, so a drifted balance can be corrected directly (deleting suspect transactions only closes the gap when it is a duplicate)
+* Make the balance-check delete verify success before updating the panel
+
 ### 3.0.11: 2026-06-20
 
 * Set the mobile metric info-icon gap to 10px

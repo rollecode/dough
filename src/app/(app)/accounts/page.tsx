@@ -163,11 +163,12 @@ export default function AccountsPage() {
   // the account balance, so we adjust the shown difference by the removed amount too.
   const deleteSuspect = async (txId: string, amount: number) => {
     try {
-      await fetch("/api/ynab/transaction", {
+      const res = await fetch("/api/ynab/transaction", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transaction_id: txId }),
       });
+      if (!res.ok) { console.error("[accounts] Delete suspect failed:", res.status); return; }
       setReconcile((prev) => prev ? {
         ...prev,
         diff: Math.round((prev.diff + amount) * 100) / 100,
@@ -176,6 +177,29 @@ export default function AccountsPage() {
       load();
     } catch (err) {
       console.error("[accounts] Delete suspect error:", err);
+    }
+  };
+
+  // Apply the typed bank balance directly: sets the account balance and records a reconciliation
+  // adjustment so history matches. This is the fix when the difference is a balance drift rather
+  // than a duplicate transaction to delete (deleting suspects can't close a drift).
+  const applyTrueBalance = async () => {
+    if (!editTarget) return;
+    const bal = parseFloat(trueBalance.replace(",", "."));
+    if (!isFinite(bal)) return;
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editTarget.id, balance: bal }),
+      });
+      if (!res.ok) { console.error("[accounts] Apply balance failed:", res.status); return; }
+      setReconcile(null);
+      setTrueBalance("");
+      setEditTarget(null);
+      load();
+    } catch (err) {
+      console.error("[accounts] Apply balance error:", err);
     }
   };
 
@@ -393,6 +417,11 @@ export default function AccountsPage() {
                         </button>
                       </div>
                     ))}
+                    {reconcile.diff !== 0 && (
+                      <Button type="button" variant="outline" size="sm" className="reconcile-apply" onClick={applyTrueBalance}>
+                        {locale === "fi" ? "Aseta saldoksi pankin saldo" : "Set balance to the bank balance"}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
