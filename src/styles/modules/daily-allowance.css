@@ -210,10 +210,11 @@
   margin-left: 0.5rem;
 }
 
-/* Tuck the info icon a bit closer to the text on phones. */
+/* Tuck the info icon a bit closer to the text on phones - a small visible gap, tighter than the
+   0.5rem desktop gap but not flush against the text. */
 @media (max-width: 639px) {
   .metric-info-wrap {
-    margin-left: 0.25rem;
+    margin-left: 0.375rem;
   }
 }
 

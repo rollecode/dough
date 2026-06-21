@@ -1,3 +1,7 @@
+### 3.0.10: 2026-06-20
+
+* Give the metric info icons a small 6px gap from their text on phones (the previous 4px read as nearly flush)
+
 ### 3.0.9: 2026-06-20
 
 * Show the exact-amount tooltips on touch: tap an amount to reveal its precise value (they were hover-only, so never appeared on a phone), tap elsewhere to dismiss
