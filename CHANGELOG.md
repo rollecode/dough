@@ -4,6 +4,7 @@
 * Show receipt scan errors in red in the add-transaction dialog, and make the attach button read "Loading, please wait..." while scanning
 * Bring up chart tooltips on a single tap on touch devices (they only appeared on hover or drag before)
 * Slightly larger chart tooltip text on phones
+* Open an account's transactions on a single tap again (it had started needing a double tap)
 
 ### 3.0.5: 2026-06-20
 

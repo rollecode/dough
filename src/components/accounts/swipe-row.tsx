@@ -69,22 +69,34 @@ export function SwipeRow({
       }
     }
     if (axis.current !== "x") return; // vertical drag: let the page scroll
-    moved.current = true;
     // Only the right-to-left direction reveals the edit action; clamp the rest closed.
-    setOffset(Math.max(-ACTION_WIDTH, Math.min(0, base.current + dx)));
+    const next = Math.max(-ACTION_WIDTH, Math.min(0, base.current + dx));
+    if (next < -8) moved.current = true; // a real reveal swipe, not tap jitter
+    setOffset(next);
   };
 
-  const endDrag = () => {
+  // A clean tap (no real horizontal swipe, no vertical scroll) navigates. This runs on pointer-up
+  // rather than a synthetic click, which fires unreliably after a swipe's pointer capture on touch
+  // and forced a second tap to open the account.
+  const onPointerUp = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
+    const tapped = axis.current !== "y" && !moved.current;
+    if (tapped) {
+      if (base.current !== 0) { setOffset(0); return; } // tap on an open row closes it
+      setOffset(0);
+      router.push(href);
+      return;
+    }
+    setOffset((o) => (o < -OPEN_THRESHOLD ? -ACTION_WIDTH : 0)); // a swipe: snap open or closed
+  };
+
+  const onPointerCancel = () => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
     setDragging(false);
     setOffset((o) => (o < -OPEN_THRESHOLD ? -ACTION_WIDTH : 0));
-  };
-
-  const handleClick = () => {
-    if (moved.current) { moved.current = false; return; } // a swipe, not a tap
-    if (offset !== 0) { setOffset(0); return; } // tap while open just closes it
-    router.push(href);
   };
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -105,9 +117,8 @@ export function SwipeRow({
         style={offset !== 0 ? { transform: `translateX(${offset}px)` } : undefined}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onClick={handleClick}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
       >
         {children}
       </div>
