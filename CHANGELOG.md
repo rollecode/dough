@@ -1,3 +1,7 @@
+### 3.0.8: 2026-06-20
+
+* Fix the touch chart tooltips so they stay visible after a tap (they were being cleared the instant the finger lifted, so nothing showed on a real tap); dismiss by tapping elsewhere, and desktop hover is unaffected
+
 ### 3.0.7: 2026-06-20
 
 * Rework chart tooltips to trigger on touch: a tap (or drag) maps to the nearest data point and shows the tooltip directly, instead of relying on iOS Safari firing mouse events it does not produce on a tap. Live on the dashboard spending-flow, spending and cash-flow charts; remaining charts to follow
