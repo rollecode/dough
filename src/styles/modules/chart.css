@@ -1,5 +1,11 @@
 /* Module: chart */
 
+/* cursor:pointer also marks a chart "clickable" so iOS Safari fires the mouse events a tap needs to
+   show the hover tooltip (see ChartTouchTooltips). Harmless on desktop. */
+.recharts-surface {
+  cursor: pointer;
+}
+
 .chart-tooltip {
   border-radius: 0.5rem;
   border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);

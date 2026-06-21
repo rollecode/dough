@@ -2,39 +2,35 @@
 
 import { useEffect } from "react";
 
-// Recharts shows tooltips on hover and (in v3) on touch-drag, but never on a stationary tap, and its
-// trigger="click" does not fire on a pure touch tap either (verified: a tap with no compatibility
-// mouse events, as on iOS Safari, shows nothing). Mounted once for the whole app, this listens for
-// touches and, when one is over a chart, dispatches a synthetic mousemove at that point so the
-// chart's normal hover tooltip appears and follows the finger. The synthetic mousemove bubbles to
-// the recharts wrapper, whose onMouseMove reads clientX/clientY relative to itself - exactly what a
-// real hover provides. A touch off every chart nudges each chart's pointer outside to dismiss it.
+// iOS Safari only dispatches mouse events (mouseover, mousemove, ...) when you tap an element it
+// considers "clickable": one that has an onclick handler or cursor:pointer. A plain SVG chart is not
+// clickable, so a tap on it fires nothing and the hover tooltip never appears - even though desktop
+// hover and Android (which synthesize mouse events freely) work. So we mark every recharts chart
+// clickable; then on iOS a tap produces the mouseover/mousemove that drives the normal hover tooltip.
+// Done globally via a MutationObserver so it covers every chart, including ones rendered after data
+// loads. See Apple's Safari Web Content Guide, "One-Finger Events" / making elements clickable.
 export function ChartTouchTooltips() {
   useEffect(() => {
-    const relay = (clientX: number, clientY: number): boolean => {
-      const el = document.elementFromPoint(clientX, clientY);
-      const wrapper = el?.closest(".recharts-wrapper");
-      if (wrapper && el) {
-        el.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, cancelable: true, clientX, clientY, view: window }));
-        return true;
-      }
-      return false;
+    const noop = () => {};
+    const mark = (el: Element) => {
+      const e = el as HTMLElement & { __tapTip?: boolean };
+      if (e.__tapTip) return;
+      e.__tapTip = true;
+      e.style.cursor = "pointer";
+      e.onclick = noop; // the onclick property is what iOS checks to treat a tap as "clickable"
     };
-    const onTouch = (e: TouchEvent) => {
-      const t = e.touches[0];
-      if (!t) return;
-      if (!relay(t.clientX, t.clientY)) {
-        document.querySelectorAll<HTMLElement>(".recharts-wrapper").forEach((w) =>
-          w.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, cancelable: true, clientX: -9999, clientY: -9999, view: window }))
-        );
-      }
+    const scan = (node: Node) => {
+      if (node.nodeType !== 1) return;
+      const el = node as Element;
+      if (el.matches?.(".recharts-wrapper, .recharts-surface")) mark(el);
+      el.querySelectorAll?.(".recharts-wrapper, .recharts-surface").forEach(mark);
     };
-    document.addEventListener("touchstart", onTouch, { passive: true });
-    document.addEventListener("touchmove", onTouch, { passive: true });
-    return () => {
-      document.removeEventListener("touchstart", onTouch);
-      document.removeEventListener("touchmove", onTouch);
-    };
+    scan(document.body);
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) m.addedNodes.forEach(scan);
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => obs.disconnect();
   }, []);
   return null;
 }
