@@ -58,7 +58,7 @@
 - Add an expense, income, or a transfer between accounts, with AI auto-categorization and a duplicate check; the account and category pickers are searchable and focus their search box on open so you can type to filter
 - Receipt or statement photo/PDF: the AI reads it and adds one or many transactions, each with an editable category and a possible-duplicate flag
 - Payee and description fields autocomplete from earlier entries (rendered in a portal so they are not clipped by the modal)
-- Picking a category prefills the amount and description from the last expense in that category, to speed up recurring entries; both stay editable and only re-fill if you pick a category again
+- Entering a payee (or picking a category) prefills the amount and description from the last matching expense - the payee is matched first, then the category as a fallback - to speed up recurring entries; both stay editable and a field you have typed into is never overwritten
 - Edit a transaction's category from the edit dialog (writes back to YNAB when connected, plus local data)
 - Split a transaction across multiple categories (stored as child rows sharing a split_group, with live remaining + auto-distribute); shown as one grouped row and preserved across YNAB re-sync
 - Date fields follow the configured date format with a themed calendar picker

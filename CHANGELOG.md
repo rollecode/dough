@@ -1,3 +1,7 @@
+### 3.0.14: 2026-06-21
+
+* Prefill a recurring expense from the last entry with the same payee (amount and description), falling back to the category when the payee has no history - keyed on payee first, not just the category
+
 ### 3.0.13: 2026-06-21
 
 * Picking a category when adding an expense prefills the amount and description from the last expense in that category, speeding up recurring entries (both stay editable)

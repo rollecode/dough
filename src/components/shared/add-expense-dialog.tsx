@@ -84,6 +84,10 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [memos, setMemos] = useState<string[]>([]);
   const [dupCandidates, setDupCandidates] = useState<{ id: string; date: string; payee: string; amount: number; account: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Track whether the user has hand-edited the amount/description, so the recurring prefill never
+  // overwrites their input. Reset whenever the dialog opens or a transaction is added.
+  const amountTouchedRef = useRef(false);
+  const memoTouchedRef = useRef(false);
 
   useEffect(() => {
     console.debug("[add-expense] Loading accounts");
@@ -116,6 +120,11 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     const a = allAccounts.find((x) => x.id === initialAccountId);
     if (a) setLinkedAccountName(a.name);
   }, [open, initialAccountId, allAccounts]);
+
+  // Fresh prefill allowance each time the dialog opens.
+  useEffect(() => {
+    if (open) { amountTouchedRef.current = false; memoTouchedRef.current = false; }
+  }, [open]);
 
   const resolveAccountFromMemo = async (memo: string) => {
     if (!memo.trim()) return;
@@ -159,16 +168,20 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, addPayee, addMemo, txType]);
 
-  // When a category is picked, prefill the amount and description from the last expense in that
-  // category to speed up recurring entries. It fills once on pick and the fields stay editable, so
-  // the prefill never fights your edits (it only re-applies if you pick a category again).
-  const prefillFromCategory = async (cat: string) => {
-    if (!cat) return;
+  // Prefill the amount and description from the last matching expense to speed up recurring entries:
+  // the payee is tried first (a recurring entry repeats the same payee), then the category as a
+  // fallback. It never overwrites a field you have already typed into (amountTouched/memoTouched), so
+  // a pick fills empty fields once and then leaves your edits alone.
+  const prefill = async (payee: string, category: string) => {
+    const p = payee.trim();
+    const c = category.trim();
+    if (!p && !c) return;
+    if (amountTouchedRef.current && memoTouchedRef.current) return;
     try {
-      const r = await fetch(`/api/categories/last?category=${encodeURIComponent(cat)}`);
+      const r = await fetch(`/api/categories/last?payee=${encodeURIComponent(p)}&category=${encodeURIComponent(c)}`);
       const d = await r.json();
-      if (typeof d.amount === "number") { setAddAmount(String(d.amount)); setDupCandidates([]); }
-      if (typeof d.memo === "string" && d.memo) setAddMemo(d.memo);
+      if (typeof d.amount === "number" && !amountTouchedRef.current) { setAddAmount(String(d.amount)); setDupCandidates([]); }
+      if (typeof d.memo === "string" && d.memo && !memoTouchedRef.current) setAddMemo(d.memo);
     } catch { /* prefill is a convenience; ignore failures */ }
   };
 
@@ -284,7 +297,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
       });
       if (res.ok) {
         onOpenChange(false);
-        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10));
+        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10)); amountTouchedRef.current = false; memoTouchedRef.current = false;
         setTxType("expense"); setToAccountId("");
         catSourceRef.current = ""; setCatSource("");
         setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
@@ -345,7 +358,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
       });
       if (res.ok) {
         onOpenChange(false);
-        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10));
+        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10)); amountTouchedRef.current = false; memoTouchedRef.current = false;
         setTxType("expense"); setToAccountId("");
         setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
         refresh();
@@ -481,14 +494,14 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
               {txType !== "transfer" && (
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
-                  <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
+                  <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} onBlur={() => { if (txType === "expense") prefill(addPayee, addCategory); }} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
                 </div>
               )}
 
               <div className="form-grid-2">
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
-                  <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); }} placeholder="0.00" />
+                  <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); amountTouchedRef.current = true; }} placeholder="0.00" />
                 </div>
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>
@@ -505,7 +518,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
                   </Label>
                   <CategoryPicker
                     value={addCategory}
-                    onChange={(v) => { setAddCategory(v); const src = v ? "manual" : ""; catSourceRef.current = src; setCatSource(src); if (v) prefillFromCategory(v); }}
+                    onChange={(v) => { setAddCategory(v); const src = v ? "manual" : ""; catSourceRef.current = src; setCatSource(src); if (v) prefill(addPayee, v); }}
                     categories={budgetCats}
                     fmt={fmt}
                     placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
@@ -523,7 +536,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
 
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
-                <PayeeInput value={addMemo} onChange={setAddMemo} payees={memos} onBlur={() => txType !== "transfer" && resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
+                <PayeeInput value={addMemo} onChange={(v) => { setAddMemo(v); memoTouchedRef.current = true; }} payees={memos} onBlur={() => txType !== "transfer" && resolveAccountFromMemo(addMemo)} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
               </div>
 
               {dupCandidates.length > 0 && (
