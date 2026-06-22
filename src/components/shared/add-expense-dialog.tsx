@@ -159,6 +159,19 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, addPayee, addMemo, txType]);
 
+  // When a category is picked, prefill the amount and description from the last expense in that
+  // category to speed up recurring entries. It fills once on pick and the fields stay editable, so
+  // the prefill never fights your edits (it only re-applies if you pick a category again).
+  const prefillFromCategory = async (cat: string) => {
+    if (!cat) return;
+    try {
+      const r = await fetch(`/api/categories/last?category=${encodeURIComponent(cat)}`);
+      const d = await r.json();
+      if (typeof d.amount === "number") { setAddAmount(String(d.amount)); setDupCandidates([]); }
+      if (typeof d.memo === "string" && d.memo) setAddMemo(d.memo);
+    } catch { /* prefill is a convenience; ignore failures */ }
+  };
+
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -492,7 +505,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
                   </Label>
                   <CategoryPicker
                     value={addCategory}
-                    onChange={(v) => { setAddCategory(v); const src = v ? "manual" : ""; catSourceRef.current = src; setCatSource(src); }}
+                    onChange={(v) => { setAddCategory(v); const src = v ? "manual" : ""; catSourceRef.current = src; setCatSource(src); if (v) prefillFromCategory(v); }}
                     categories={budgetCats}
                     fmt={fmt}
                     placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}

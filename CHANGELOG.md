@@ -1,3 +1,7 @@
+### 3.0.13: 2026-06-21
+
+* Picking a category when adding an expense prefills the amount and description from the last expense in that category, speeding up recurring entries (both stay editable)
+
 ### 3.0.12: 2026-06-21
 
 * Add a "Set balance to the bank balance" action to the account balance check, so a drifted balance can be corrected directly (deleting suspect transactions only closes the gap when it is a duplicate)
