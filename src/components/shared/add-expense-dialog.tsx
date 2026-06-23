@@ -494,14 +494,14 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
               {txType !== "transfer" && (
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
-                  <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} onBlur={() => { if (txType === "expense") prefill(addPayee, addCategory); }} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
+                  <PayeeInput value={addPayee} onChange={setAddPayee} payees={payees} onBlur={() => { if (txType === "expense") prefill(addPayee, addCategory); }} onPick={() => document.getElementById("add-tx-amount")?.focus()} placeholder={locale === "fi" ? "esim. K-Market" : "e.g. Store name"} />
                 </div>
               )}
 
               <div className="form-grid-2">
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Summa (€)" : "Amount (€)"}</Label>
-                  <Input type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); amountTouchedRef.current = true; }} placeholder="0.00" />
+                  <Input id="add-tx-amount" type="text" inputMode="decimal" value={addAmount} onChange={(e) => { setAddAmount(e.target.value); setDupCandidates([]); amountTouchedRef.current = true; }} onFocus={(e) => e.currentTarget.select()} placeholder="0.00" />
                 </div>
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>

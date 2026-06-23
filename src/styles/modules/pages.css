@@ -2527,6 +2527,32 @@
   gap: 0.5rem;
 }
 
+/* Debts list: stacked on mobile, two half-width cards per row on desktop, with grid dividers
+   (the surrounding list-card supplies the outer frame). */
+.debt-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .debt-edit-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .debt-edit-grid > .edit-item {
+    border-top: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  }
+  .debt-edit-grid > .edit-item:nth-child(1),
+  .debt-edit-grid > .edit-item:nth-child(2) {
+    border-top: none;
+  }
+  .debt-edit-grid > .edit-item:nth-child(odd) {
+    border-right: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  }
+  .debt-edit-grid > .edit-item:last-child:nth-child(odd) {
+    border-right: none;
+  }
+}
+
 .edit-item-header {
   display: flex;
   align-items: flex-start;

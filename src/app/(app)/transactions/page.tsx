@@ -90,6 +90,7 @@ export default function TransactionsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addDayDate, setAddDayDate] = useState("");
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
+  const [excludedAccountIds, setExcludedAccountIds] = useState<string[]>([]);
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
   const [payees, setPayees] = useState<string[]>([]);
   const [memos, setMemos] = useState<string[]>([]);
@@ -121,7 +122,24 @@ export default function TransactionsPage() {
         setBudgetCats(data.categories.filter((c: { is_active: number }) => c.is_active).map((c: { name: string; group_name: string; available: number }) => ({ name: c.name, group_name: c.group_name, available: c.available })));
       }
     }).catch(() => {});
+    // Accounts excluded from the daily budget ("Pois päiväbudjetista"), so the header balance can
+    // sum only the in-budget accounts.
+    fetch("/api/household").then((r) => r.json()).then((data) => {
+      if (data.settings?.budget_excluded_accounts) {
+        try { setExcludedAccountIds(JSON.parse(data.settings.budget_excluded_accounts)); } catch {}
+      }
+    }).catch(() => {});
   }, []);
+
+  // Account selection is a deep link at a pretty path (/transactions/<account-slug>, or /transactions
+  // for all). Native history.pushState updates the URL and keeps usePathname in sync without
+  // remounting, so the view stays put and the URL is shareable and restored on refresh.
+  const selectAccount = (id: string) => {
+    setAccountFilter(id);
+    const acct = allAccounts.find((a) => a.id === id);
+    const path = id === "all" || !acct ? "/transactions" : `/transactions/${accountSlug(acct.name)}`;
+    window.history.pushState(null, "", path);
+  };
 
   const handleEditSave = async () => {
     if (!editTx) return;
@@ -287,7 +305,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     if (!allAccounts.length) return;
     const slug = pathname.startsWith("/transactions/") ? decodeURIComponent(pathname.slice("/transactions/".length)) : "";
-    if (!slug) return;
+    if (!slug) { setAccountFilter("all"); return; }
     const match = allAccounts.find((a) => accountSlug(a.name) === slug);
     if (match) setAccountFilter(match.id);
   }, [pathname, allAccounts]);
@@ -298,10 +316,10 @@ export default function TransactionsPage() {
   // Live account balances for the topbar box (selected account, or all checking/savings).
   const acctBalances = data?.summary?.accounts ?? [];
   const topBalance = accountFilter === "all"
-    ? acctBalances.filter((a) => a.type === "checking" || a.type === "savings").reduce((s, a) => s + a.balance, 0)
+    ? acctBalances.filter((a) => (a.type === "checking" || a.type === "savings") && !excludedAccountIds.includes(a.id)).reduce((s, a) => s + a.balance, 0)
     : (acctBalances.find((a) => a.id === accountFilter)?.balance ?? 0);
   const topBalanceLabel = accountFilter === "all"
-    ? (locale === "fi" ? "Tilien saldo" : "Accounts balance")
+    ? (locale === "fi" ? "Tilien saldo (budjetissa)" : "Accounts balance (in budget)")
     : (allAccounts.find((a) => a.id === accountFilter)?.name ?? "");
   useEffect(() => {
     const el = sentinelRef.current;
@@ -386,7 +404,7 @@ export default function TransactionsPage() {
           <button
             type="button"
             className={`budget-filter ${accountFilter === "all" ? "is-active" : ""}`}
-            onClick={() => setAccountFilter("all")}
+            onClick={() => selectAccount("all")}
           >
             {locale === "fi" ? "Kaikki tilit" : "All accounts"}
           </button>
@@ -395,7 +413,7 @@ export default function TransactionsPage() {
               key={a.id}
               type="button"
               className={`budget-filter ${accountFilter === a.id ? "is-active" : ""}`}
-              onClick={() => setAccountFilter(a.id)}
+              onClick={() => selectAccount(a.id)}
             >
               {a.name}
             </button>
@@ -507,12 +525,12 @@ export default function TransactionsPage() {
               </div>
               <div className="form-field">
                 <Label>{locale === "fi" ? "Saaja" : "Payee"}</Label>
-                <PayeeInput value={editTx.payee} onChange={(v) => setEditTx({ ...editTx, payee: v })} payees={payees} />
+                <PayeeInput value={editTx.payee} onChange={(v) => setEditTx({ ...editTx, payee: v })} payees={payees} onPick={() => document.getElementById("edit-tx-amount")?.focus()} />
               </div>
               <div className="form-grid-2">
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Summa" : "Amount"}</Label>
-                  <Input type="number" step="0.01" value={Math.abs(editTx.amount)} onChange={(e) => setEditTx({ ...editTx, amount: editTx.amount < 0 ? -Math.abs(parseFloat(e.target.value) || 0) : Math.abs(parseFloat(e.target.value) || 0) })} />
+                  <Input id="edit-tx-amount" type="number" step="0.01" value={Math.abs(editTx.amount)} onChange={(e) => setEditTx({ ...editTx, amount: editTx.amount < 0 ? -Math.abs(parseFloat(e.target.value) || 0) : Math.abs(parseFloat(e.target.value) || 0) })} onFocus={(e) => e.currentTarget.select()} />
                 </div>
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Päivämäärä" : "Date"}</Label>

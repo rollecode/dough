@@ -10,13 +10,16 @@ interface PayeeInputProps {
   payees: string[];
   placeholder?: string;
   onBlur?: () => void;
+  // Fired only when a suggestion is committed from the dropdown (click or Enter), not while typing.
+  // Lets the caller advance focus to the next field once a payee is picked.
+  onPick?: () => void;
 }
 
 // Payee/description field with a custom suggestions dropdown. The list is rendered in a portal
 // with fixed positioning so it floats above a dialog instead of being clipped by the modal's
 // overflow (which forced scrolling inside the modal to reach options). Selects on pointerdown so
 // a touch tap registers before the input loses focus.
-export function PayeeInput({ value, onChange, payees, placeholder, onBlur }: PayeeInputProps) {
+export function PayeeInput({ value, onChange, payees, placeholder, onBlur, onPick }: PayeeInputProps) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const [mounted, setMounted] = useState(false);
@@ -65,6 +68,7 @@ export function PayeeInput({ value, onChange, payees, placeholder, onBlur }: Pay
     onChange(p);
     setOpen(false);
     setHighlight(-1);
+    onPick?.();
   };
 
   return (

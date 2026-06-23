@@ -1,3 +1,11 @@
+### 3.2.0: 2026-06-23
+
+* Focusing the amount field in the add or edit transaction modal selects its contents, so you can type over it
+* Picking a payee from the suggestions in a transaction modal moves focus to the amount field
+* Selecting an account on Transactions updates the URL to a pretty permalink (/transactions/account-name), so the view is shareable and restored on refresh
+* The Transactions header balance is labelled "in budget" and sums only accounts that are not excluded from the daily budget
+* Debts list shows two debts per row on desktop
+
 ### 3.1.0: 2026-06-23
 
 * Fix the Ready to Assign badge reading the grey "all budgeted" state while still showing a rounded amount, by classifying the state from the value exactly as displayed

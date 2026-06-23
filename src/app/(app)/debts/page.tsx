@@ -405,7 +405,7 @@ export default function DebtsPage() {
 
       {/* Debt list with editable fields */}
       {debts.length > 0 && (
-        <Card className="list-card">
+        <Card className="list-card debt-edit-grid">
           {debts.map((debt, idx) => (
             <div key={debt.id} className="edit-item" draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDragEnd={handleDragEnd}>
               <div className="edit-item-header">
