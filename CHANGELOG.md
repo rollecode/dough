@@ -1,3 +1,7 @@
+### 3.0.15: 2026-06-21
+
+* Add the Apple Music logo to the shared brand icons, so it shows its real logo (was a plain glyph) on subscriptions and bills
+
 ### 3.0.14: 2026-06-21
 
 * Prefill a recurring expense from the last entry with the same payee (amount and description), falling back to the category when the payee has no history - keyed on payee first, not just the category
