@@ -152,7 +152,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     const t = setTimeout(async () => {
       setCatGuessing(true);
       try {
-        const res = await fetch(`/api/categorize?payee=${encodeURIComponent(payee)}&memo=${encodeURIComponent(addMemo.trim())}`);
+        const res = await fetch(`/api/categorize?payee=${encodeURIComponent(payee)}&memo=${encodeURIComponent(addMemo.trim())}&amount=${encodeURIComponent(addAmount.trim().replace(",", "."))}`);
         const d = await res.json();
         if (d.category && catSourceRef.current !== "manual") {
           setAddCategory(d.category);
@@ -166,7 +166,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, addPayee, addMemo, txType]);
+  }, [open, addPayee, addMemo, addAmount, txType]);
 
   // Prefill the amount and description from the last matching expense to speed up recurring entries:
   // the payee is tried first (a recurring entry repeats the same payee), then the category as a

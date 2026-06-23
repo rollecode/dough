@@ -60,6 +60,7 @@
 - Payee and description fields autocomplete from earlier entries (rendered in a portal so they are not clipped by the modal)
 - Entering a payee (or picking a category) prefills the amount and description from the last matching expense - the payee is matched first, then the category as a fallback - to speed up recurring entries; both stay editable and a field you have typed into is never overwritten
 - Edit a transaction's category from the edit dialog (writes back to YNAB when connected, plus local data)
+- Auto-categorize by payee + amount: when a payee has always been filed under one category at a given amount (a fixed recurring payment), that category is picked instantly when adding or syncing, before falling back to the AI guess
 - Split a transaction across multiple categories (stored as child rows sharing a split_group, with live remaining + auto-distribute); shown as one grouped row and preserved across YNAB re-sync
 - Date fields follow the configured date format with a themed calendar picker
 - Floating action button for quick entry (hidden on chat page)

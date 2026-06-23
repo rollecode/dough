@@ -1,3 +1,7 @@
+### 3.0.16: 2026-06-21
+
+* Auto-categorize a transaction from a consistent payee + amount history (a fixed recurring payment) when adding or syncing, before falling back to the AI guess
+
 ### 3.0.15: 2026-06-21
 
 * Add the Apple Music logo to the shared brand icons, so it shows its real logo (was a plain glyph) on subscriptions and bills

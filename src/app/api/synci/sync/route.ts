@@ -5,6 +5,7 @@ import { getHouseholdSetting, setHouseholdSetting, getBudgetMode, secretsEqual }
 import { getAllPatterns } from "@/lib/matching";
 import { eventBus } from "@/lib/event-bus";
 import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
+import { categoryByPayeeAmount } from "@/lib/categorize-history";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
 
     let totalMatched = 0;
     let totalImported = 0;
-    const toCategorize: { id: string; payee: string }[] = []; // newly imported expenses for AI categorizing
+    const toCategorize: { id: string; payee: string; amount: number }[] = []; // newly imported expenses to categorize
 
     for (const synciAccountId of mappedAccountIds) {
       console.info("[synci/sync] Polling account", synciAccountId, "mode:", mode);
@@ -174,7 +175,7 @@ export async function POST(request: Request) {
               .run(amount, localAccountId);
             totalImported++;
             // Only unrecognised outflows need AI categorising; matched income is already placed.
-            if (amount < 0) toCategorize.push({ id: synciTxId, payee });
+            if (amount < 0) toCategorize.push({ id: synciTxId, payee, amount });
             console.info("[synci/sync] Imported", payee, amount, incomeCategory ? "(income)" : provisionalInflow ? "(provisional inflow)" : "", "to account", localAccountId);
           }
           // Mark a matched income source as received this month
@@ -395,6 +396,10 @@ export async function POST(request: Request) {
         for (const item of toCategorize) {
           const row = db.prepare("SELECT category, payee FROM transactions WHERE ynab_id = ?").get(item.id) as { category: string; payee: string } | undefined;
           if (!row || row.category || row.payee.startsWith("Transfer")) continue;
+          // A consistent payee+amount history (fixed recurring payment) is used directly, no model
+          // call; otherwise fall back to the AI guess from the payee.
+          const histCat = categoryByPayeeAmount(db, item.payee, item.amount);
+          if (histCat) { db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(histCat, item.id); categorized++; continue; }
           try {
             const cat = await categorizePayee(item.payee, catNames);
             if (cat) { db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(cat, item.id); categorized++; }
