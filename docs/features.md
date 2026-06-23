@@ -78,11 +78,12 @@
 - Auto-assign (Quick Budget): fund to targets, copy last month's assigned, or copy last month's spending
 - Inline assigned editor with a calculator popover
 - Category inspector (right sheet): inline-editable name, group and description, available breakdown, target editing, snooze, hide and delete
-- Link a category to a subscription, bill, debt, savings goal or investment (mutually exclusive); the linked item supplies the category's target. A savings-goal link sets a by-date target and its progress is derived from what you assign, so assigning in Budget reflects in the goal (no balance mutation); debt and investment links are target/display-only
+- Link a category to a subscription, bill, debt, savings goal or investment (mutually exclusive); the linked item supplies the category's target. A savings-goal link sets a by-date target and its saved progress reflects the category's current available balance (what is assigned minus what is spent), so assigning in Budget reflects in the goal (no balance mutation); debt and investment links are target/display-only
 - Hidden categories with spending or assignments still appear (with a Hidden badge) and surface in the Overspent filter
 - An overspent category always appears in its group and the Overspent filter even when snoozed or hidden, so the overspend can be seen and covered
 - Delete a category: one with transactions folds into a chosen category (every transaction is reassigned retroactively and its monthly budgets merge there, so nothing is orphaned); one with no transactions is removed directly, after settling any leftover money to Ready to Assign or another category (an overspend is covered first)
-- Delete a category group from its header, keeping its categories without a group
+- Add a category straight into a group with the "+" on the group header, which opens the new-category dialog pre-filled with that group
+- The new-category dialog's group field is a filterable list of existing groups and also accepts a new group name
 - Move money between categories and cover overspending, capped at the source's available balance; the move and fund pickers (quick popovers and the inspector move dropdown) have a category search box to filter long lists
 - Cover-from popout on overspent amounts and filters for all, overspent and money available
 - Filters are deep-linkable at pretty paths (/budget/overspent, /budget/underfunded, /budget/available) so a filtered view is shareable and restored on refresh
@@ -155,7 +156,7 @@
 - Brand-styled cards with auto-detected colors and SVG logos (shared brand module, also used by bills)
 - Must-pay priority flag
 - Monthly and yearly cost summary
-- YNAB payee matching for auto-detection
+- Payee matching for auto-detection, with an optional price per pattern so payees that share a name but differ by amount (for example several Apple charges) only match the right subscription
 - Paid/overdue status badges
 - Active/inactive toggle
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { availableForCategory } from "@/lib/budget-math";
 import { eventBus } from "@/lib/event-bus";
 
 export async function GET() {
@@ -13,15 +14,19 @@ export async function GET() {
       .prepare("SELECT * FROM savings_goals ORDER BY created_at ASC")
       .all() as { id: number; saved_amount: number }[];
 
-    // A goal linked to a budget category derives its saved progress from what has been assigned to
-    // that category (so assigning in Budget reflects here). Unlinked goals keep their stored amount.
-    // This is read-time derivation - it never writes, so balances and stored data stay untouched.
+    // A goal linked to a budget category derives its saved progress from what is CURRENTLY set aside
+    // in that category - its available balance (everything assigned minus everything spent, carried
+    // forward) - not the lifetime sum of assignments. Summing budgeted made a category that is funded
+    // and spent every month (e.g. a recurring cost) inflate "saved" far beyond what is actually saved.
+    // Read-time derivation only - it never writes, so balances and stored data stay untouched.
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const linkRows = db
-      .prepare("SELECT id AS category_id, savings_goal_id FROM categories WHERE savings_goal_id IS NOT NULL")
-      .all() as { category_id: number; savings_goal_id: number }[];
+      .prepare("SELECT id AS category_id, name, savings_goal_id FROM categories WHERE savings_goal_id IS NOT NULL")
+      .all() as { category_id: number; name: string; savings_goal_id: number }[];
     const assignedByGoal = new Map<number, number>();
     for (const r of linkRows) {
-      const v = (db.prepare("SELECT COALESCE(SUM(budgeted), 0) AS v FROM monthly_category_budgets WHERE category_id = ?").get(r.category_id) as { v: number }).v || 0;
+      const v = availableForCategory(db, r.category_id, r.name, month);
       assignedByGoal.set(r.savings_goal_id, (assignedByGoal.get(r.savings_goal_id) || 0) + v);
     }
     const withDerived = goals.map((g) =>

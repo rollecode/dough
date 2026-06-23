@@ -104,11 +104,12 @@ export function runAutoMatch(transactions: any[], month: string): { matched: num
     const matchingTx = transactions.find((tx: any) => {
       const payee = tx.payee || tx.payee_name || "";
       if (!matcher(payee)) return false;
-      // Check amount range if set (min > 0 or max > 0)
+      // Check amount range if set (min > 0 or max > 0). A half-cent tolerance keeps an exact-price
+      // match (min == max, e.g. an 11.99 subscription) robust against float rounding.
       if (pattern.min_amount > 0 || pattern.max_amount > 0) {
         const absAmount = Math.abs(tx.amount);
-        if (pattern.min_amount > 0 && absAmount < pattern.min_amount) return false;
-        if (pattern.max_amount > 0 && absAmount > pattern.max_amount) return false;
+        if (pattern.min_amount > 0 && absAmount < pattern.min_amount - 0.005) return false;
+        if (pattern.max_amount > 0 && absAmount > pattern.max_amount + 0.005) return false;
       }
       // For bills/subscriptions with a due day, only match transactions near the due date
       // This prevents a previous month's late payment from being matched as current month

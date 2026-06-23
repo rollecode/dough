@@ -1430,7 +1430,9 @@
   white-space: nowrap;
 }
 
-.budget-group-delete {
+/* "+" to add a category straight into this group. Stays visible (low opacity) rather than
+   hover-only, so it is reachable on touch devices where there is no hover. */
+.budget-group-add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1442,22 +1444,22 @@
   background: none;
   color: var(--muted-foreground);
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.5;
   transition: opacity 120ms, color 120ms;
 }
 
-.budget-group-header:hover .budget-group-delete {
-  opacity: 0.55;
+.budget-group-header:hover .budget-group-add {
+  opacity: 0.7;
 }
 
-.budget-group-delete:hover {
+.budget-group-add:hover {
   opacity: 1 !important;
-  color: var(--negative);
+  color: var(--primary);
 }
 
-.budget-group-delete svg {
-  width: 0.8125rem;
-  height: 0.8125rem;
+.budget-group-add svg {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .budget-group-header .budget-num {
@@ -2221,6 +2223,12 @@
 .match-pattern-input {
   flex: 1;
   width: 100%;
+  font-size: 0.8125rem;
+}
+
+.match-pattern-amount {
+  width: 5.5rem;
+  flex: 0 0 auto;
   font-size: 0.8125rem;
 }
 

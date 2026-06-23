@@ -1,3 +1,12 @@
+### 3.1.0: 2026-06-23
+
+* Fix the Ready to Assign badge reading the grey "all budgeted" state while still showing a rounded amount, by classifying the state from the value exactly as displayed
+* Subscription payee matching can take a price per pattern, so payees that share a name but differ by amount only match the right subscription
+* Add the real Runna logo (traced from the app icon) and its brand green to the shared brand icons
+* Add a "+" on each budget group header to add a category straight into that group, opening the new-category dialog pre-filled with the group
+* Make the new-category dialog's group field a filterable list of existing groups that still accepts a new group name
+* Fix a savings goal linked to a budget category showing the lifetime sum of assignments as saved; it now reflects the category's current available balance
+
 ### 3.0.16: 2026-06-21
 
 * Auto-categorize a transaction from a consistent payee + amount history (a fixed recurring payment) when adding or syncing, before falling back to the AI guess

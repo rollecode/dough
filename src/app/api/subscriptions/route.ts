@@ -23,12 +23,12 @@ export async function GET() {
 
     // Get payee patterns with IDs for deletion
     const patterns = db
-      .prepare("SELECT id, source_id, payee_pattern FROM payee_matches WHERE source_type = 'subscription'")
-      .all() as { id: number; source_id: number; payee_pattern: string }[];
-    const patternMap = new Map<number, { id: number; pattern: string }[]>();
+      .prepare("SELECT id, source_id, payee_pattern, min_amount, max_amount FROM payee_matches WHERE source_type = 'subscription'")
+      .all() as { id: number; source_id: number; payee_pattern: string; min_amount: number; max_amount: number }[];
+    const patternMap = new Map<number, { id: number; pattern: string; min_amount: number; max_amount: number }[]>();
     for (const p of patterns) {
       if (!patternMap.has(p.source_id)) patternMap.set(p.source_id, []);
-      patternMap.get(p.source_id)!.push({ id: p.id, pattern: p.payee_pattern });
+      patternMap.get(p.source_id)!.push({ id: p.id, pattern: p.payee_pattern, min_amount: p.min_amount, max_amount: p.max_amount });
     }
 
     // Manual paid status (subscription IDs offset by 10000 to avoid collision with bills)

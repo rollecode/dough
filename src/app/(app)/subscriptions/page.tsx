@@ -34,7 +34,7 @@ interface Subscription {
   is_paid: boolean;
   is_overdue: boolean;
   is_priority: number;
-  patterns: { id: number; pattern: string }[];
+  patterns: { id: number; pattern: string; min_amount: number; max_amount: number }[];
 }
 
 export default function SubscriptionsPage() {
@@ -45,6 +45,7 @@ export default function SubscriptionsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Subscription | null>(null);
   const [newPattern, setNewPattern] = useState("");
+  const [newPatternAmount, setNewPatternAmount] = useState("");
   const addFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
 
@@ -153,13 +154,18 @@ export default function SubscriptionsPage() {
 
   const addPattern = async (subId: number) => {
     if (!newPattern.trim()) return;
+    // An optional price pins the match to one amount (sent as min == max), so e.g. only the 11.99
+    // Apple charge matches Apple Music and other Apple payments are left alone.
+    const price = parseFloat(newPatternAmount.replace(",", "."));
+    const amount = isFinite(price) && price > 0 ? Math.round(price * 100) / 100 : 0;
     try {
       await fetch("/api/matches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source_type: "subscription", source_id: subId, payee_pattern: newPattern.trim() }),
+        body: JSON.stringify({ source_type: "subscription", source_id: subId, payee_pattern: newPattern.trim(), min_amount: amount, max_amount: amount }),
       });
       setNewPattern("");
+      setNewPatternAmount("");
       loadSubscriptions();
     } catch (err) { console.error("[subscriptions] Add pattern error:", err); }
   };
@@ -299,17 +305,26 @@ export default function SubscriptionsPage() {
                   <Input
                     value={newPattern}
                     onChange={(e) => setNewPattern(e.target.value)}
-                    placeholder={locale === "fi" ? "esim. *Netflix*" : "e.g. *Netflix*"}
+                    placeholder={locale === "fi" ? "esim. *Apple*" : "e.g. *Apple*"}
                     className="match-pattern-input"
+                    autoComplete="off"
+                  />
+                  <Input
+                    value={newPatternAmount}
+                    onChange={(e) => setNewPatternAmount(e.target.value)}
+                    placeholder={locale === "fi" ? "hinta €" : "price €"}
+                    className="match-pattern-amount"
+                    inputMode="decimal"
                     autoComplete="off"
                   />
                   <Button type="button" size="sm" variant="outline" onClick={() => addPattern(editTarget.id)}>{locale === "fi" ? "Lisää" : "Add"}</Button>
                 </div>
+                <p className="settings-help">{locale === "fi" ? "Anna hinta, jos sama maksaja maksaa monta tilausta (esim. Apple), niin vain tämän hintainen veloitus täsmää." : "Add a price when one payee bills several subscriptions (e.g. Apple), so only the charge of this amount matches."}</p>
                 {editTarget.patterns.length > 0 && (
                   <div className="match-pattern-list">
                     {editTarget.patterns.map((p) => (
                       <div key={p.id} className="match-pattern-item">
-                        <span className="match-pattern-tag">{p.pattern}</span>
+                        <span className="match-pattern-tag">{p.pattern}{p.min_amount > 0 ? <> · <F v={p.min_amount} /></> : null}</span>
                         <button type="button" className="batch-remove-btn" onClick={() => deletePattern(p.id)}>
                           <X />
                         </button>

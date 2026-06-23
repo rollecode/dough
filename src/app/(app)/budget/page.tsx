@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { CategorySelect } from "@/components/shared/category-select";
 import { SearchableSelect, type SearchableOption } from "@/components/shared/searchable-select";
+import { PayeeInput } from "@/components/shared/payee-input";
 
 interface BudgetCategory {
   id: number;
@@ -164,6 +165,7 @@ export default function BudgetPage() {
   const [savingsGoalsLink, setSavingsGoalsLink] = useState<{ id: number; name: string; amount: number }[]>([]);
   const [investmentsLink, setInvestmentsLink] = useState<{ id: string; name: string; amount: number }[]>([]);
   const [addCatOpen, setAddCatOpen] = useState(false);
+  const [addCatGroup, setAddCatGroup] = useState("");
   const [inspectorId, setInspectorId] = useState<number | null>(null);
   const [catSaved, setCatSaved] = useState(false);
   const [targetEditing, setTargetEditing] = useState(false);
@@ -435,10 +437,11 @@ export default function BudgetPage() {
       const res = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: fd.get("name"), group_name: fd.get("group_name") }),
+        body: JSON.stringify({ name: fd.get("name"), group_name: addCatGroup.trim() }),
       });
       if (res.ok) {
         addCatRef.current.reset();
+        setAddCatGroup("");
         setAddCatOpen(false);
         load(month);
       } else {
@@ -716,19 +719,17 @@ export default function BudgetPage() {
     }
   };
 
-  // Delete a group: move all its categories to "no group" (categories are kept, the grouping
-  // is removed). Groups are derived from category group_name, so emptying it removes it.
-  const deleteGroup = async (groupKey: string) => {
-    try {
-      const ids = (data?.categories || []).filter((c) => (c.group_name || "") === groupKey).map((c) => c.id);
-      await Promise.all(ids.map((id) =>
-        fetch("/api/categories", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, group_name: "" }) })
-      ));
-      load(month);
-    } catch (err) {
-      console.error("[budget] Delete group error:", err);
-    }
+  // Open the add-category dialog pre-filled with a group, so the "+" on a group header drops a new
+  // category straight into that group.
+  const openAddCategory = (groupKey: string) => {
+    setAddCatGroup(groupKey);
+    setAddCatOpen(true);
   };
+
+  // Existing group names for the add-category group field's filterable suggestions.
+  const existingGroups = Array.from(
+    new Set((data?.categories || []).map((c) => (c.group_name || "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 
   if (loading && !data) {
     return <div className="page-loading"><Loader2 className="page-loading-spinner animate-spin" /></div>;
@@ -753,7 +754,11 @@ export default function BudgetPage() {
         </div>
         {(() => {
           const rta = data?.readyToAssign || 0;
-          const state = rta > eps ? "is-positive" : rta < -eps ? "is-negative" : "is-zero";
+          // Classify from the value as it is actually shown (same toFixed rounding as <F/>), so the
+          // state can never disagree with the number: e.g. 0.50 at 0 decimals shows "1 €", which must
+          // read as "Ready to assign", not the grey "All assigned".
+          const shownRta = Number(rta.toFixed(decimals));
+          const state = shownRta > 0 ? "is-positive" : shownRta < 0 ? "is-negative" : "is-zero";
           const label = state === "is-zero"
             ? (locale === "fi" ? "Kaikki budjetoitu" : "All assigned")
             : state === "is-negative"
@@ -861,7 +866,7 @@ export default function BudgetPage() {
             </div>
           );
         })()}
-        <button type="button" className="budget-manage-btn" onClick={() => setAddCatOpen(true)} aria-label={locale === "fi" ? "Lisää kategoria" : "Add category"}>
+        <button type="button" className="budget-manage-btn" onClick={() => openAddCategory("")} aria-label={locale === "fi" ? "Lisää kategoria" : "Add category"}>
           <Plus />
         </button>
       </div>
@@ -930,22 +935,19 @@ export default function BudgetPage() {
                 {dragEnabled && <span className="budget-grip budget-group-grip" aria-hidden="true"><GripVertical /></span>}
                 <span className="budget-group-name">
                   <span className="budget-group-label">{group.label}</span>
-                  {dragEnabled && group.key && (
+                  {group.key && (
                     <button
                       type="button"
-                      className="budget-group-delete"
+                      className="budget-group-add"
                       draggable={false}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation();
-                        const msg = locale === "fi"
-                          ? `Poistetaanko ryhmä "${group.label}"? Sen ${items.length} kategoriaa säilyvät ryhmättöminä.`
-                          : `Delete group "${group.label}"? Its ${items.length} categories are kept, without a group.`;
-                        if (window.confirm(msg)) deleteGroup(group.key);
+                        openAddCategory(group.key);
                       }}
-                      aria-label={locale === "fi" ? "Poista ryhmä" : "Delete group"}
+                      aria-label={locale === "fi" ? `Lisää kategoria ryhmään ${group.label}` : `Add category to ${group.label}`}
                     >
-                      <Trash2 />
+                      <Plus />
                     </button>
                   )}
                 </span>
@@ -1062,7 +1064,7 @@ export default function BudgetPage() {
             </div>
             <div className="form-field">
               <Label>{locale === "fi" ? "Ryhmä" : "Group"}</Label>
-              <Input name="group_name" autoComplete="off" />
+              <PayeeInput value={addCatGroup} onChange={setAddCatGroup} payees={existingGroups} placeholder={locale === "fi" ? "Valitse tai luo ryhmä" : "Pick or create a group"} />
             </div>
             <Button type="submit">{locale === "fi" ? "Lisää" : "Add"}</Button>
           </form>
