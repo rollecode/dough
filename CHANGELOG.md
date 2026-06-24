@@ -1,3 +1,7 @@
+### 3.2.1: 2026-06-24
+
+* Recognise a recurring person-to-person transfer as a transfer instead of income: the Synci sync now also learns transfer payees from already-confirmed internal transfers, not only from the edit dialog
+
 ### 3.2.0: 2026-06-23
 
 * Focusing the amount field in the add or edit transaction modal selects its contents, so you can type over it

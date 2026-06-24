@@ -350,11 +350,24 @@ export async function POST(request: Request) {
       // The payee list is learned from confirmed transfers, never hardcoded. Matching is on sorted
       // name tokens so a reordered name (surname-first vs first-name-first) still matches.
       const normPayee = (p: string) => p.toLowerCase().trim().split(/\s+/).filter(Boolean).sort().join(" ");
+      const isGenericTransferPayee = (p: string) => /^(transfer|siirto|starting balance|reconciliation)/i.test(p.trim());
       let knownTransferPayees = new Set<string>();
       try {
         const raw = getHouseholdSetting("internal_transfer_payees");
         if (raw) knownTransferPayees = new Set((JSON.parse(raw) as string[]).map(normPayee).filter(Boolean));
       } catch { knownTransferPayees = new Set(); }
+      // Self-heal: also treat the real payee of any already-confirmed internal transfer as a known
+      // transfer payee. This learns from transfers fixed directly (e.g. in the DB) or otherwise never
+      // routed through the edit dialog's payee learning, so a recurring person-to-person transfer is
+      // recognised next time. Generic "Transfer : <account>" leg descriptors are excluded.
+      try {
+        const confirmed = db.prepare(
+          "SELECT DISTINCT payee FROM transactions WHERE category = ? AND payee IS NOT NULL AND payee != '' AND payee NOT LIKE 'Transfer%'"
+        ).all(INTERNAL_TRANSFER_CATEGORY) as { payee: string }[];
+        for (const c of confirmed) {
+          if (!isGenericTransferPayee(c.payee)) knownTransferPayees.add(normPayee(c.payee));
+        }
+      } catch (e) { console.warn("[synci/sync] Failed to derive transfer payees from confirmed transfers:", e); }
       if (knownTransferPayees.size > 0) {
         const unmatchedInflows = db.prepare(
           "SELECT ynab_id, payee FROM transactions " +
