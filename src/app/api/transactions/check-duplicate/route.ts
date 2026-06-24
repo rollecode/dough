@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { localDateIso } from "@/lib/date-utils";
 
 // Look for an existing transaction that a manual add would likely duplicate: same absolute
 // amount, dated on the add date or the day after (Synci may have already imported it, or will
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     // End of window = the day after the add date (today + tomorrow).
     const end = new Date(`${date}T00:00:00`);
     end.setDate(end.getDate() + 1);
-    const endStr = end.toISOString().slice(0, 10);
+    const endStr = localDateIso(end);
 
     const db = getDb();
     const rows = db

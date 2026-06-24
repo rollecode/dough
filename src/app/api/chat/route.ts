@@ -4,6 +4,7 @@ import { getFinancialAdvice } from "@/lib/ai/finance-advisor";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
+import { localDateIso } from "@/lib/date-utils";
 import { eventBus } from "@/lib/event-bus";
 
 export async function POST(request: Request) {
@@ -436,8 +437,8 @@ export async function POST(request: Request) {
       try {
         console.info("[chat] Attempting to auto-add expenses from image");
         const { queryClaudeWithImage } = await import("@/lib/ai/claude-image");
-        const chatToday = new Date().toISOString().slice(0, 10);
-        const chatYesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        const chatToday = localDateIso();
+        const chatYesterday = localDateIso(new Date(Date.now() - 86400000));
         // Load YNAB account names for smart account detection
         const expAccounts = getDb().prepare("SELECT name FROM ynab_accounts WHERE closed = 0").all() as { name: string }[];
         const accountNames = expAccounts.map((a) => a.name).join(", ");

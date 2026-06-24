@@ -1,3 +1,7 @@
+### 3.2.4: 2026-06-25
+
+* Extend the local-date fix to the spending heatmap grid, the duplicate-check window and all server-side date defaults (new transactions, transfers, Synci imports, net worth and investment snapshots), removing the UTC off-by-one everywhere
+
 ### 3.2.3: 2026-06-24
 
 * Fix a timezone off-by-one so a transaction dated today no longer shows as tomorrow: date labels and the new-transaction date use the Helsinki local date instead of UTC, which rolled to the previous day

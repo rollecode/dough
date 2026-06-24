@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { localDateIso } from "@/lib/date-utils";
 
 export async function GET() {
   try {
@@ -46,7 +47,7 @@ export async function POST() {
     const investments = sumType("otherAsset");
     const debtTotal = sumType("otherDebt");
     const netWorth = Math.round(accounts.reduce((s, a) => s + a.balance, 0) * 100) / 100;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateIso();
 
     db.prepare(`
       INSERT INTO net_worth_snapshots (user_id, date, checking, savings, investments, debts, net_worth)

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
+import { localDateIso } from "@/lib/date-utils";
 
 export async function GET() {
   try {
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
       const investments = summary.accounts.filter((a: any) => a.type === "otherAsset").reduce((s: number, a: any) => s + a.balance, 0);
       const debtTotal = summary.accounts.filter((a: any) => a.type === "otherDebt").reduce((s: number, a: any) => s + a.balance, 0);
       const netWorth = checking + savings + investments + debtTotal;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateIso();
 
       db.prepare(`
         INSERT INTO net_worth_snapshots (user_id, date, checking, savings, investments, debts, net_worth)

@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/locale-context";
 import { useEvent } from "@/lib/use-events";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { isTransfer } from "@/lib/transaction-utils";
+import { localDateIso } from "@/lib/date-utils";
 
 interface HeatmapTransaction {
   date: string;
@@ -52,7 +53,7 @@ export function SpendingHeatmap() {
   }, [transactions]);
 
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = localDateIso(now);
 
   const dailyData: Record<string, { total: number; top: { payee: string; amount: number }[] }> = {};
   for (const tx of transactions) {
@@ -82,7 +83,7 @@ export function SpendingHeatmap() {
       weeks.push([]);
     }
     weeks[weeks.length - 1].push({
-      date: cursor.toISOString().slice(0, 10),
+      date: localDateIso(cursor),
       dateObj: new Date(cursor),
     });
     cursor.setDate(cursor.getDate() + 1);

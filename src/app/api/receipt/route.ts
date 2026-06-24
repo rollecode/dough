@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { queryClaudeWithImage } from "@/lib/ai/claude-image";
 import { titleCasePayee } from "@/lib/text-utils";
+import { localDateIso } from "@/lib/date-utils";
 
 export async function POST(request: Request) {
   try {
@@ -17,8 +18,8 @@ export async function POST(request: Request) {
 
     console.info("[receipt] Parsing receipt image for user", user.id);
 
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const today = localDateIso();
+    const yesterday = localDateIso(new Date(Date.now() - 86400000));
 
     // Load YNAB account names for smart account detection
     const { getDb } = await import("@/lib/db");

@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { localDateIso } from "@/lib/date-utils";
 
 export async function GET() {
   try {
@@ -132,7 +133,7 @@ export async function PUT(request: Request) {
           "FROM ynab_accounts a LEFT JOIN investment_overrides o ON o.ynab_account_id = a.id " +
           "WHERE a.type = 'otherAsset' AND a.closed = 0"
       ).get() as { value: number; invested: number };
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateIso();
       db.prepare(
         "INSERT INTO investment_progress (date, total_value, total_contributed) VALUES (?, ?, ?) " +
           "ON CONFLICT(date) DO UPDATE SET total_value = excluded.total_value, total_contributed = excluded.total_contributed"

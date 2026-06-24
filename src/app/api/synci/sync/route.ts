@@ -6,6 +6,7 @@ import { getAllPatterns } from "@/lib/matching";
 import { eventBus } from "@/lib/event-bus";
 import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
 import { categoryByPayeeAmount } from "@/lib/categorize-history";
+import { localDateIso } from "@/lib/date-utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
         // no YNAB round trip. Dormant while YNAB is connected.
         if (mode === "local") {
           const localAccountId = accountMapping[txSynciAccount] || "";
-          const importDate = txDate || now.toISOString().slice(0, 10);
+          const importDate = txDate || localDateIso(now);
           // Skip if this transaction is already present from YNAB or a manual entry, matched by
           // amount but NOT account. Synci attributes a transaction to the bank account it polled,
           // while YNAB may hold the same transaction on a different account; matching on account
@@ -220,7 +221,7 @@ export async function POST(request: Request) {
                 const { createTransaction } = await import("@/lib/ynab/client");
                 const ynabTx = await createTransaction(ynabBudgetId, ynabToken, {
                   account_id: ynabAccountId,
-                  date: txDate || now.toISOString().slice(0, 10),
+                  date: txDate || localDateIso(now),
                   amount,
                   payee_name: payee,
                   memo: "Synci",
@@ -250,7 +251,7 @@ export async function POST(request: Request) {
               db.prepare(`
                 INSERT OR IGNORE INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared)
                 VALUES (?, ?, ?, ?, ?, '', 'Synci', ?, 1, 'cleared')
-              `).run(firstUser.id, realYnabId, txDate || now.toISOString().slice(0, 10), amount, payee, ynabAccountId);
+              `).run(firstUser.id, realYnabId, txDate || localDateIso(now), amount, payee, ynabAccountId);
 
               db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?")
                 .run(amount, ynabAccountId);

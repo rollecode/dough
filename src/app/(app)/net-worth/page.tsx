@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { useYnab } from "@/lib/ynab-context";
 import { Card } from "@/components/ui/card";
+import { localDateIso } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import {
   AreaChart,
@@ -180,7 +181,7 @@ export default function NetWorthPage() {
   const liveAccounts = ynabData?.summary?.accounts || [];
   const sumAcctType = (type: string) => liveAccounts.filter((a) => a.type === type).reduce((s, a) => s + a.balance, 0);
   const currentSnap: Snapshot | null = liveAccounts.length > 0 ? {
-    date: new Date().toISOString().slice(0, 10),
+    date: localDateIso(),
     checking: sumAcctType("checking"),
     savings: sumAcctType("savings"),
     investments: sumAcctType("otherAsset"),

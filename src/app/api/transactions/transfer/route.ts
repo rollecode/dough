@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
+import { localDateIso } from "@/lib/date-utils";
 import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
 
 // Add an internal transfer between two own accounts: two opposite rows labelled
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     const fromId = String(body.from_account_id || "");
     const toId = String(body.to_account_id || "");
     const amt = Math.abs(parseFloat(String(body.amount).replace(",", ".")));
-    const date = body.date || new Date().toISOString().slice(0, 10);
+    const date = body.date || localDateIso();
     const memo = body.memo || "";
 
     if (!fromId || !toId || fromId === toId) {
