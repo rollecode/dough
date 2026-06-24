@@ -267,7 +267,8 @@ export default function TransactionsPage() {
       if (filter === "income" && (tx.amount < 0 || txIsTransfer)) return false;
       if (filter === "expenses" && (tx.amount >= 0 || txIsTransfer)) return false;
       if (filter === "transfers" && !txIsTransfer) return false;
-      if (filter === "all" && txIsTransfer) return false;
+      // "all" shows every transaction including transfers (they are still kept out of income/expense
+      // stats via isTransfer elsewhere); otherwise a reclassified transfer would vanish from view.
       return true;
     });
 

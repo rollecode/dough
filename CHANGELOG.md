@@ -1,3 +1,7 @@
+### 3.2.2: 2026-06-24
+
+* Show transfers in the transactions All tab, so a transaction reclassified as a transfer no longer disappears from the default view (still excluded from income and expense stats)
+
 ### 3.2.1: 2026-06-24
 
 * Recognise a recurring person-to-person transfer as a transfer instead of income: the Synci sync now also learns transfer payees from already-confirmed internal transfers, not only from the edit dialog
