@@ -9,6 +9,7 @@ import { Loader2, Paperclip, X, Sparkles } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { useYnab } from "@/lib/ynab-context";
 import { titleCasePayee } from "@/lib/text-utils";
+import { localDateIso } from "@/lib/date-utils";
 import { PayeeInput } from "@/components/shared/payee-input";
 import { CategoryPicker } from "@/components/shared/category-picker";
 import { DateField } from "@/components/ui/date-field";
@@ -17,10 +18,10 @@ import { F } from "@/components/ui/f";
 
 // Human label for a duplicate candidate's date: today / tomorrow / d.m.yyyy.
 function dayLabel(iso: string, locale: string): string {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const todayIso = today.toISOString().slice(0, 10);
+  const today = new Date();
+  const todayIso = localDateIso(today);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowIso = tomorrow.toISOString().slice(0, 10);
+  const tomorrowIso = localDateIso(tomorrow);
   if (iso === todayIso) return locale === "fi" ? "tänään" : "today";
   if (iso === tomorrowIso) return locale === "fi" ? "huomenna" : "tomorrow";
   const p = iso.split("-");
@@ -45,7 +46,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [addPayee, setAddPayee] = useState("");
   const [addMemo, setAddMemo] = useState("");
   const [addCategory, setAddCategory] = useState("");
-  const [addDate, setAddDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [addDate, setAddDate] = useState(() => localDateIso());
   // Preselect a day when opened from a day heading's + button.
   useEffect(() => { if (open && initialDate) setAddDate(initialDate); }, [open, initialDate]);
 
@@ -218,7 +219,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
               const matched = allAccounts.find((a) => a.name === tx.account);
               if (matched) { accId = matched.id; accName = matched.name; }
             }
-            return { payee, amount: tx.amount, date: tx.date || new Date().toISOString().slice(0, 10), account_id: accId, account_name: accName };
+            return { payee, amount: tx.amount, date: tx.date || localDateIso(), account_id: accId, account_name: accName };
           });
           // Enrich each parsed line like the single-add flow does: guess a category (AI) and flag
           // likely duplicates - both against existing transactions and identical lines within this
@@ -297,7 +298,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
       });
       if (res.ok) {
         onOpenChange(false);
-        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10)); amountTouchedRef.current = false; memoTouchedRef.current = false;
+        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(localDateIso()); amountTouchedRef.current = false; memoTouchedRef.current = false;
         setTxType("expense"); setToAccountId("");
         catSourceRef.current = ""; setCatSource("");
         setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
@@ -358,7 +359,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
       });
       if (res.ok) {
         onOpenChange(false);
-        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(new Date().toISOString().slice(0, 10)); amountTouchedRef.current = false; memoTouchedRef.current = false;
+        setAddAmount(""); setAddPayee(""); setAddMemo(""); setAddCategory(""); setAddDate(localDateIso()); amountTouchedRef.current = false; memoTouchedRef.current = false;
         setTxType("expense"); setToAccountId("");
         setReceiptPreview(null); setBatchTransactions([]); setDupCandidates([]);
         refresh();
@@ -415,7 +416,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
                           {tx.payee}
                           {tx.dup && <span className="batch-dup-chip">{locale === "fi" ? "mahdollinen duplikaatti" : "possible duplicate"}</span>}
                         </p>
-                        <p className="batch-item-meta">{tx.amount} € · {tx.date === new Date().toISOString().slice(0, 10) ? (locale === "fi" ? "tänään" : "today") : (() => { const [y, m, d] = tx.date.split("-"); return `${parseInt(d)}.${parseInt(m)}.${y}`; })()} · {tx.account_name}</p>
+                        <p className="batch-item-meta">{tx.amount} € · {tx.date === localDateIso() ? (locale === "fi" ? "tänään" : "today") : (() => { const [y, m, d] = tx.date.split("-"); return `${parseInt(d)}.${parseInt(m)}.${y}`; })()} · {tx.account_name}</p>
                       </div>
                       <div className="batch-item-actions">
                         {allAccounts.length > 1 && (

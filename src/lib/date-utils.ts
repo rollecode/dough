@@ -20,6 +20,17 @@ export function relativeDate(dateStr: string, locale: string = "en"): string {
   return formatDistanceToNow(date, { addSuffix: true, locale: loc });
 }
 
+// Local calendar date as YYYY-MM-DD, from local date parts. NOT toISOString(), which is UTC and in
+// UTC+ zones like Helsinki returns the previous calendar day for local midnight/early hours - that
+// off-by-one made a transaction dated today render as "tomorrow". Browser and server (Helsinki) are
+// both in the user's zone, so local parts give the correct date.
+export function localDateIso(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // Heading for a day group in a transaction list: today/yesterday, else weekday + d.M.yyyy.
 export function dayHeading(dateStr: string, locale: string = "en"): string {
   const date = parseISO(dateStr);

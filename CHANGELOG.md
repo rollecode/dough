@@ -1,3 +1,7 @@
+### 3.2.3: 2026-06-24
+
+* Fix a timezone off-by-one so a transaction dated today no longer shows as tomorrow: date labels and the new-transaction date use the Helsinki local date instead of UTC, which rolled to the previous day
+
 ### 3.2.2: 2026-06-24
 
 * Show transfers in the transactions All tab, so a transaction reclassified as a transfer no longer disappears from the default view (still excluded from income and expense stats)
