@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, getHouseholdSetting, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { categorizePayee } from "@/lib/ai/categorize";
-import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
+import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "@/lib/transaction-utils";
 import { localDateIso } from "@/lib/date-utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -191,7 +191,7 @@ export async function PUT(request: Request) {
       // are recognized as transfers, not income. Skip the generic transfer descriptors.
       if (newCategory === INTERNAL_TRANSFER_CATEGORY) {
         const realPayee = (payee_name || "").trim();
-        if (realPayee && !/^(transfer|starting balance|reconciliation)/i.test(realPayee)) {
+        if (realPayee && !isGenericTransferPayee(realPayee)) {
           try {
             const rawList = getHouseholdSetting("internal_transfer_payees");
             const list: string[] = rawList ? JSON.parse(rawList) : [];
@@ -202,6 +202,24 @@ export async function PUT(request: Request) {
             }
           } catch (e) {
             console.warn("[ynab/transaction] Failed to record internal-transfer payee:", e);
+          }
+          // Also learn which counterpart account this payee transfers with, so a future Synci import
+          // that only delivers the inflow leg (the bank shows the owner's own name, not the source
+          // account) can fill in the Vastatili and recreate the missing opposite leg automatically.
+          const learnedAcct = body.transfer_account_id ? String(body.transfer_account_id) : "";
+          if (learnedAcct && learnedAcct !== (account_id || prev?.account_id || "")) {
+            try {
+              const rawMap = getHouseholdSetting("transfer_payee_accounts");
+              const map: Record<string, string> = rawMap ? JSON.parse(rawMap) : {};
+              const key = normTransferPayee(realPayee);
+              if (key && map[key] !== learnedAcct) {
+                map[key] = learnedAcct;
+                setHouseholdSetting("transfer_payee_accounts", JSON.stringify(map));
+                console.info("[ynab/transaction] Learned a transfer counterpart account for a payee");
+              }
+            } catch (e) {
+              console.warn("[ynab/transaction] Failed to record transfer counterpart account:", e);
+            }
           }
         }
       }

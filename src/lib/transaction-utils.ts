@@ -17,3 +17,17 @@ export function isTransfer(payee: string, category?: string): boolean {
 export function transferCategoryLabel(locale: string): string {
   return locale === "fi" ? "Sisäinen siirto" : "Internal transfer";
 }
+
+// Normalise a payee for transfer-payee matching: lowercased, whitespace-collapsed and its name
+// tokens sorted, so a reordered name (surname-first vs first-name-first) still matches. Used as the
+// learning key for both the internal-transfer payee list and the payee -> counterpart-account map,
+// so the sync importer and the edit dialog must normalise identically.
+export function normTransferPayee(p: string): string {
+  return p.toLowerCase().trim().split(/\s+/).filter(Boolean).sort().join(" ");
+}
+
+// True for generic transfer-leg descriptors ("Transfer : X", "Siirto", "Starting balance", ...)
+// that must never be learned as a real person/payee key.
+export function isGenericTransferPayee(p: string): boolean {
+  return /^(transfer|siirto|starting balance|reconciliation)/i.test(p.trim());
+}

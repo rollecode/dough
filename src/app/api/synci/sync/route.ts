@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting, setHouseholdSetting, getBudgetMode, secretsEqual } from "@/lib/household";
 import { getAllPatterns } from "@/lib/matching";
 import { eventBus } from "@/lib/event-bus";
-import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
+import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "@/lib/transaction-utils";
 import { categoryByPayeeAmount } from "@/lib/categorize-history";
 import { localDateIso } from "@/lib/date-utils";
 
@@ -350,13 +351,19 @@ export async function POST(request: Request) {
       // the bank shows the owner's own name as the payee). Mark it so it stops counting as income.
       // The payee list is learned from confirmed transfers, never hardcoded. Matching is on sorted
       // name tokens so a reordered name (surname-first vs first-name-first) still matches.
-      const normPayee = (p: string) => p.toLowerCase().trim().split(/\s+/).filter(Boolean).sort().join(" ");
-      const isGenericTransferPayee = (p: string) => /^(transfer|siirto|starting balance|reconciliation)/i.test(p.trim());
+      const normPayee = normTransferPayee;
       let knownTransferPayees = new Set<string>();
       try {
         const raw = getHouseholdSetting("internal_transfer_payees");
         if (raw) knownTransferPayees = new Set((JSON.parse(raw) as string[]).map(normPayee).filter(Boolean));
       } catch { knownTransferPayees = new Set(); }
+      // Learned payee -> counterpart-account map: lets a single-leg inflow (only the receiving side
+      // synced) get its Vastatili and a recreated opposite leg, mirroring what the edit dialog does.
+      let transferPayeeAccounts: Record<string, string> = {};
+      try {
+        const rawMap = getHouseholdSetting("transfer_payee_accounts");
+        if (rawMap) transferPayeeAccounts = JSON.parse(rawMap) as Record<string, string>;
+      } catch { transferPayeeAccounts = {}; }
       // Self-heal: also treat the real payee of any already-confirmed internal transfer as a known
       // transfer payee. This learns from transfers fixed directly (e.g. in the DB) or otherwise never
       // routed through the edit dialog's payee learning, so a recurring person-to-person transfer is
@@ -371,14 +378,46 @@ export async function POST(request: Request) {
       } catch (e) { console.warn("[synci/sync] Failed to derive transfer payees from confirmed transfers:", e); }
       if (knownTransferPayees.size > 0) {
         const unmatchedInflows = db.prepare(
-          "SELECT ynab_id, payee FROM transactions " +
+          "SELECT ynab_id, payee, date, amount, account_id FROM transactions " +
             "WHERE ynab_id LIKE 'synci_%' AND amount > 0 AND payee NOT LIKE 'Transfer%' " +
             "AND COALESCE(category, '') = '' AND date >= date('now', '-45 days')"
-        ).all() as { ynab_id: string; payee: string }[];
+        ).all() as { ynab_id: string; payee: string; date: string; amount: number; account_id: string }[];
         for (const inf of unmatchedInflows) {
           if (paired.has(inf.ynab_id)) continue;
           if (!inf.payee || !knownTransferPayees.has(normPayee(inf.payee))) continue;
-          db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
+          // When the household has confirmed which account this payee transfers from, fill the
+          // Vastatili: relabel the inflow "Transfer : <counterpart>" and make sure the opposite leg
+          // exists on that account. Banks often deliver only the receiving leg (the sender shows the
+          // owner's own name, not the source account), so the outflow leg is recreated like the edit
+          // dialog does, which also corrects the counterpart balance. Falls back to category-only when
+          // the counterpart is unknown or would be the inflow's own account.
+          const counterAcct = transferPayeeAccounts[normPayee(inf.payee)];
+          if (counterAcct && counterAcct !== inf.account_id && acctNames.has(counterAcct) && firstUser) {
+            const counterName = acctNames.get(counterAcct) || "";
+            const thisName = acctNames.get(inf.account_id) || "";
+            const counterSigned = -inf.amount;
+            // Reuse an unclassified opposite-amount leg on the counterpart account if one happens to
+            // exist; otherwise fabricate it. Never touch a leg that is already a transfer or a
+            // categorised real expense.
+            const existing = db.prepare(
+              "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) " +
+                "AND COALESCE(category, '') = '' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
+            ).get(counterAcct, counterSigned, inf.date, inf.date) as { ynab_id: string } | undefined;
+            if (existing) {
+              db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
+                .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
+              paired.add(existing.ynab_id);
+            } else {
+              db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, 'Synci', ?, 1, 'cleared')")
+                .run(firstUser.id, `local_${randomUUID()}`, inf.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
+              db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, counterAcct);
+            }
+            db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
+              .run(`Transfer : ${counterName}`, INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
+            console.info("[synci/sync] Filled transfer counterpart for a single-leg inflow");
+          } else {
+            db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
+          }
           paired.add(inf.ynab_id);
           transfersPaired++;
         }

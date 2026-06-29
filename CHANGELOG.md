@@ -1,3 +1,7 @@
+### 3.3.0: 2026-06-29
+
+* Fill the counterpart account on single-leg Synci transfers: the edit dialog now learns which account a transfer payee moves money from, so when the bank delivers only the receiving leg the sync sets the Vastatili and recreates the missing opposite leg, which also corrects the source account balance
+
 ### 3.2.5: 2026-06-29
 
 * Fix the days-until-payday countdown when payday falls on a day the month does not have: an income expected on the 31st now counts down to the clamped last day, so the day before payday reads one day, not two
