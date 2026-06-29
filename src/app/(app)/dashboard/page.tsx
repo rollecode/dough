@@ -347,7 +347,18 @@ export default function DashboardPage() {
 
   // Tomorrow's budget: re-run the engine on the money actually left (today's spend
   // already reduced the balance) as of tomorrow. No spreading of today's costs.
-  const tomorrowParams = { ...budgetParams, balance: availableBalance, today: today + 1 };
+  // Income that lands tomorrow has, from tomorrow's vantage point, been received, so credit it to
+  // tomorrow's starting balance and drop it from the still-future incomes. Without this, payday eve
+  // showed "tomorrow you can spend max 0" right next to "money arrives tomorrow".
+  const incomeArrivingTomorrow = incomes
+    .filter((i) => i.is_active && resolveDay(i.expected_day) === today + 1 && !matchedIncomeIds.has(i.id))
+    .reduce((s, i) => s + i.amount, 0);
+  const tomorrowParams = {
+    ...budgetParams,
+    balance: availableBalance + incomeArrivingTomorrow,
+    today: today + 1,
+    unreceivedIncomes: budgetParams.unreceivedIncomes.filter((i) => resolveDay(i.expectedDay) > today + 1),
+  };
   const tomorrowWithBills = calculateDailyBudget(tomorrowParams);
   const tomorrowWithoutBills = calculateDailyBudget({ ...tomorrowParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });
   const tomorrowBudget = (useBills ? tomorrowWithBills : tomorrowWithoutBills).dailyBudget;

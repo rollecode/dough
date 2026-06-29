@@ -1,3 +1,7 @@
+### 3.3.1: 2026-06-29
+
+* Count income that lands tomorrow in the tomorrow's-budget preview, so the day before payday no longer shows you can spend max 0 next to the note that money arrives tomorrow
+
 ### 3.3.0: 2026-06-29
 
 * Fill the counterpart account on single-leg Synci transfers: the edit dialog now learns which account a transfer payee moves money from, so when the bank delivers only the receiving leg the sync sets the Vastatili and recreates the missing opposite leg, which also corrects the source account balance
