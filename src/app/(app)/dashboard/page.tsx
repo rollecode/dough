@@ -660,7 +660,7 @@ export default function DashboardPage() {
         nextIncomeAmount={(() => {
           const next = incomes
             .filter((i) => i.is_active && resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
-            .sort((a, b) => a.expected_day - b.expected_day)[0];
+            .sort((a, b) => resolveDay(a.expected_day) - resolveDay(b.expected_day))[0];
           if (next) return next.amount;
           // Wrap to next month
           const nextMonth = incomes.filter((i) => i.is_active).sort((a, b) => resolveDay(a.expected_day) - resolveDay(b.expected_day))[0];
@@ -669,7 +669,7 @@ export default function DashboardPage() {
         nextIncomeDate={(() => {
           const next = incomes
             .filter((i) => i.is_active && resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
-            .sort((a, b) => a.expected_day - b.expected_day)[0];
+            .sort((a, b) => resolveDay(a.expected_day) - resolveDay(b.expected_day))[0];
           if (next) return `${resolveDay(next.expected_day)}.${now.getMonth() + 1}. – ${next.name}`;
           // Wrap to next month
           const nextMonth = incomes.filter((i) => i.is_active).sort((a, b) => resolveDay(a.expected_day) - resolveDay(b.expected_day))[0];
@@ -680,8 +680,8 @@ export default function DashboardPage() {
         daysUntilIncome={(() => {
           const next = incomes
             .filter((i) => i.is_active && resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
-            .sort((a, b) => a.expected_day - b.expected_day)[0];
-          if (next) return next.expected_day - today;
+            .sort((a, b) => resolveDay(a.expected_day) - resolveDay(b.expected_day))[0];
+          if (next) return resolveDay(next.expected_day) - today;
           // No more income this month — find earliest income in next month
           const allDays = incomes.filter((i) => i.is_active).map((i) => resolveDay(i.expected_day)).sort((a, b) => a - b);
           return allDays.length > 0 ? (daysInMonth - today) + allDays[0] : daysLeft;

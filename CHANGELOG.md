@@ -1,3 +1,7 @@
+### 3.2.5: 2026-06-29
+
+* Fix the days-until-payday countdown when payday falls on a day the month does not have: an income expected on the 31st now counts down to the clamped last day, so the day before payday reads one day, not two
+
 ### 3.2.4: 2026-06-25
 
 * Extend the local-date fix to the spending heatmap grid, the duplicate-check window and all server-side date defaults (new transactions, transfers, Synci imports, net worth and investment snapshots), removing the UTC off-by-one everywhere
