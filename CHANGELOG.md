@@ -1,3 +1,7 @@
+### 3.3.2: 2026-06-30
+
+* Fix Ready to Assign staying at zero after payday in local mode: the cutover month's frozen, partially-synced YNAB figures no longer pin income, so local inflows from the first Synci-fed month on drive Ready to Assign and a paycheck now shows up as money to budget
+
 ### 3.3.1: 2026-06-29
 
 * Count income that lands tomorrow in the tomorrow's-budget preview, so the day before payday no longer shows you can spend max 0 next to the note that money arrives tomorrow

@@ -54,6 +54,18 @@ export function assignedForMonth(db: ReturnType<typeof getDb>, month: string): n
   return (db.prepare("SELECT COALESCE(SUM(budgeted), 0) AS v FROM monthly_category_budgets WHERE month = ?").get(month) as { v: number }).v || 0;
 }
 
+// First month Dough's own feed (Synci import) owns the data, i.e. when YNAB stopped being
+// authoritative. In local mode the frozen ynab_month_budget rows from this month on are stale: the
+// cutover month is only partially synced, so it under-reports income and pins Ready to Assign. From
+// this month on, RTA must come from local inflows, not those rows. Null when no Synci data exists
+// (e.g. a manual-only setup), which leaves the historical YNAB behaviour unchanged.
+export function firstLocalMonth(db: ReturnType<typeof getDb>): string | null {
+  const row = db
+    .prepare("SELECT SUBSTR(MIN(date), 1, 7) AS m FROM transactions WHERE ynab_id LIKE 'synci_%'")
+    .get() as { m: string | null };
+  return row?.m || null;
+}
+
 // Income and Ready-to-Assign for the viewed month. Ready to Assign is cumulative: prior-month
 // leftover rolls forward. Within YNAB's synced range we trust YNAB's own per-month figure
 // (adjusted for any local assignment edits). For months after the last synced month we anchor
@@ -72,9 +84,15 @@ export function monthBudgetNumbers(
   const horizon = month > latestYnab ? month : latestYnab;
   const futureCommitted = (db.prepare("SELECT COALESCE(SUM(budgeted), 0) AS v FROM monthly_category_budgets WHERE month > ?").get(horizon) as { v: number }).v || 0;
 
+  // In local mode every month from the first locally-fed month on is owned by Dough; its frozen
+  // YNAB row is stale, so we ignore it and anchor the carry-forward on the last fully-YNAB month
+  // before the local era instead of trusting YNAB's partial income/RTA for the cutover month.
+  const localStart = getBudgetMode() === "local" ? firstLocalMonth(db) : null;
+  const inLocalEra = localStart != null && month >= localStart;
+
   let income: number;
   let base: number;
-  const ynabMonth = db
+  const ynabMonth = inLocalEra ? undefined : db
     .prepare("SELECT income, budgeted, to_be_budgeted FROM ynab_month_budget WHERE month = ?")
     .get(month) as { income: number; budgeted: number; to_be_budgeted: number } | undefined;
   if (ynabMonth) {
@@ -82,7 +100,10 @@ export function monthBudgetNumbers(
     income = round(ynabMonth.income);
     base = ynabMonth.to_be_budgeted - localDivergence;
   } else {
-    const lastYnab = (db.prepare("SELECT MAX(month) AS m FROM ynab_month_budget WHERE month < ?").get(month) as { m: string | null }).m;
+    // Local-era months anchor before the local era so a stale cutover-month YNAB row is never the
+    // anchor; otherwise anchor on the last YNAB month before the viewed month.
+    const anchorBefore = inLocalEra ? localStart! : month;
+    const lastYnab = (db.prepare("SELECT MAX(month) AS m FROM ynab_month_budget WHERE month < ?").get(anchorBefore) as { m: string | null }).m;
     if (lastYnab) {
       const anchor = db
         .prepare("SELECT budgeted, to_be_budgeted FROM ynab_month_budget WHERE month = ?")
