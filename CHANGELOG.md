@@ -1,3 +1,7 @@
+### 3.6.1: 2026-07-01
+
+* Document the write-scoped v1 budget endpoints (`budget/assign`, `budget/auto-assign`) in `docs/public-api.md`
+
 ### 3.6.0: 2026-07-01
 
 * Reconcile the current month's Ready to Assign against real account balances in local mode (on-budget balance = Ready to Assign + category available), so money accumulated before the YNAB cutover is counted as assignable instead of being lost to the income-only carry-forward

@@ -66,6 +66,16 @@ current month in the server's Helsinki timezone.
 - `GET /api/v1/subscriptions` — subscriptions with amount and due day.
 - `GET /api/v1/savings-goals` — active goals with target and derived saved amount. Accepts `month`.
 
+### Write endpoints (write scope)
+
+These require a key minted with `--scopes read,write` and return `403` for a read-only key.
+
+- `GET /api/v1/budget/auto-assign?month=YYYY-MM[&mode=...]` — preview target funding (no write). Without
+  `mode`, the total each mode would assign; with `mode`, the full per-category plan.
+- `POST /api/v1/budget/auto-assign` — apply a plan. Body: `{ "month": "YYYY-MM", "mode": "underfunded" | "last_assigned" | "last_spent" }`.
+  Funds category targets from Ready to Assign, capped so it never overbudgets.
+- `POST /api/v1/budget/assign` — set one category's amount. Body: `{ "month": "YYYY-MM", "category_id" | "category_name", "budgeted": number }`.
+
 ### Example
 
 ```
