@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { getBudgetMode } from "./household";
+import { localDateIso } from "./date-utils";
 
 // Shared budget math so the move/cover endpoint validates against the same available
 // balance the budget page shows. Mirrors the carryover model in app/api/budget/route.ts:
@@ -125,7 +126,20 @@ export function monthBudgetNumbers(
     }
   }
 
-  return { income, readyToAssign: round(base - futureCommitted) };
+  let readyToAssign = round(base - futureCommitted);
+
+  // In local mode, reconcile the CURRENT month's Ready to Assign directly against real account
+  // balances (YNAB's golden equation: sum of on-budget balances = Ready to Assign + sum of category
+  // available). The income-based carry-forward only counts money booked since the YNAB cutover, so
+  // balances accumulated before it (savings built up over years) went untracked - neither in RTA nor
+  // in any category. Reconciling against balances surfaces that money as assignable. Past and future
+  // months keep the carry-forward, since account balances are only meaningful for "now".
+  if (inLocalEra && month === localDateIso().slice(0, 7)) {
+    const onBudget = (db.prepare("SELECT COALESCE(SUM(balance), 0) AS v FROM ynab_accounts WHERE on_budget = 1 AND closed = 0").get() as { v: number }).v || 0;
+    readyToAssign = round(onBudget - sumCategoryAvailable(db, month) - futureCommitted);
+  }
+
+  return { income, readyToAssign };
 }
 
 // "How long your money lasts": cash on hand divided by recent average daily spending. A reliable
@@ -265,4 +279,13 @@ export function availableForCategory(
   month: string
 ): number {
   return walkCategory(db, categoryId, categoryName, month).availableAt;
+}
+
+// Sum of every active category's available balance for a month. Used to reconcile Ready to Assign
+// against real account balances (the golden equation: on-budget balance = RTA + sum of available).
+export function sumCategoryAvailable(db: ReturnType<typeof getDb>, month: string): number {
+  const cats = db.prepare("SELECT id, name FROM categories WHERE is_active = 1").all() as { id: number; name: string }[];
+  let sum = 0;
+  for (const c of cats) sum += walkCategory(db, c.id, c.name, month).availableAt;
+  return Math.round(sum * 100) / 100;
 }
