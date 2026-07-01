@@ -20,9 +20,12 @@ export async function GET(request: Request) {
     const end = `${month}-${String(lastDay).padStart(2, "0")}`;
 
     const db = getDb();
+    // Same-day tie-break on MAX(rowid) DESC (the autoincrement primary key = insertion order), so a
+    // just-added transaction lands at the top of its day. The output alias `id` is ynab_id (a random
+    // local_<uuid> for new rows), so ordering by it would scatter same-day items arbitrarily.
     const transactions = db.prepare(
       "SELECT ynab_id as id, date, amount, payee, category, memo, approved, cleared, account_id, COALESCE(split_group, '') AS split_group " +
-        "FROM transactions WHERE date >= ? AND date <= ? GROUP BY ynab_id ORDER BY date DESC, id DESC"
+        "FROM transactions WHERE date >= ? AND date <= ? GROUP BY ynab_id ORDER BY date DESC, MAX(rowid) DESC"
     ).all(start, end);
 
     console.debug("[transactions/list] month", month, "->", (transactions as unknown[]).length, "transactions");

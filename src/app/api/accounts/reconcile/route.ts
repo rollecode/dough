@@ -26,8 +26,10 @@ export async function POST(request: Request) {
     const diff = Math.round((trueBalance - stored) * 100) / 100;
 
     // Recent transactions on this account (ynab_id is the stable id used by the delete endpoint).
+    // Tie-break same-day rows on rowid DESC (insertion order); the `id` alias is ynab_id, not the
+    // monotonic primary key, so ordering by it would scatter same-day rows.
     const recent = db.prepare(
-      "SELECT ynab_id AS id, date, payee, amount FROM transactions WHERE account_id = ? AND date >= date('now', '-7 days') ORDER BY date DESC, id DESC LIMIT 60"
+      "SELECT ynab_id AS id, date, payee, amount FROM transactions WHERE account_id = ? AND date >= date('now', '-7 days') ORDER BY date DESC, rowid DESC LIMIT 60"
     ).all(accountId) as { id: string; date: string; payee: string; amount: number }[];
 
     if (Math.abs(diff) < 0.005) {
