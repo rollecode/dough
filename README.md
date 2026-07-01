@@ -204,6 +204,20 @@ ingress:
   - service: http_status:404
 ```
 
+## HTTP API and MCP
+
+Dough exposes a small versioned, read-only API under `/api/v1/*` for programmatic access, separate
+from the cookie-authenticated internal routes. It authenticates with an API key (stored only as a
+SHA-256 hash, shown once at creation):
+
+```bash
+npx tsx scripts/create-api-key.ts --name "dough-mcp" --scopes read
+curl -s https://your-host/api/v1/summary -H "Authorization: Bearer $DOUGH_API_KEY"
+```
+
+The Dough MCP server is a separate repo that wraps this API as MCP tools, so an assistant can query
+your finances. See [Public API](docs/public-api.md) for endpoints, auth and the MCP pointer.
+
 ## Backups
 
 The SQLite database is at `data/dough.db`. Back it up regularly:
@@ -256,6 +270,7 @@ Detailed docs live in the `docs/` directory:
 - [Setup guide](docs/setup.md) - installation, configuration, deployment
 - [Features](docs/features.md) - complete feature list
 - [Architecture](docs/architecture.md) - tech stack, database schema, data flow
-- [API reference](docs/api.md) - all endpoints
+- [API reference](docs/api.md) - all internal endpoints
+- [Public API](docs/public-api.md) - the key-authenticated `/api/v1` API for scripts and MCP
 - [CSS framework](docs/css-framework.md) - styling conventions
 - [Real-time](docs/real-time.md) - SSE implementation

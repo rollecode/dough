@@ -1,3 +1,9 @@
+### 3.4.0: 2026-07-01
+
+* Add a read-only public API under `/api/v1` (summary, accounts, transactions, budget, net worth, bills, subscriptions, savings goals) authenticated by API key, so external clients like the Dough MCP server can read finances without a browser session
+* Add an `api_keys` table and a `scripts/create-api-key.ts` minting script that stores only a SHA-256 hash and prints the key once, with `read`/`write` scopes for future write access
+* Document the public API and key handling in `docs/public-api.md`
+
 ### 3.3.2: 2026-06-30
 
 * Fix Ready to Assign staying at zero after payday in local mode: the cutover month's frozen, partially-synced YNAB figures no longer pin income, so local inflows from the first Synci-fed month on drive Ready to Assign and a paycheck now shows up as money to budget
