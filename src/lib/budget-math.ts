@@ -102,6 +102,36 @@ export function recentTransactionMonths(db: ReturnType<typeof getDb>, limit = 6)
   ).all(limit) as { month: string }[]).map((r) => r.month);
 }
 
+// Per-category budgeted / activity / available for a month from the local categories table and the
+// ledger, in the same shape (and YNAB sign convention: activity is negative for spending) the
+// dashboard payload used to read from ynab_categories. Used in local mode, where those rows are
+// frozen at the cutover and never updated.
+export function localMonthCategories(
+  db: ReturnType<typeof getDb>,
+  month: string
+): { name: string; group: string; budgeted: number; activity: number; balance: number }[] {
+  const { start, end } = monthBounds(month);
+  const cats = db.prepare(
+    "SELECT id, name, COALESCE(group_name, '') AS group_name FROM categories WHERE is_active = 1 ORDER BY group_name, sort_order, name"
+  ).all() as { id: number; name: string; group_name: string }[];
+  const budgeted = new Map((db.prepare(
+    "SELECT category_id, budgeted FROM monthly_category_budgets WHERE month = ?"
+  ).all(month) as { category_id: number; budgeted: number }[]).map((r) => [r.category_id, r.budgeted]));
+  // Raw SUM(amount) keeps YNAB's convention (spending negative, refunds positive); the shared
+  // predicate excludes on-budget transfers but counts off-budget ones as activity.
+  const activity = new Map((db.prepare(
+    "SELECT category, ROUND(SUM(amount), 2) AS a FROM transactions WHERE date >= ? AND date <= ? AND " +
+      CATEGORY_ACTIVITY_PREDICATE + " GROUP BY category"
+  ).all(start, end) as { category: string; a: number }[]).map((r) => [r.category, r.a]));
+  return cats.map((c) => ({
+    name: c.name,
+    group: c.group_name,
+    budgeted: Math.round((budgeted.get(c.id) || 0) * 100) / 100,
+    activity: activity.get(c.name) || 0,
+    balance: walkCategory(db, c.id, c.name, month).availableAt,
+  }));
+}
+
 // First month Dough's own feed (Synci import) owns the data, i.e. when YNAB stopped being
 // authoritative. In local mode the frozen ynab_month_budget rows from this month on are stale: the
 // cutover month is only partially synced, so it under-reports income and pins Ready to Assign. From

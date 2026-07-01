@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { localDateIso } from "@/lib/date-utils";
-import { cashFlowForMonth } from "@/lib/budget-math";
+import { cashFlowForMonth, localMonthCategories } from "@/lib/budget-math";
 
 export async function GET() {
   try {
@@ -40,7 +40,11 @@ export async function GET() {
 
     const monthBudgetRow = db.prepare("SELECT income, budgeted, activity, to_be_budgeted as toBeBudgeted FROM ynab_month_budget WHERE month = ?").get(currentMonth) as { income: number; budgeted: number; activity: number; toBeBudgeted: number } | undefined;
 
-    const categories = db.prepare("SELECT name, group_name as 'group', budgeted, activity, balance FROM ynab_categories WHERE month = ?").all(currentMonth) as { name: string; group: string; budgeted: number; activity: number; balance: number }[];
+    // Local mode: the frozen ynab_categories rows are never updated after the cutover (and are empty
+    // for months added since), so build the category list from the local categories table + ledger.
+    const categories = getBudgetMode() === "local"
+      ? localMonthCategories(db, currentMonth)
+      : db.prepare("SELECT name, group_name as 'group', budgeted, activity, balance FROM ynab_categories WHERE month = ?").all(currentMonth) as { name: string; group: string; budgeted: number; activity: number; balance: number }[];
 
     const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
     const syncedAt = getHouseholdSetting("last_ynab_sync") || now.toISOString();
