@@ -254,12 +254,23 @@ export default function TransactionsPage() {
     return out;
   })();
 
+  // Search matches payee, category, memo, split-part categories and the amount. A numeric query is
+  // matched against the absolute amount formatted to cents, and a Finnish decimal comma is accepted
+  // (12,50 -> 12.50), so "200" finds a 200 EUR transfer that has no matching text.
+  const q = search.trim().toLowerCase();
+  const qNum = q.replace(",", ".");
+  const qIsNumeric = q !== "" && /^\d+(\.\d+)?$/.test(qNum);
+
   const filtered = entries
     .sort((a, b) => b.date.localeCompare(a.date))
     .filter((tx) => {
-      const partMatch = tx.parts?.some((p) => p.category.toLowerCase().includes(search.toLowerCase()));
-      if (search && !tx.payee.toLowerCase().includes(search.toLowerCase()) && !tx.category.toLowerCase().includes(search.toLowerCase()) && !partMatch) {
-        return false;
+      if (search) {
+        const partMatch = tx.parts?.some((p) => p.category.toLowerCase().includes(q));
+        const amountMatch = qIsNumeric && Math.abs(tx.amount).toFixed(2).includes(qNum);
+        const memoMatch = (tx.memo || "").toLowerCase().includes(q);
+        if (!tx.payee.toLowerCase().includes(q) && !tx.category.toLowerCase().includes(q) && !partMatch && !amountMatch && !memoMatch) {
+          return false;
+        }
       }
       if (tx.date.slice(0, 7) !== month) return false;
       if (accountFilter !== "all" && tx.account_id !== accountFilter) return false;

@@ -1,3 +1,7 @@
+### 3.7.0: 2026-07-01
+
+* Make the transactions search match the amount and the memo too, not just payee and category: a numeric query is compared against the amount formatted to cents and accepts a Finnish decimal comma (12,50), so searching 200 finds a 200 EUR transfer that has no matching text
+
 ### 3.6.2: 2026-07-01
 
 * Show a just-added transaction at the top of its day instead of the bottom: same-day rows now tie-break on insertion order (`MAX(rowid)`) rather than the `ynab_id` alias, which for local rows is a random `local_<uuid>` that scattered them, fixing the transactions list, the dashboard current-month feed and the reconcile recent list
