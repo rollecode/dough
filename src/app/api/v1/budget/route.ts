@@ -29,6 +29,7 @@ export const GET = apiRoute("read", (request) => {
     const budgeted = Math.round((budgetedMap.get(c.id) || 0) * 100) / 100;
     const activity = Math.round((activityMap.get(c.name) || 0) * 100) / 100;
     return {
+      id: c.id,
       name: c.name,
       group: c.group_name || "",
       budgeted,

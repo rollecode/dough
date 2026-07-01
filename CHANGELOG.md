@@ -1,3 +1,8 @@
+### 3.5.0: 2026-07-01
+
+* Add write-scoped v1 endpoints for budgeting: `POST /api/v1/budget/assign` sets one category's amount and `GET/POST /api/v1/budget/auto-assign` previews and applies target funding, so an authorized client can do the monthly budget
+* Extract the auto-assign planning into `lib/auto-assign.ts` shared by the internal route and the v1 API
+
 ### 3.4.1: 2026-07-01
 
 * Let the `/api/v1` public API bypass the session-cookie middleware so key-authenticated requests reach the routes instead of being redirected to the login page

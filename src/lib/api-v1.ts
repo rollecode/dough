@@ -16,6 +16,8 @@ export function apiRoute(
     }
     try {
       const data = await handler(request, auth.identity);
+      // A handler may return a NextResponse directly (e.g. a 400 for a bad body); pass it through.
+      if (data instanceof NextResponse) return data;
       return NextResponse.json(data);
     } catch (error) {
       console.error("[api/v1] Handler error:", error);
