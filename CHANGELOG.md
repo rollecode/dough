@@ -1,3 +1,8 @@
+### 3.8.0: 2026-07-01
+
+* Make the monthly cash flow chart work without YNAB: in local mode the income and expenses for both the current and past months now come from the actual transactions ledger (internal transfers excluded) instead of the frozen YNAB-era `ynab_month_budget` and `monthly_snapshots` tables, which were never updated after the cutover and showed stale or zero figures
+* Add shared local cash-flow helpers (`cashFlowForMonth`, `topExpenseCategories`, `recentTransactionMonths`) so every consumer derives money-in/money-out the same way
+
 ### 3.7.1: 2026-07-01
 
 * Recognise an outflow to an own account as a transfer, not an expense: Synci auto-pairing only classified incoming legs, so moving money to an account it does not sync stayed an expense; a new outflow pass mirrors the inflow one, marking outflows to a confirmed transfer payee as internal transfers and filling the counterpart leg when the account is known

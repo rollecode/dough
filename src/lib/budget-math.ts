@@ -55,6 +55,53 @@ export function assignedForMonth(db: ReturnType<typeof getDb>, month: string): n
   return (db.prepare("SELECT COALESCE(SUM(budgeted), 0) AS v FROM monthly_category_budgets WHERE month = ?").get(month) as { v: number }).v || 0;
 }
 
+// Month bounds (first and last day) as YYYY-MM-DD, for date-range queries on a month.
+function monthBounds(month: string): { start: string; end: string } {
+  const [yy, mm] = month.split("-").map(Number);
+  return { start: `${month}-01`, end: `${month}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}` };
+}
+
+// Internal transfers between the household's own accounts are neither income nor expense in a
+// money-in/money-out view, so the cash-flow figures exclude them: the "Transfer :"/"Starting
+// Balance"/"Reconciliation" payees Synci and the edit dialog produce, plus the internal-transfer
+// and uncategorised-transfer categories.
+const CASHFLOW_REAL =
+  "category NOT IN ('Internal transfer', 'Uncategorized') " +
+  "AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%'";
+
+// Cash flow for a month straight from the local ledger: income is every real inflow, expenses every
+// real outflow, both excluding internal transfers. This is the money-in/money-out lens the dashboard
+// cash-flow chart used to read from YNAB's own month figures; recomputing it locally keeps the chart
+// working with no YNAB connection, and it counts uncategorised spending, which is still money out.
+export function cashFlowForMonth(db: ReturnType<typeof getDb>, month: string): { income: number; expenses: number } {
+  const { start, end } = monthBounds(month);
+  const row = db.prepare(
+    "SELECT ROUND(COALESCE(SUM(CASE WHEN amount > 0 THEN amount END), 0), 2) AS income, " +
+      "ROUND(-COALESCE(SUM(CASE WHEN amount < 0 THEN amount END), 0), 2) AS expenses " +
+      "FROM transactions WHERE date >= ? AND date <= ? AND " + CASHFLOW_REAL
+  ).get(start, end) as { income: number; expenses: number };
+  return { income: row.income || 0, expenses: row.expenses || 0 };
+}
+
+// Top expense categories for a month (name + total spent), for the cash-flow snapshot breakdown.
+// An empty category is shown as "Uncategorized" so uncategorised spending is still attributed.
+export function topExpenseCategories(db: ReturnType<typeof getDb>, month: string, limit = 10): { name: string; amount: number }[] {
+  const { start, end } = monthBounds(month);
+  return db.prepare(
+    "SELECT COALESCE(NULLIF(category, ''), 'Uncategorized') AS name, ROUND(-SUM(amount), 2) AS amount " +
+      "FROM transactions WHERE amount < 0 AND date >= ? AND date <= ? AND " + CASHFLOW_REAL +
+      " GROUP BY name ORDER BY amount DESC LIMIT ?"
+  ).all(start, end, limit) as { name: string; amount: number }[];
+}
+
+// The most recent months that have any transactions, newest first (for the cash-flow history in
+// local mode, where the YNAB-written monthly_snapshots table is never updated).
+export function recentTransactionMonths(db: ReturnType<typeof getDb>, limit = 6): string[] {
+  return (db.prepare(
+    "SELECT DISTINCT substr(date, 1, 7) AS month FROM transactions ORDER BY month DESC LIMIT ?"
+  ).all(limit) as { month: string }[]).map((r) => r.month);
+}
+
 // First month Dough's own feed (Synci import) owns the data, i.e. when YNAB stopped being
 // authoritative. In local mode the frozen ynab_month_budget rows from this month on are stale: the
 // cutover month is only partially synced, so it under-reports income and pins Ready to Assign. From

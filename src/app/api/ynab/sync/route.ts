@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { localDateIso } from "@/lib/date-utils";
+import { cashFlowForMonth } from "@/lib/budget-math";
 
 export async function GET() {
   try {
@@ -44,13 +45,20 @@ export async function GET() {
     const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
     const syncedAt = getHouseholdSetting("last_ynab_sync") || now.toISOString();
 
+    // In local mode the frozen ynab_month_budget row is stale (YNAB no longer syncs), so the current
+    // month's income and activity come from the live transactions ledger instead. Activity keeps the
+    // YNAB negative convention; the dashboard takes its absolute value for "expenses".
+    const cash = getBudgetMode() === "local" ? cashFlowForMonth(db, currentMonth) : null;
+    const monthIncome = cash ? cash.income : (monthBudgetRow?.income || 0);
+    const monthActivity = cash ? -cash.expenses : (monthBudgetRow?.activity || 0);
+
     const data = {
       summary: { totalBalance, accounts, categories },
       transactions: transactions.map((t) => ({ ...t, approved: !!t.approved })),
       monthBudget: {
-        income: monthBudgetRow?.income || 0,
+        income: monthIncome,
         budgeted: monthBudgetRow?.budgeted || 0,
-        activity: monthBudgetRow?.activity || 0,
+        activity: monthActivity,
         toBeBudgeted: monthBudgetRow?.toBeBudgeted || 0,
         categories,
       },
