@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
+import { localMonthCategories } from "@/lib/budget-math";
 
 // Reconstruct a debt's balance over the last 12 months from its transactions and current balance.
 // balance(month-end) = current - sum(transactions booked after that month-end). Returned as a
@@ -52,6 +53,10 @@ export async function GET() {
     } else {
       console.info("[debts] Reading debt accounts from local data");
       debtAccounts = db.prepare("SELECT id, name, balance FROM ynab_accounts WHERE type = 'otherDebt' AND closed = 0").all() as any[];
+      // Provide the local category list so a debt linked to a budget category still resolves its
+      // monthly target and category activity, matching the YNAB path.
+      const nowMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+      monthBudget = { categories: localMonthCategories(db, nowMonth) };
     }
 
     const overrides = db.prepare("SELECT * FROM debt_overrides").all() as any[];

@@ -1,3 +1,11 @@
+### 3.9.0: 2026-07-01
+
+* Make everything that read YNAB-only tables work in local mode, so households that started on YNAB and moved off it (or never used it) see correct data everywhere
+* Dashboard: build the current month's category spending from the local ledger instead of the frozen `ynab_categories` rows, which are empty for months added since the cutover
+* AI summary and chat: fix the local category-activity sign (spending was stored positive, so the "spending by category" breakdown filtered itself out to empty) and derive the previous-months comparison from the transactions ledger instead of the stale `monthly_snapshots` table
+* Debts: read debt accounts from the live accounts table (not the frozen `ynab_cache` snapshot) and resolve category-linked monthly targets from the local budget when YNAB is disconnected
+* Category list endpoint now serves the local categories table in local mode
+
 ### 3.8.0: 2026-07-01
 
 * Make the monthly cash flow chart work without YNAB: in local mode the income and expenses for both the current and past months now come from the actual transactions ledger (internal transfers excluded) instead of the frozen YNAB-era `ynab_month_budget` and `monthly_snapshots` tables, which were never updated after the cutover and showed stale or zero figures

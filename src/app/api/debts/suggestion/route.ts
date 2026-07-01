@@ -41,10 +41,9 @@ export async function GET(request: Request) {
 
     console.info("[debts/suggestion] Generating fresh AI suggestion");
 
-    const cached = db.prepare("SELECT data FROM ynab_cache WHERE id = 1").get() as { data: string } | undefined;
-    const allAccounts: any[] = cached
-      ? JSON.parse(cached.data).summary.accounts
-      : (db.prepare("SELECT id, name, type, balance FROM ynab_accounts WHERE closed = 0").all() as any[]);
+    // Read debt accounts from the live accounts table (authoritative in both YNAB and local mode),
+    // not the ynab_cache snapshot which is frozen at the cutover when YNAB is disconnected.
+    const allAccounts = db.prepare("SELECT id, name, type, balance FROM ynab_accounts WHERE closed = 0").all() as any[];
     const debtAccounts = allAccounts.filter((a: any) => a.type === "otherDebt" && a.balance < 0);
     if (debtAccounts.length === 0) return NextResponse.json({ suggestion: null });
 
