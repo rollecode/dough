@@ -423,6 +423,51 @@ export async function POST(request: Request) {
         }
       }
 
+      // Pass four: an OUTFLOW whose payee the household has confirmed as an internal transfer is a
+      // transfer out to an own account (e.g. money moved to an external account Synci does not sync).
+      // Symmetric to pass three: the bank delivers only the sending leg, so mark it a transfer and,
+      // when the counterpart account is known, fill the Vastatili and recreate the receiving leg on
+      // it. Without this an outflow to an own account keeps showing up as an expense.
+      if (knownTransferPayees.size > 0) {
+        const unmatchedOutflows = db.prepare(
+          "SELECT ynab_id, payee, date, amount, account_id FROM transactions " +
+            "WHERE ynab_id LIKE 'synci_%' AND amount < 0 AND payee NOT LIKE 'Transfer%' " +
+            "AND COALESCE(category, '') = '' AND date >= date('now', '-45 days')"
+        ).all() as { ynab_id: string; payee: string; date: string; amount: number; account_id: string }[];
+        for (const out of unmatchedOutflows) {
+          if (paired.has(out.ynab_id)) continue;
+          if (!out.payee || !knownTransferPayees.has(normPayee(out.payee))) continue;
+          const counterAcct = transferPayeeAccounts[normPayee(out.payee)];
+          if (counterAcct && counterAcct !== out.account_id && acctNames.has(counterAcct) && firstUser) {
+            const counterName = acctNames.get(counterAcct) || "";
+            const thisName = acctNames.get(out.account_id) || "";
+            const counterSigned = -out.amount; // the receiving leg is a positive inflow on the counterpart
+            // Reuse an unclassified opposite-amount leg on the counterpart account if one exists;
+            // otherwise fabricate it. Never touch a leg that is already a transfer or a real expense.
+            const existing = db.prepare(
+              "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) " +
+                "AND COALESCE(category, '') = '' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
+            ).get(counterAcct, counterSigned, out.date, out.date) as { ynab_id: string } | undefined;
+            if (existing) {
+              db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
+                .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
+              paired.add(existing.ynab_id);
+            } else {
+              db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, 'Synci', ?, 1, 'cleared')")
+                .run(firstUser.id, `local_${randomUUID()}`, out.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
+              db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, counterAcct);
+            }
+            db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
+              .run(`Transfer : ${counterName}`, INTERNAL_TRANSFER_CATEGORY, out.ynab_id);
+            console.info("[synci/sync] Filled transfer counterpart for a single-leg outflow");
+          } else {
+            db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(INTERNAL_TRANSFER_CATEGORY, out.ynab_id);
+          }
+          paired.add(out.ynab_id);
+          transfersPaired++;
+        }
+      }
+
       // Any inflow that matched no income source and did not pair as a transfer above is real income
       // (e.g. a client paying through a personal account). Categorise it to Ready to Assign so it is
       // accounted for and assignable in the budget. Transactions are NEVER deleted here: same-account

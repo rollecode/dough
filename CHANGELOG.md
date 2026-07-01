@@ -1,3 +1,7 @@
+### 3.7.1: 2026-07-01
+
+* Recognise an outflow to an own account as a transfer, not an expense: Synci auto-pairing only classified incoming legs, so moving money to an account it does not sync stayed an expense; a new outflow pass mirrors the inflow one, marking outflows to a confirmed transfer payee as internal transfers and filling the counterpart leg when the account is known
+
 ### 3.7.0: 2026-07-01
 
 * Make the transactions search match the amount and the memo too, not just payee and category: a numeric query is compared against the amount formatted to cents and accepts a Finnish decimal comma (12,50), so searching 200 finds a 200 EUR transfer that has no matching text
