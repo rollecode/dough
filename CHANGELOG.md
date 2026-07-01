@@ -1,3 +1,7 @@
+### 3.4.1: 2026-07-01
+
+* Let the `/api/v1` public API bypass the session-cookie middleware so key-authenticated requests reach the routes instead of being redirected to the login page
+
 ### 3.4.0: 2026-07-01
 
 * Add a read-only public API under `/api/v1` (summary, accounts, transactions, budget, net worth, bills, subscriptions, savings goals) authenticated by API key, so external clients like the Dough MCP server can read finances without a browser session

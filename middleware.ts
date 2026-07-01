@@ -14,9 +14,12 @@ export async function middleware(request: NextRequest) {
   const isApiAuth = request.nextUrl.pathname.startsWith("/api/auth");
   const isEvents = request.nextUrl.pathname === "/api/events";
   const isSynciSync = request.nextUrl.pathname === "/api/synci/sync";
+  // The public v1 API authenticates with an API key inside each route (see lib/api-auth), not the
+  // session cookie, so it must bypass this cookie gate and never be redirected to /login.
+  const isApiV1 = request.nextUrl.pathname.startsWith("/api/v1");
 
-  // Allow auth API, SSE events, cron endpoints, and static assets
-  if (isApiAuth || isEvents || isSynciSync) {
+  // Allow auth API, the key-authed public API, SSE events, cron endpoints, and static assets
+  if (isApiAuth || isApiV1 || isEvents || isSynciSync) {
     return NextResponse.next();
   }
 
