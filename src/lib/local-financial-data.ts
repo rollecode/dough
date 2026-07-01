@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { getDb } from "./db";
+import { localMonthCategories } from "./budget-math";
 
 /**
  * Assemble a financial-context object from Dough's own local tables, in the same
@@ -21,34 +22,10 @@ export function buildLocalFinancialData(database: Database.Database = getDb()) {
     .all() as { id: string; name: string; type: string; balance: number; clearedBalance: number }[];
   const totalBalance = Math.round(accounts.reduce((s, a) => s + a.balance, 0) * 100) / 100;
 
-  // Per-category budgeted (this month) and activity (this month's outflows, excluding transfers/starting/reconciliation)
-  const budgetedRows = database
-    .prepare(
-      "SELECT c.name AS name, c.group_name AS groupName, COALESCE(mcb.budgeted, 0) AS budgeted " +
-        "FROM categories c LEFT JOIN monthly_category_budgets mcb ON mcb.category_id = c.id AND mcb.month = ? " +
-        "WHERE c.is_active = 1"
-    )
-    .all(month) as { name: string; groupName: string; budgeted: number }[];
-
-  const activityRows = database
-    .prepare(
-      "SELECT category, ROUND(SUM(-amount), 2) AS activity " +
-        "FROM transactions WHERE date >= ? AND date <= ? AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' GROUP BY category"
-    )
-    .all(monthStart, monthEnd) as { category: string; activity: number }[];
-  const activityByName = new Map<string, number>();
-  for (const r of activityRows) activityByName.set(r.category, r.activity || 0);
-
-  const categories = budgetedRows.map((c) => {
-    const activity = activityByName.get(c.name) || 0;
-    return {
-      name: c.name,
-      group: c.groupName || "",
-      budgeted: Math.round(c.budgeted * 100) / 100,
-      activity: Math.round(activity * 100) / 100,
-      balance: Math.round((c.budgeted - activity) * 100) / 100,
-    };
-  });
+  // Per-category budgeted / activity / available, from the shared local computation. Activity keeps
+  // YNAB's sign convention (negative for spending) and the balance carries over month to month, so
+  // the AI features read categories the same way they would from the YNAB cache.
+  const categories = localMonthCategories(database, month);
 
   // Recent transactions (last ~10 months), deduped by source id
   const tenMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 9, 1);

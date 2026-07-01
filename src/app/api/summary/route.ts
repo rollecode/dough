@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { getYnabToken, getYnabBudgetId, getHouseholdSetting } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, getHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
+import { cashFlowHistory } from "@/lib/budget-math";
 import { spawn } from "child_process";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -68,11 +69,14 @@ export async function GET(request: Request) {
       ({ summary, transactions, monthBudget } = buildLocalFinancialData(db));
     }
 
-    // Load historical monthly data for comparisons
+    // Load historical monthly data for comparisons. In local mode the YNAB-written monthly_snapshots
+    // table is frozen at the cutover, so derive the recent months from the transactions ledger.
     const billMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const historySnapshots = db
-      .prepare("SELECT month, income, expenses FROM monthly_snapshots WHERE month < ? ORDER BY month DESC LIMIT 3")
-      .all(billMonth) as { month: string; income: number; expenses: number }[];
+    const historySnapshots = getBudgetMode() === "local"
+      ? cashFlowHistory(db, 3, billMonth)
+      : db
+          .prepare("SELECT month, income, expenses FROM monthly_snapshots WHERE month < ? ORDER BY month DESC LIMIT 3")
+          .all(billMonth) as { month: string; income: number; expenses: number }[];
 
     const { getHouseholdSetting: getExcludedSetting } = await import("@/lib/household");
     const excludedRaw = getExcludedSetting("budget_excluded_accounts");

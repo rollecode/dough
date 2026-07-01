@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { localDateIso } from "@/lib/date-utils";
 import { eventBus } from "@/lib/event-bus";
+import { cashFlowHistory } from "@/lib/budget-math";
 
 export async function POST(request: Request) {
   try {
@@ -188,11 +189,14 @@ export async function POST(request: Request) {
             .prepare("SELECT name, target_amount, saved_amount, target_date FROM savings_goals WHERE is_active = 1 ORDER BY name ASC")
             .all() as { name: string; target_amount: number; saved_amount: number; target_date: string | null }[];
 
-          // Load monthly history for comparisons
+          // Load monthly history for comparisons. In local mode the YNAB-written monthly_snapshots
+          // table is frozen at the cutover, so derive recent months from the transactions ledger.
           const chatHistoryMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-          const historySnapshots = chatDb
-            .prepare("SELECT month, income, expenses FROM monthly_snapshots WHERE month < ? ORDER BY month DESC LIMIT 3")
-            .all(chatHistoryMonth) as { month: string; income: number; expenses: number }[];
+          const historySnapshots = (token && budgetId)
+            ? chatDb
+                .prepare("SELECT month, income, expenses FROM monthly_snapshots WHERE month < ? ORDER BY month DESC LIMIT 3")
+                .all(chatHistoryMonth) as { month: string; income: number; expenses: number }[]
+            : cashFlowHistory(chatDb, 3, chatHistoryMonth);
 
           // Pre-calculate time-sequenced cash flow for AI
           const today = now.getDate();
@@ -408,7 +412,7 @@ export async function POST(request: Request) {
       context = {
         totalBalance: fbCheckingSavings,
         monthlyIncome: local.monthBudget.income,
-        monthlyExpenses: local.monthBudget.activity,
+        monthlyExpenses: Math.abs(local.monthBudget.activity),
         todaySpent: 0,
         todayFixedCosts: 0,
         tomorrowBudget: 0,
@@ -473,11 +477,11 @@ Reply with ONLY a valid JSON array: [{"amount":"...","payee":"...","date":"YYYY-
             .prepare("SELECT ynab_account_id FROM user_linked_accounts WHERE user_id = ? LIMIT 1")
             .get(user.id) as { ynab_account_id: string } | undefined;
 
-          // Load all YNAB accounts for name-based routing
-          const ynabCache = getDb().prepare("SELECT data FROM ynab_cache WHERE id = 1").get() as { data: string } | undefined;
-          const allYnabAccounts = ynabCache
-            ? JSON.parse(ynabCache.data).summary.accounts.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name }))
-            : [];
+          // Load all accounts for name-based routing from the live accounts table (authoritative in
+          // both YNAB and local mode), instead of the ynab_cache snapshot which is stale without YNAB.
+          const allYnabAccounts = getDb()
+            .prepare("SELECT id, name FROM ynab_accounts WHERE closed = 0")
+            .all() as { id: string; name: string }[];
 
           if (defaultAcc) {
             const added: string[] = [];

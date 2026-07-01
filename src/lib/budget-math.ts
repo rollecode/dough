@@ -102,6 +102,20 @@ export function recentTransactionMonths(db: ReturnType<typeof getDb>, limit = 6)
   ).all(limit) as { month: string }[]).map((r) => r.month);
 }
 
+// Recent months' cash flow (income/expenses), newest first, optionally only months before `before`.
+// The local-mode replacement for the monthly_snapshots history that the AI summary and chat compare
+// against, so those comparisons use the real ledger instead of the frozen YNAB-era rows.
+export function cashFlowHistory(
+  db: ReturnType<typeof getDb>,
+  limit = 3,
+  before?: string
+): { month: string; income: number; expenses: number }[] {
+  const months = recentTransactionMonths(db, limit + (before ? 3 : 0))
+    .filter((m) => !before || m < before)
+    .slice(0, limit);
+  return months.map((month) => ({ month, ...cashFlowForMonth(db, month) }));
+}
+
 // Per-category budgeted / activity / available for a month from the local categories table and the
 // ledger, in the same shape (and YNAB sign convention: activity is negative for spending) the
 // dashboard payload used to read from ynab_categories. Used in local mode, where those rows are
