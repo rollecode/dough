@@ -1,3 +1,7 @@
+### 3.10.2: 2026-07-03
+
+* Scope the Synci import duplicate check to the same account: matching on amount alone across all accounts made a common round amount (a 50 euro card payment) count as a duplicate of a same-size transfer on another account days earlier, permanently dropping the real purchase and leaving the account balance above the bank's
+
 ### 3.10.1: 2026-07-03
 
 * Walk every page of the Synci transactions feed instead of only the newest one: the API ignores its per-account filter and plain page parameter (pagination is `page[number]`/`page[size]`), so the sync only ever saw the latest 25 transactions and a quiet account's purchases were pushed out of the window by busier accounts and silently lost; the full walk also backfills anything missed earlier

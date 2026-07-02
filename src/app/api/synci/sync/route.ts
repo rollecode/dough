@@ -140,15 +140,15 @@ export async function POST(request: Request) {
         if (mode === "local") {
           const localAccountId = accountMapping[txSynciAccount] || "";
           const importDate = txDate || localDateIso(now);
-          // Skip if this transaction is already present from YNAB or a manual entry, matched by
-          // amount but NOT account. Synci attributes a transaction to the bank account it polled,
-          // while YNAB may hold the same transaction on a different account; matching on account
-          // would miss those and double-count, corrupting balances after a YNAB cutover. The date
-          // is matched within a +/-4 day window because the booking date (when it posts) can differ
-          // from the value date (when it happened) — an exact-date match let duplicates through.
-          const manualDup = db.prepare(
-            "SELECT 1 FROM transactions WHERE ROUND(amount, 2) = ROUND(?, 2) AND date BETWEEN date(?, '-4 days') AND date(?, '+4 days') AND ynab_id NOT LIKE 'synci_%' LIMIT 1"
-          ).get(amount, importDate, importDate);
+          // Skip if this transaction is already present from a manual entry, matched by amount and
+          // date on the SAME account. Matching across all accounts (the old YNAB-cutover behaviour)
+          // ate real purchases: a common round amount (a 50 EUR card payment) matched a same-size
+          // transfer leg on a different account days earlier and the purchase was permanently
+          // dropped, leaving the account's balance above the bank's. The date is matched within a
+          // +/-4 day window because the booking date can differ from the value date.
+          const manualDup = localAccountId ? db.prepare(
+            "SELECT 1 FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND date BETWEEN date(?, '-4 days') AND date(?, '+4 days') AND ynab_id NOT LIKE 'synci_%' LIMIT 1"
+          ).get(localAccountId, amount, importDate, importDate) : undefined;
           if (manualDup) {
             console.info("[synci/sync] Skipping duplicate of an existing transaction:", payee, amount, "on", importDate);
             markProcessed();
