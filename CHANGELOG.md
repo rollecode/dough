@@ -1,3 +1,7 @@
+### 3.10.1: 2026-07-03
+
+* Walk every page of the Synci transactions feed instead of only the newest one: the API ignores its per-account filter and plain page parameter (pagination is `page[number]`/`page[size]`), so the sync only ever saw the latest 25 transactions and a quiet account's purchases were pushed out of the window by busier accounts and silently lost; the full walk also backfills anything missed earlier
+
 ### 3.10.0: 2026-07-02
 
 * Open a finger-sized calculator sheet when editing an assigned amount on a touch device: the native number keypad has no operator keys, so expressions like 50+10 could not be typed on mobile; the first digit replaces the prefilled amount and operators build on it, matching the keyboard behaviour

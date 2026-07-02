@@ -75,21 +75,30 @@ export async function POST(request: Request) {
     let totalImported = 0;
     const toCategorize: { id: string; payee: string; amount: number }[] = []; // newly imported expenses to categorize
 
-    for (const synciAccountId of mappedAccountIds) {
-      console.info("[synci/sync] Polling account", synciAccountId, "mode:", mode);
+    // The transactions feed is GLOBAL: the API ignores its bank_account_id filter (and plain
+    // ?page=), so per-account polling just fetched the same newest page over and over, and any
+    // transaction that rotated past that page between polls was never seen - a quiet account's
+    // purchases were pushed out by busier accounts and silently lost. Pagination works JSON:API
+    // style (page[number], page[size]), so walk every page of the feed each run; the dedup below
+    // makes already-imported transactions no-ops. Each transaction is attributed to its own
+    // financial_account_id, so one global walk covers every mapped account.
+    let lastPage = 1;
+    for (let pageNo = 1; pageNo <= lastPage; pageNo++) {
+      console.info("[synci/sync] Fetching transactions page", pageNo, "of", lastPage, "mode:", mode);
 
-      const res = await fetch(`https://api.synci.io/api/v1/banks/transactions?bank_account_id=${synciAccountId}`, {
+      const res = await fetch(`https://api.synci.io/api/v1/banks/transactions?page%5Bnumber%5D=${pageNo}&page%5Bsize%5D=100`, {
         headers: { Authorization: `Bearer ${synciToken}` },
         signal: AbortSignal.timeout(25000),
       });
 
       if (!res.ok) {
-        console.error("[synci/sync] API error for account", synciAccountId, res.status);
-        continue;
+        console.error("[synci/sync] API error on transactions page", pageNo, res.status);
+        break;
       }
 
       const data = await res.json();
       const transactions = data.data || [];
+      lastPage = data.meta?.last_page || lastPage;
 
       for (const tx of transactions) {
         const amount = parseFloat(tx.amount) || 0;
@@ -100,11 +109,10 @@ export async function POST(request: Request) {
         // over booking_date (when it later posted/cleared). Using booking_date stamped purchases
         // with their clearing date instead of the real transaction date.
         const txDate = tx.value_date || tx.booking_date || tx.mapped_fields?.date || "";
-        // Attribute to the transaction's OWN account, not the account being polled. Synci's
-        // bank_account_id filter is not strict: a poll can return transactions belonging to other
-        // linked accounts (e.g. a partner's), and filing them under the polled account put one
-        // person's spending on another's account. Fall back to the polled account if absent.
-        const txSynciAccount = tx.financial_account_id != null ? String(tx.financial_account_id) : synciAccountId;
+        // Attribute to the transaction's OWN account: the feed is global, so this is the only
+        // account signal. A transaction without one cannot be filed and is skipped below (its
+        // empty mapping resolves to no local account).
+        const txSynciAccount = tx.financial_account_id != null ? String(tx.financial_account_id) : "";
 
         if (!txId) continue;
 
