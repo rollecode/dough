@@ -1,3 +1,8 @@
+### 3.10.0: 2026-07-02
+
+* Open a finger-sized calculator sheet when editing an assigned amount on a touch device: the native number keypad has no operator keys, so expressions like 50+10 could not be typed on mobile; the first digit replaces the prefilled amount and operators build on it, matching the keyboard behaviour
+* Show the activity (spent) column in the budget on phones with a compact four-column layout instead of dropping the column
+
 ### 3.9.0: 2026-07-01
 
 * Make everything that read YNAB-only tables work in local mode, so households that started on YNAB and moved off it (or never used it) see correct data everywhere

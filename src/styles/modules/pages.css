@@ -1245,12 +1245,13 @@
     text-overflow: ellipsis;
   }
 
-  /* Drop the Activity column and keep name | assigned | available so it fits */
+  /* Compact four columns (name | assigned | activity | available) so the Activity (spent)
+     column stays visible on phones instead of being dropped */
   .budget-grid {
-    grid-template-columns: minmax(0, 1fr) 4rem 4.5rem;
-    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1fr) 3.25rem 3.25rem 4rem;
+    gap: 0.375rem;
   }
-  .budget-col-activity { display: none; }
+  .budget-table-header { font-size: 0.6875rem; }
   .budget-table-header,
   .budget-group-header,
   .budget-row {
@@ -1264,6 +1265,25 @@
 
   /* Drag grips do not work on touch — hide them and reclaim the gutter */
   .budget-grip { display: none; }
+
+  /* The calculator becomes a bottom sheet with finger-sized keys: on touch devices it replaces
+     the native keypad, which has no operator keys for typing expressions like 50+10. The in-input
+     toggle icon is redundant there (the sheet opens on focus) and would eat the narrow column. */
+  .button-calculator { display: none; }
+  .budget-budgeted-input.is-focused { padding-left: 0.25rem; }
+  .budget-calc-backdrop { z-index: 59; background: rgba(0, 0, 0, 0.35); }
+  .budget-calc-popover {
+    position: fixed;
+    top: auto;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: auto;
+    padding: 0.75rem;
+    z-index: 60;
+  }
+  .budget-calc-display { font-size: 1.25rem; }
+  .budget-calc-key { height: 2.75rem; font-size: 1.0625rem; }
 }
 
 /* Keep the budget readable on wide screens: cap the column so the name field doesn't stretch
