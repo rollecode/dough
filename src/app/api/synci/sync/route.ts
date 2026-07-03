@@ -142,7 +142,7 @@ export async function POST(request: Request) {
           const importDate = txDate || localDateIso(now);
           // Skip if this transaction is already present from a manual entry, matched by amount and
           // date on the SAME account. Matching across all accounts (the old YNAB-cutover behaviour)
-          // ate real purchases: a common round amount (a 50 EUR card payment) matched a same-size
+          // ate real purchases: an everyday round-sum card payment matched a same-size
           // transfer leg on a different account days earlier and the purchase was permanently
           // dropped, leaving the account's balance above the bank's. The date is matched within a
           // +/-4 day window because the booking date can differ from the value date.

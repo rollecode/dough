@@ -8,7 +8,7 @@
 
 ### 3.10.2: 2026-07-03
 
-* Scope the Synci import duplicate check to the same account: matching on amount alone across all accounts made a common round amount (a 50 euro card payment) count as a duplicate of a same-size transfer on another account days earlier, permanently dropping the real purchase and leaving the account balance above the bank's
+* Scope the Synci import duplicate check to the same account: matching on amount alone across all accounts made an everyday round-sum card payment count as a duplicate of a same-size transfer on another account days earlier, permanently dropping the real purchase and leaving the account balance above the bank's
 
 ### 3.10.1: 2026-07-03
 
