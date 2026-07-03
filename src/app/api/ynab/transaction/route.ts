@@ -46,7 +46,8 @@ export async function POST(request: Request) {
         categoryName = "Inflow: Ready to Assign";
       } else {
         try {
-          const names = (db.prepare("SELECT name FROM categories WHERE is_active = 1").all() as { name: string }[]).map((c) => c.name);
+          // Inflow categories are never valid for an expense guess.
+          const names = (db.prepare("SELECT name FROM categories WHERE is_active = 1 AND name NOT LIKE 'Inflow%'").all() as { name: string }[]).map((c) => c.name);
           if (names.length > 0) categoryName = (await aiCategorize(payee_name, names)) || "";
         } catch (err) { console.warn("[ynab/transaction] local categorize failed:", err); }
       }

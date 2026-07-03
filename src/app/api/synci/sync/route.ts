@@ -295,14 +295,21 @@ export async function POST(request: Request) {
       const acctNames = new Map(
         (db.prepare("SELECT id, name FROM ynab_accounts").all() as { id: string; name: string }[]).map((a) => [a.id, a.name])
       );
-      // Matched household income (Ready to Assign) is excluded so a real paycheck is never eaten
-      // by a same-size outflow on another account and mislabelled a transfer.
-      // Matched income and already-classified transfers (paired or marked by the user) are excluded
-      // so neither a real paycheck nor a confirmed transfer is re-paired into the wrong thing.
+      // Local accounts that Synci itself feeds: their transfer legs always arrive from the bank, so
+      // the counterpart-filling passes must never fabricate a leg for them (it would double the
+      // transfer when the real leg lands and permanently drift the account balance).
+      const syncedLocalIds = new Set(Object.values(accountMapping).filter(Boolean));
+      // Pattern-matched household income (in monthly_matches) is excluded so a real paycheck is
+      // never eaten by a same-size outflow on another account and mislabelled a transfer. An inflow
+      // the FALLBACK filed as income stays a candidate: its opposite leg often arrives days later
+      // (banks deliver accounts at different cadences), and without re-pairing it the money counts
+      // as income on one account while the other side ends up a transfer with no counterpart -
+      // inflating income and drifting balances. Confirmed transfers stay excluded.
       const candidates = db.prepare(
         "SELECT ynab_id, date, amount, account_id FROM transactions " +
           "WHERE ynab_id LIKE 'synci_%' AND payee NOT LIKE 'Transfer%' " +
-          "AND category != 'Inflow: Ready to Assign' AND category != 'Internal transfer' " +
+          "AND category != 'Internal transfer' " +
+          "AND (category != 'Inflow: Ready to Assign' OR ynab_id NOT IN (SELECT ynab_transaction_id FROM monthly_matches)) " +
           "AND date >= date('now', '-45 days') ORDER BY date"
       ).all() as { ynab_id: string; date: string; amount: number; account_id: string }[];
       const paired = new Set<string>();
@@ -329,13 +336,13 @@ export async function POST(request: Request) {
       }
       if (transfersPaired > 0) console.info("[synci/sync] Auto-paired", transfersPaired, "transfers");
 
-      // Pass two: attach a still-unmatched inflow to an existing single-leg internal transfer - an
-      // outflow already marked a transfer (by the user, or paired earlier) whose received leg never
-      // arrived. Only outflows that do not already have an opposite internal-transfer leg qualify,
-      // so a complete transfer is never disturbed.
+      // Pass two: attach a still-unmatched leg (either sign - banks deliver the two sides at
+      // different cadences) to an existing single-leg internal transfer already marked by the user
+      // or paired earlier. Only legs that do not already have an opposite internal-transfer leg
+      // qualify, so a complete transfer is never disturbed.
       const lateInflows = db.prepare(
         "SELECT ynab_id, date, amount, account_id FROM transactions " +
-          "WHERE ynab_id LIKE 'synci_%' AND amount > 0 AND payee NOT LIKE 'Transfer%' " +
+          "WHERE ynab_id LIKE 'synci_%' AND ROUND(amount, 2) != 0 AND payee NOT LIKE 'Transfer%' " +
           "AND COALESCE(category, '') = '' AND date >= date('now', '-45 days')"
       ).all() as { ynab_id: string; date: string; amount: number; account_id: string }[];
       for (const inf of lateInflows) {
@@ -394,19 +401,19 @@ export async function POST(request: Request) {
           if (paired.has(inf.ynab_id)) continue;
           if (!inf.payee || !knownTransferPayees.has(normPayee(inf.payee))) continue;
           // When the household has confirmed which account this payee transfers from, fill the
-          // Vastatili: relabel the inflow "Transfer : <counterpart>" and make sure the opposite leg
-          // exists on that account. Banks often deliver only the receiving leg (the sender shows the
-          // owner's own name, not the source account), so the outflow leg is recreated like the edit
-          // dialog does, which also corrects the counterpart balance. Falls back to category-only when
-          // the counterpart is unknown or would be the inflow's own account.
+          // Vastatili: relabel the inflow "Transfer : <counterpart>". The opposite leg is reused
+          // when the bank already delivered it, FABRICATED only when the counterpart account is not
+          // Synci-fed (its leg can never arrive by itself). For a bank-fed counterpart the real leg
+          // arrives on its own schedule and pass two attaches it - fabricating one here doubled the
+          // transfer and drifted the counterpart balance. Falls back to category-only when the
+          // counterpart is unknown or would be the inflow's own account.
           const counterAcct = transferPayeeAccounts[normPayee(inf.payee)];
           if (counterAcct && counterAcct !== inf.account_id && acctNames.has(counterAcct) && firstUser) {
             const counterName = acctNames.get(counterAcct) || "";
             const thisName = acctNames.get(inf.account_id) || "";
             const counterSigned = -inf.amount;
             // Reuse an unclassified opposite-amount leg on the counterpart account if one happens to
-            // exist; otherwise fabricate it. Never touch a leg that is already a transfer or a
-            // categorised real expense.
+            // exist. Never touch a leg that is already a transfer or a categorised real expense.
             const existing = db.prepare(
               "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) " +
                 "AND COALESCE(category, '') = '' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
@@ -415,7 +422,7 @@ export async function POST(request: Request) {
               db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
                 .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
               paired.add(existing.ynab_id);
-            } else {
+            } else if (!syncedLocalIds.has(counterAcct)) {
               db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, 'Synci', ?, 1, 'cleared')")
                 .run(firstUser.id, `local_${randomUUID()}`, inf.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
               db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, counterAcct);
@@ -450,8 +457,9 @@ export async function POST(request: Request) {
             const counterName = acctNames.get(counterAcct) || "";
             const thisName = acctNames.get(out.account_id) || "";
             const counterSigned = -out.amount; // the receiving leg is a positive inflow on the counterpart
-            // Reuse an unclassified opposite-amount leg on the counterpart account if one exists;
-            // otherwise fabricate it. Never touch a leg that is already a transfer or a real expense.
+            // Reuse an unclassified opposite-amount leg on the counterpart account if one exists.
+            // Fabricate one only when the counterpart is not Synci-fed (see pass three): for a
+            // bank-fed account the real leg arrives on its own and pass two attaches it.
             const existing = db.prepare(
               "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) " +
                 "AND COALESCE(category, '') = '' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
@@ -460,7 +468,7 @@ export async function POST(request: Request) {
               db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
                 .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
               paired.add(existing.ynab_id);
-            } else {
+            } else if (!syncedLocalIds.has(counterAcct)) {
               db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, 'Synci', ?, 1, 'cleared')")
                 .run(firstUser.id, `local_${randomUUID()}`, out.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
               db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, counterAcct);
@@ -482,21 +490,32 @@ export async function POST(request: Request) {
       // transfers are already paired above, and a transfer recognised later can be reclassified from
       // the edit dialog (which teaches the transfer-payee list for next time).
       const unrecognised = db.prepare(
-        "SELECT ynab_id FROM transactions " +
+        "SELECT ynab_id, payee FROM transactions " +
           "WHERE ynab_id LIKE 'synci_%' AND amount > 0 AND payee NOT LIKE 'Transfer%' " +
           "AND COALESCE(category, '') = ''"
-      ).all() as { ynab_id: string }[];
+      ).all() as { ynab_id: string; payee: string }[];
       for (const row of unrecognised) {
-        db.prepare("UPDATE transactions SET category = 'Inflow: Ready to Assign' WHERE ynab_id = ?").run(row.ynab_id);
+        // An inflow from a payee the household only spends at is a REFUND of past spending, not
+        // income: it returns to the payee's usual expense category (reducing that category's
+        // activity, matching YNAB), instead of inflating income with e.g. a food-courier refund.
+        const refund = row.payee ? (db.prepare(
+          "SELECT category FROM transactions WHERE LOWER(payee) = LOWER(?) AND amount < 0 " +
+            "AND COALESCE(category, '') NOT IN ('', 'Uncategorized', 'Internal transfer') AND category NOT LIKE 'Inflow%' " +
+            "GROUP BY category ORDER BY COUNT(*) DESC LIMIT 1"
+        ).get(row.payee) as { category: string } | undefined)?.category : undefined;
+        db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(refund || "Inflow: Ready to Assign", row.ynab_id);
+        if (refund) console.info("[synci/sync] Categorised an inflow as a refund to", refund);
       }
-      if (unrecognised.length > 0) console.info("[synci/sync] Categorised", unrecognised.length, "unmatched inflows as Ready to Assign income");
+      if (unrecognised.length > 0) console.info("[synci/sync] Categorised", unrecognised.length, "unmatched inflows (refunds to their spending category, the rest as income)");
     }
 
     // AI complement: categorize freshly imported expenses that Synci left uncategorized (skip
     // anything that turned out to be a transfer). Best-effort, never blocks the sync result.
     let categorized = 0;
     if (mode === "local" && toCategorize.length > 0) {
-      const catNames = (db.prepare("SELECT name FROM categories WHERE is_active = 1").all() as { name: string }[]).map((c) => c.name);
+      // Inflow categories are never valid for an expense; keep them out of the model's choices so
+      // a spending row can never be filed as income.
+      const catNames = (db.prepare("SELECT name FROM categories WHERE is_active = 1 AND name NOT LIKE 'Inflow%'").all() as { name: string }[]).map((c) => c.name);
       if (catNames.length > 0) {
         const { categorizePayee } = await import("@/lib/ai/categorize");
         for (const item of toCategorize) {

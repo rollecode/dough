@@ -1,3 +1,11 @@
+### 3.11.0: 2026-07-03
+
+* Stop fabricating the opposite leg of a transfer when the counterpart account is bank-fed: the real leg always arrives from the bank on its own schedule, so a fabricated one doubled the transfer and permanently drifted the counterpart balance; fabrication now only happens for accounts Synci does not feed
+* Let transfer pairing reclaim an inflow the fallback filed as income: the opposite leg often arrives days later, and without re-pairing the money stayed income on one account while the other side became a transfer with no counterpart, inflating income and mismatching balances (pattern-matched paychecks stay protected)
+* Attach late-arriving transfer legs of either direction to an existing single-leg transfer, not just incoming ones
+* Categorise an unmatched inflow from a payee the household only spends at as a refund to that payee's usual category instead of income, so a courier or shop refund no longer shows up as money to budget
+* Never offer income categories to the AI expense categoriser
+
 ### 3.10.2: 2026-07-03
 
 * Scope the Synci import duplicate check to the same account: matching on amount alone across all accounts made a common round amount (a 50 euro card payment) count as a duplicate of a same-size transfer on another account days earlier, permanently dropping the real purchase and leaving the account balance above the bank's
