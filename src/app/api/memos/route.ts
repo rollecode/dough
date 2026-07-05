@@ -10,10 +10,12 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
     const db = getDb();
+    // The literal 'Synci' marker every bank import carries is bookkeeping, not a description the
+    // user would ever want suggested.
     const rows = db
       .prepare(
         "SELECT memo, COUNT(*) AS n FROM transactions " +
-          "WHERE COALESCE(memo, '') <> '' " +
+          "WHERE COALESCE(memo, '') <> '' AND memo != 'Synci' " +
           "GROUP BY memo ORDER BY n DESC, MAX(date) DESC LIMIT 500"
       )
       .all() as { memo: string; n: number }[];

@@ -17,9 +17,10 @@ export async function GET(request: Request) {
     if (!payee && !category) return NextResponse.json({ amount: null, memo: null });
 
     const db = getDb();
+    // The 'Synci' import marker is never a usable description, so it must not prefill the form.
     const find = (clause: string, value: string) =>
       db.prepare(
-        "SELECT amount, COALESCE(memo, '') AS memo FROM transactions " +
+        "SELECT amount, CASE WHEN COALESCE(memo, '') = 'Synci' THEN '' ELSE COALESCE(memo, '') END AS memo FROM transactions " +
           `WHERE ${clause} AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' ` +
           "ORDER BY date DESC, id DESC LIMIT 1"
       ).get(value) as { amount: number; memo: string } | undefined;
