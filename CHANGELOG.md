@@ -1,3 +1,10 @@
+### 3.11.1: 2026-07-03
+
+* Fix the phone budget layout collapsing rows onto extra lines: the compact four-column grid and the calculator bottom sheet were declared in a media block earlier in the stylesheet than the base rules of the same selectors, so the base rules won and the fourth cell wrapped; the compact grid is now the mobile-first base and phone overrides live after every rule they override
+* Never mark a transaction as an internal transfer without its counterpart account: the category-only fallback created transfers reading "no second account (external)"; an unpaired row now stays as is until the opposite leg arrives or the counterpart is learned
+* Relabel both legs when a late-arriving leg attaches to an existing transfer, and self-heal any transfer leg still showing the original payee once its opposite leg exists, so the counterpart account is always visible
+* Stop suggesting and prefilling the literal `Synci` import marker as a transaction description
+
 ### 3.11.0: 2026-07-03
 
 * Stop fabricating the opposite leg of a transfer when the counterpart account is bank-fed: the real leg always arrives from the bank on its own schedule, so a fabricated one doubled the transfer and permanently drifted the counterpart balance; fabrication now only happens for accounts Synci does not feed
