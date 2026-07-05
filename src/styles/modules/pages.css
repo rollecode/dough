@@ -1762,7 +1762,10 @@
      eat the narrow column, as would the focused-state padding reserved for it. */
   .button-calculator { display: none; }
   .budget-budgeted-input.is-focused { padding-left: 0.25rem; }
-  .budget-calc-backdrop { z-index: 59; background: rgba(0, 0, 0, 0.35); }
+  /* Scoped to the calculator sheet's OWN backdrop: the plain backdrop class is shared by the
+     cover/fund/move/activity popovers, and dimming or raising it above them buries those
+     popovers under the overlay. */
+  .budget-calc-backdrop.is-sheet { z-index: 59; background: rgba(0, 0, 0, 0.35); }
   .budget-calc-popover {
     position: fixed;
     top: auto;

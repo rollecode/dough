@@ -839,12 +839,18 @@ export default function BudgetPage() {
                     <button
                       type="button"
                       className="budget-assign-trigger"
-                      onClick={(e) => { e.stopPropagation(); setCoverAllOpen((o) => !o); }}
-                      aria-haspopup="menu"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Without enough unbudgeted money the menu would only offer the manual
+                        // option - skip the extra click and jump straight to the overspent list.
+                        if (rta >= overspentR - eps) setCoverAllOpen((o) => !o);
+                        else { setCoverAllOpen(false); setFilter("overspent"); }
+                      }}
+                      aria-haspopup={rta >= overspentR - eps ? "menu" : undefined}
                       aria-expanded={coverAllOpen}
                     >
                       {locale === "fi" ? "Kata" : "Cover"}
-                      <ChevronDown className="icon-xs" />
+                      {rta >= overspentR - eps && <ChevronDown className="icon-xs" />}
                     </button>
                   </div>
                   {coverAllOpen && (
@@ -1596,7 +1602,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
         )}
         {calcOpen && (
           <>
-            <div className="budget-calc-backdrop" onClick={() => { setCalcOpen(false); setFocused(false); commit(); }} />
+            <div className="budget-calc-backdrop is-sheet" onClick={() => { setCalcOpen(false); setFocused(false); commit(); }} />
             <div className="budget-calc-popover">
               <div className="budget-calc-display">{draft || "0"}</div>
               <div className="budget-calc-grid">

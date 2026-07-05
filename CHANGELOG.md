@@ -1,3 +1,8 @@
+### 3.11.2: 2026-07-03
+
+* Fix the cover/fund/move/activity popovers being buried under a dark overlay on phones: the calculator sheet's dimmed backdrop style hit the backdrop class those popovers share, so it now applies only to the calculator's own backdrop
+* Make covering overspending one click: when there is not enough unbudgeted money to cover from, the Kata button jumps straight to the overspent list instead of opening a menu whose only option was Erikseen
+
 ### 3.11.1: 2026-07-03
 
 * Fix the phone budget layout collapsing rows onto extra lines: the compact four-column grid and the calculator bottom sheet were declared in a media block earlier in the stylesheet than the base rules of the same selectors, so the base rules won and the fourth cell wrapped; the compact grid is now the mobile-first base and phone overrides live after every rule they override
