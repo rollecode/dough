@@ -356,7 +356,11 @@ export async function POST(request: Request) {
         ).get(-inf.amount, inf.account_id, inf.date, inf.amount) as { ynab_id: string; account_id: string } | undefined;
         if (!out) continue;
         const outName = acctNames.get(out.account_id) || "";
+        const infName = acctNames.get(inf.account_id) || "";
         db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${outName}`, INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
+        // Relabel the existing leg too: it can still carry the person payee from before pairing,
+        // which reads as a transfer without a counterpart account in the UI.
+        db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ? AND payee NOT LIKE 'Transfer%'").run(`Transfer : ${infName}`, out.ynab_id);
         paired.add(inf.ynab_id);
         transfersPaired++;
       }
@@ -430,11 +434,14 @@ export async function POST(request: Request) {
             db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
               .run(`Transfer : ${counterName}`, INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
             console.info("[synci/sync] Filled transfer counterpart for a single-leg inflow");
-          } else {
-            db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
+            paired.add(inf.ynab_id);
+            transfersPaired++;
           }
-          paired.add(inf.ynab_id);
-          transfersPaired++;
+          // No counterpart known: leave the row alone. An internal transfer must always carry its
+          // counterpart account; marking category-only here created transfers that read as
+          // "no second account (external)". The row stays classifiable by a later pass or run
+          // (once the opposite leg arrives or the payee's counterpart is learned), or by the user,
+          // whose correction teaches the counterpart map.
         }
       }
 
@@ -476,13 +483,35 @@ export async function POST(request: Request) {
             db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
               .run(`Transfer : ${counterName}`, INTERNAL_TRANSFER_CATEGORY, out.ynab_id);
             console.info("[synci/sync] Filled transfer counterpart for a single-leg outflow");
-          } else {
-            db.prepare("UPDATE transactions SET category = ? WHERE ynab_id = ?").run(INTERNAL_TRANSFER_CATEGORY, out.ynab_id);
+            paired.add(out.ynab_id);
+            transfersPaired++;
           }
-          paired.add(out.ynab_id);
-          transfersPaired++;
+          // No counterpart known: leave the row alone (see pass three) - never a transfer
+          // without its counterpart account.
         }
       }
+
+      // Pass five: self-heal transfer legs that carry the internal-transfer category but still show
+      // the original person payee (no "Transfer : <account>" label, which the UI reads as a transfer
+      // with no counterpart). Once the opposite leg exists, relabel with its account so an internal
+      // transfer always names its Vastatili.
+      const unlabeled = db.prepare(
+        "SELECT ynab_id, date, amount, account_id FROM transactions " +
+          "WHERE category = 'Internal transfer' AND payee NOT LIKE 'Transfer%'"
+      ).all() as { ynab_id: string; date: string; amount: number; account_id: string }[];
+      let relabeled = 0;
+      for (const leg of unlabeled) {
+        const opposite = db.prepare(
+          "SELECT account_id FROM transactions WHERE category = 'Internal transfer' AND ROUND(amount, 2) = ROUND(?, 2) " +
+            "AND account_id != ? AND ABS(julianday(date) - julianday(?)) <= 2 LIMIT 1"
+        ).get(-leg.amount, leg.account_id, leg.date) as { account_id: string } | undefined;
+        if (!opposite) continue;
+        const oppName = acctNames.get(opposite.account_id) || "";
+        if (!oppName) continue;
+        db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${oppName}`, leg.ynab_id);
+        relabeled++;
+      }
+      if (relabeled > 0) console.info("[synci/sync] Relabeled", relabeled, "transfer legs with their counterpart account");
 
       // Any inflow that matched no income source and did not pair as a transfer above is real income
       // (e.g. a client paying through a personal account). Categorise it to Ready to Assign so it is
