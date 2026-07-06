@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
-import { getYnabToken, getYnabBudgetId, getHouseholdSetting, setHouseholdSetting, getBudgetMode } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { categorizePayee } from "@/lib/ai/categorize";
-import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "@/lib/transaction-utils";
 import { localDateIso } from "@/lib/date-utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -173,84 +172,21 @@ export async function PUT(request: Request) {
     // Inflow (income, or a positive-side transfer) is stored positive; default stays an outflow.
     const inflow = body.inflow === true;
 
-    // LOCAL MODE: update local row, adjust account balance by the delta
+    // LOCAL MODE: shared mutation logic (also used by the v1 API) updates the row, adjusts the
+    // balance delta, learns transfer payees and maintains the counterpart leg.
     if (getBudgetMode() === "local") {
-      const { getDb } = await import("@/lib/db");
-      const db = getDb();
-      const prev = db.prepare("SELECT amount, account_id, category FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string; category: string } | undefined;
-      const signed = inflow ? Math.abs(parseFloat(amount)) : parseFloat(amount) * -1;
-      const newCategory = category !== undefined ? category : (prev?.category ?? "");
-      db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ?, category = ? WHERE ynab_id = ?")
-        .run(signed, payee_name || "", memo || "", account_id || (prev?.account_id ?? ""), date || "", newCategory, transaction_id);
-      if (prev) {
-        // remove old amount from old account, add new to new account
-        db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
-        db.prepare("UPDATE ynab_accounts SET balance = balance + ? WHERE id = ?").run(signed, account_id || prev.account_id);
-      }
-
-      // Learn this payee as an internal-transfer payee so future Synci imports with the same payee
-      // are recognized as transfers, not income. Skip the generic transfer descriptors.
-      if (newCategory === INTERNAL_TRANSFER_CATEGORY) {
-        const realPayee = (payee_name || "").trim();
-        if (realPayee && !isGenericTransferPayee(realPayee)) {
-          try {
-            const rawList = getHouseholdSetting("internal_transfer_payees");
-            const list: string[] = rawList ? JSON.parse(rawList) : [];
-            if (!list.some((p) => p.toLowerCase() === realPayee.toLowerCase())) {
-              list.push(realPayee);
-              setHouseholdSetting("internal_transfer_payees", JSON.stringify(list));
-              console.info("[ynab/transaction] Learned an internal-transfer payee");
-            }
-          } catch (e) {
-            console.warn("[ynab/transaction] Failed to record internal-transfer payee:", e);
-          }
-          // Also learn which counterpart account this payee transfers with, so a future Synci import
-          // that only delivers the inflow leg (the bank shows the owner's own name, not the source
-          // account) can fill in the Vastatili and recreate the missing opposite leg automatically.
-          const learnedAcct = body.transfer_account_id ? String(body.transfer_account_id) : "";
-          if (learnedAcct && learnedAcct !== (account_id || prev?.account_id || "")) {
-            try {
-              const rawMap = getHouseholdSetting("transfer_payee_accounts");
-              const map: Record<string, string> = rawMap ? JSON.parse(rawMap) : {};
-              const key = normTransferPayee(realPayee);
-              if (key && map[key] !== learnedAcct) {
-                map[key] = learnedAcct;
-                setHouseholdSetting("transfer_payee_accounts", JSON.stringify(map));
-                console.info("[ynab/transaction] Learned a transfer counterpart account for a payee");
-              }
-            } catch (e) {
-              console.warn("[ynab/transaction] Failed to record transfer counterpart account:", e);
-            }
-          }
-        }
-      }
-
-      // Internal transfer with a chosen counterpart account: make sure the other leg exists so the
-      // transfer shows on both accounts. Reuse an existing opposite-amount leg on that account (e.g.
-      // one Synci imported) rather than creating a duplicate.
-      const transferAcct = body.transfer_account_id ? String(body.transfer_account_id) : "";
-      const thisAcct = account_id || prev?.account_id || "";
-      if (transferAcct && transferAcct !== thisAcct && newCategory === INTERNAL_TRANSFER_CATEGORY) {
-        const txDate = date || "";
-        const counterSigned = -signed;
-        const nameOf = (id: string) => (db.prepare("SELECT name FROM ynab_accounts WHERE id = ?").get(id) as { name: string } | undefined)?.name || "";
-        const thisName = nameOf(thisAcct);
-        const counterName = nameOf(transferAcct);
-        const existing = db.prepare(
-          "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND category != 'Internal transfer' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
-        ).get(transferAcct, counterSigned, txDate, txDate) as { ynab_id: string } | undefined;
-        if (existing) {
-          db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
-        } else {
-          db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, '', ?, 1, 'cleared')")
-            .run(user.id, `local_${randomUUID()}`, txDate, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, transferAcct);
-          db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, transferAcct);
-        }
-        db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${counterName}`, transaction_id);
-      }
-
-      eventBus.emit("data:updated", { source: "transaction-updated", userId: user.id });
-      console.info("[ynab/transaction] Local transaction updated:", transaction_id);
+      const { updateLocalTransaction } = await import("@/lib/local-transactions");
+      updateLocalTransaction(user.id, {
+        transaction_id,
+        amount,
+        inflow,
+        payee_name: payee_name || "",
+        memo: memo || "",
+        account_id,
+        date,
+        category,
+        transfer_account_id: body.transfer_account_id ? String(body.transfer_account_id) : undefined,
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -326,24 +262,11 @@ export async function DELETE(request: Request) {
     const transaction_id = body.transaction_id;
     if (!transaction_id) return NextResponse.json({ error: "Transaction ID required" }, { status: 400 });
 
-    // LOCAL MODE: delete the row (and any split siblings) and reverse their balance effect
+    // LOCAL MODE: shared mutation logic (also used by the v1 API) deletes the row plus any split
+    // siblings and reverses their balance effect.
     if (getBudgetMode() === "local") {
-      const { getDb } = await import("@/lib/db");
-      const db = getDb();
-      const row = db.prepare("SELECT split_group FROM transactions WHERE ynab_id = ?").get(transaction_id) as { split_group: string } | undefined;
-      const group = row?.split_group || "";
-      // Reverse the summed amount of all rows being removed, then delete them
-      if (group) {
-        const rows = db.prepare("SELECT amount, account_id FROM transactions WHERE split_group = ?").all(group) as { amount: number; account_id: string }[];
-        for (const r of rows) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(r.amount, r.account_id);
-        db.prepare("DELETE FROM transactions WHERE split_group = ?").run(group);
-      } else {
-        const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transaction_id) as { amount: number; account_id: string } | undefined;
-        db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transaction_id);
-        if (prev) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
-      }
-      eventBus.emit("data:updated", { source: "transaction-deleted", userId: user.id });
-      console.info("[ynab/transaction] Local transaction deleted:", transaction_id, group ? "(split group)" : "");
+      const { deleteLocalTransaction } = await import("@/lib/local-transactions");
+      deleteLocalTransaction(user.id, transaction_id);
       return NextResponse.json({ success: true });
     }
 

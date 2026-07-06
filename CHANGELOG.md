@@ -1,3 +1,8 @@
+### 3.12.0: 2026-07-06
+
+* Add write-scoped v1 endpoints for editing and deleting transactions (`POST /api/v1/transactions/update`, `POST /api/v1/transactions/delete`), so an authorized API client can fix a misrouted transfer or remove a bad row; updates are partial (only provided fields change) and marking a row an internal transfer with a counterpart account maintains the opposite leg, local mode only
+* Extract the local-mode transaction update and delete logic into `lib/local-transactions.ts`, shared by the session-authenticated route and the v1 API
+
 ### 3.11.2: 2026-07-03
 
 * Fix the cover/fund/move/activity popovers being buried under a dark overlay on phones: the calculator sheet's dimmed backdrop style hit the backdrop class those popovers share, so it now applies only to the calculator's own backdrop

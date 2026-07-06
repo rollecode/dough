@@ -75,6 +75,14 @@ These require a key minted with `--scopes read,write` and return `403` for a rea
 - `POST /api/v1/budget/auto-assign` — apply a plan. Body: `{ "month": "YYYY-MM", "mode": "underfunded" | "last_assigned" | "last_spent" }`.
   Funds category targets from Ready to Assign, capped so it never overbudgets.
 - `POST /api/v1/budget/assign` — set one category's amount. Body: `{ "month": "YYYY-MM", "category_id" | "category_name", "budgeted": number }`.
+- `POST /api/v1/transactions/update` — patch one transaction by the id the read endpoints return;
+  only provided fields change. Body: `{ "transaction_id", "amount"?, "inflow"?, "payee_name"?,
+  "memo"?, "account_id"?, "date"?, "category"?, "transfer_account_id"? }`. `amount` is the absolute
+  value (`inflow: true` stores it positive). Setting `category` to `Internal transfer` with a
+  `transfer_account_id` fills the counterpart account and maintains the opposite leg. Local mode
+  only.
+- `POST /api/v1/transactions/delete` — remove one transaction (split siblings included) and reverse
+  its balance effect. Body: `{ "transaction_id" }`. Local mode only.
 
 ### Example
 
