@@ -1,3 +1,8 @@
+### 3.13.0: 2026-07-07
+
+* Add a write-scoped v1 endpoint for creating a transaction (`POST /api/v1/transactions/create`), so an authorized API client can add a row Synci has not imported yet - most importantly a pending card hold (varaus) - and dough matches the bank's available balance to the cent; amount is the absolute value with `inflow` for direction, `cleared` can be `uncleared` for a pending hold, and marking it an internal transfer with a counterpart account maintains the opposite leg, local mode only
+* Extend `lib/local-transactions.ts` with `createLocalTransaction`, mirroring the update path's insert and signed balance-delta mechanics including the internal-transfer counterpart leg
+
 ### 3.12.0: 2026-07-06
 
 * Add write-scoped v1 endpoints for editing and deleting transactions (`POST /api/v1/transactions/update`, `POST /api/v1/transactions/delete`), so an authorized API client can fix a misrouted transfer or remove a bad row; updates are partial (only provided fields change) and marking a row an internal transfer with a counterpart account maintains the opposite leg, local mode only

@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { getDb } from "./db";
 import { getHouseholdSetting, setHouseholdSetting } from "./household";
 import { eventBus } from "./event-bus";
+import { localDateIso } from "./date-utils";
 import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "./transaction-utils";
 
 // Local-mode transaction mutations shared by the internal session-authenticated route and the
@@ -117,6 +118,74 @@ export function updateLocalTransaction(
   eventBus.emit("data:updated", { source: "transaction-updated", userId });
   console.info("[local-transactions] Local transaction updated:", params.transaction_id);
   return { found: true };
+}
+
+export interface LocalTransactionCreate {
+  account_id: string;
+  amount: number | string; // absolute value; sign comes from inflow
+  inflow?: boolean; // stored positive when true, negative otherwise (default false = money out)
+  date?: string; // YYYY-MM-DD; defaults to today (Helsinki)
+  payee_name?: string;
+  memo?: string;
+  category?: string;
+  cleared?: string; // free-text ledger state; defaults to 'cleared'. Use 'uncleared' for pending holds.
+  transfer_account_id?: string;
+}
+
+// Insert a new transaction into Dough's local ledger and apply its balance effect. Mirrors the
+// insert/balance mechanics of updateLocalTransaction. Used by the key-authenticated v1 API to add
+// rows Synci has not imported yet - most importantly pending card holds (varaukset), so Dough can
+// match the bank's available balance to the cent. Returns the new id, or an error if the account is
+// unknown. Local mode only (enforced by the route).
+export function createLocalTransaction(
+  userId: number,
+  params: LocalTransactionCreate
+): { id: string } | { error: string } {
+  const db = getDb();
+  const account = String(params.account_id || "");
+  const acct = db.prepare("SELECT id FROM ynab_accounts WHERE id = ?").get(account) as { id: string } | undefined;
+  if (!acct) return { error: `No account with id ${account}` };
+
+  const inflow = params.inflow ?? false;
+  const signed = (inflow ? 1 : -1) * Math.abs(parseFloat(String(params.amount)));
+  if (!isFinite(signed)) return { error: "amount must be a number" };
+  const date = params.date || localDateIso();
+  const payee = params.payee_name ?? "";
+  const memo = params.memo ?? "";
+  const category = params.category ?? "";
+  const cleared = params.cleared || "cleared";
+  const id = `local_${randomUUID()}`;
+
+  db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)")
+    .run(userId, id, date, signed, payee, category, memo, account, cleared);
+  db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(signed, account);
+
+  // Internal transfer with a chosen counterpart account: make sure the other leg exists so the
+  // transfer shows on both accounts. Reuse an existing opposite-amount leg rather than duplicating.
+  const transferAcct = params.transfer_account_id ? String(params.transfer_account_id) : "";
+  if (transferAcct && transferAcct !== account && category === INTERNAL_TRANSFER_CATEGORY) {
+    const counterSigned = -signed;
+    const nameOf = (aid: string) =>
+      (db.prepare("SELECT name FROM ynab_accounts WHERE id = ?").get(aid) as { name: string } | undefined)?.name || "";
+    const thisName = nameOf(account);
+    const counterName = nameOf(transferAcct);
+    const existing = db.prepare(
+      "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND category != 'Internal transfer' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
+    ).get(transferAcct, counterSigned, date, date) as { ynab_id: string } | undefined;
+    if (existing) {
+      db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
+        .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
+    } else {
+      db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, '', ?, 1, 'cleared')")
+        .run(userId, `local_${randomUUID()}`, date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, transferAcct);
+      db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, transferAcct);
+    }
+    db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${counterName}`, id);
+  }
+
+  eventBus.emit("data:updated", { source: "transaction-created", userId });
+  console.info("[local-transactions] Local transaction created:", id);
+  return { id };
 }
 
 // Delete a local transaction (and any split siblings sharing its group), reversing the balance
