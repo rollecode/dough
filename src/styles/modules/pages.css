@@ -1320,6 +1320,7 @@
 /* Drag handles for reordering rows and whole groups in the budget view */
 .budget-row-drag {
   position: relative;
+  transition: background-color 1.2s ease;
 }
 
 .budget-grip {
@@ -2488,6 +2489,12 @@
   font-family: inherit;
 }
 
+/* Flash highlight for a category row reached via /budget?cat=<id> */
+.budget-row-drag.is-deeplink-target {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: 0.5rem;
+}
+
 /* Small helper under a form field (e.g. the derived saved amount explanation) */
 .form-field-note {
   margin-top: 0.25rem;
@@ -2506,6 +2513,28 @@
 .goal-linked-name {
   color: var(--foreground);
   font-weight: 500;
+}
+
+/* Budget-link control row in the finance modals: jump link + unlink button */
+.budget-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.budget-link-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.budget-link-jump:hover .goal-linked-name {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .list-item-amount {

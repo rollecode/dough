@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Loader2, Check, AlertCircle, X } from "lucide-react";
 import { F } from "@/components/ui/f";
+import { BudgetLinkControl } from "@/components/shared/budget-link-control";
 import { getBrandConfig, BrandIcon } from "@/lib/brands";
 
 
@@ -343,6 +344,7 @@ export default function SubscriptionsPage() {
                   ? (locale === "fi" ? "Merkitse maksamattomaksi" : "Mark unpaid")
                   : (locale === "fi" ? "Merkitse maksetuksi" : "Mark paid")}
               </Button>
+              <BudgetLinkControl linkType="subscription" targetId={editTarget.id} />
               <Button
                 type="button"
                 variant={editTarget.is_priority ? "destructive" : "outline"}

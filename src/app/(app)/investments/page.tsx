@@ -34,6 +34,7 @@ import {
 } from "recharts";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { F } from "@/components/ui/f";
+import { BudgetLinkControl } from "@/components/shared/budget-link-control";
 
 interface InvestmentData {
   id: string;
@@ -653,6 +654,7 @@ export default function InvestmentsPage() {
                   {saving === inv.id ? <Check /> : <Save />}
                 </Button>
               </div>
+              <BudgetLinkControl linkType="investment_account" targetId={inv.id} />
             </div>
           ))}
         </Card>

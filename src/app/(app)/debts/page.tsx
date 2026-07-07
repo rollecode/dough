@@ -41,6 +41,7 @@ import {
 import { ChartContainer } from "@/components/ui/chart-container";
 import { formatDuration } from "@/lib/date-utils";
 import { F } from "@/components/ui/f";
+import { BudgetLinkControl } from "@/components/shared/budget-link-control";
 import { DebtDonut } from "@/components/debts/debt-donut";
 
 interface DebtData {
@@ -127,6 +128,7 @@ function calculatePayoff(debts: DebtData[], extraPayment: number, sortFn: (a: De
   }
   return { timeline, months: month, totalInterest: Math.round(totalInterest) };
 }
+
 
 export default function DebtsPage() {
   const { t, locale, fmt, mask } = useLocale();
@@ -505,6 +507,7 @@ export default function DebtsPage() {
                   {saving === debt.id ? <Check /> : <Save />}
                 </Button>
               </div>
+              <BudgetLinkControl linkType="debt_account" targetId={debt.id} />
             </div>
           ))}
         </Card>

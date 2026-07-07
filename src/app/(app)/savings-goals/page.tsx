@@ -19,7 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CategoryPicker } from "@/components/shared/category-picker";
-import { Plus, Loader2, Target, Star } from "lucide-react";
+import { BudgetLinkControl } from "@/components/shared/budget-link-control";
+import { Plus, Loader2, Target, Star, Info } from "lucide-react";
 import { F } from "@/components/ui/f";
 
 interface SavingsGoal {
@@ -61,13 +62,16 @@ export default function SavingsGoalsPage() {
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<SavingsGoal | null>(null);
+  // The editor tracks the goal id; the goal object is derived from the loaded list, so a reload
+  // (e.g. after linking/unlinking inside the modal) refreshes the open editor automatically.
+  const [editTargetId, setEditTargetId] = useState<number | null>(null);
   const [categories, setCategories] = useState<{ id: number; name: string; group_name: string }[]>([]);
   const addFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
-  // Picker values hold the category name (CategoryPicker selects by name); the id is looked up on save.
+  // Picker value holds the category name (CategoryPicker selects by name); the id is looked up on
+  // save. The edit dialog links/unlinks through BudgetLinkControl instead, immediately.
   const [addCategory, setAddCategory] = useState("");
-  const [editCategory, setEditCategory] = useState("");
+  const [savedInfoOpen, setSavedInfoOpen] = useState(false);
 
   const loadGoals = useCallback(() => {
     console.debug("[savings-goals] Loading goals");
@@ -102,6 +106,7 @@ export default function SavingsGoalsPage() {
 
   useEvent("data:updated", useCallback(() => { loadGoals(); loadCategories(); }, [loadGoals, loadCategories]));
 
+
   // Create a new category from the picker and select it. Names are unique, so a duplicate just
   // reuses the existing one (already in the list); a real create is appended for the next open.
   const createCategory = useCallback(async (name: string) => {
@@ -123,6 +128,8 @@ export default function SavingsGoalsPage() {
       }
     } catch (err) { console.error("[savings-goals] Create category error:", err); }
   }, []);
+
+  const editTarget = editTargetId != null ? goals.find((g) => g.id === editTargetId) ?? null : null;
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,15 +162,14 @@ export default function SavingsGoalsPage() {
     e.preventDefault();
     if (!editTarget || !editFormRef.current) return;
     const fd = new FormData(editFormRef.current);
-    const cat = categories.find((c) => c.name === editCategory);
+    // The budget link is managed by BudgetLinkControl (immediate), so the category fields are
+    // deliberately absent here - sending them would clobber a link made moments earlier.
     const body: Record<string, unknown> = {
       id: editTarget.id,
       name: fd.get("name") as string,
       target_amount: parseFloat((fd.get("target_amount") as string).replace(",", ".")),
       target_date: (fd.get("target_date") as string) || null,
       description: (fd.get("description") as string) || "",
-      ynab_category_id: cat ? String(cat.id) : null,
-      ynab_category_name: editCategory || null,
     };
     // The saved amount is only writable for unlinked goals: on a derived goal the field is disabled
     // (a disabled input is absent from FormData, and writing 0 over the stored manual value would
@@ -175,7 +181,7 @@ export default function SavingsGoalsPage() {
     try {
       await fetch("/api/savings-goals", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       setEditOpen(false);
-      setEditTarget(null);
+      setEditTargetId(null);
       loadGoals();
     } catch (err) { console.error("[savings-goals] Edit error:", err); }
   };
@@ -300,7 +306,7 @@ export default function SavingsGoalsPage() {
             const monthly = calcMonthlySavings(goal);
             return (
               <div key={goal.id} className="list-item list-item-col">
-                <div className="list-item-main" onClick={() => { setEditTarget(goal); setEditCategory(goal.linked_category_name || goal.ynab_category_name || ""); setEditOpen(true); }}>
+                <div className="list-item-main" onClick={() => { setEditTargetId(goal.id); setSavedInfoOpen(false); setEditOpen(true); }}>
                   <div className="list-item-body">
                     <div className="list-item-name-row">
                       <p className="list-item-name">{goal.name}</p>
@@ -336,7 +342,7 @@ export default function SavingsGoalsPage() {
       )}
 
       {/* Edit dialog */}
-      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditTarget(null); }}>
+      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditTargetId(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{locale === "fi" ? "Muokkaa tavoitetta" : "Edit goal"}</DialogTitle></DialogHeader>
           {editTarget && (
@@ -351,42 +357,29 @@ export default function SavingsGoalsPage() {
                   <Input name="target_amount" type="text" inputMode="decimal" defaultValue={editTarget.target_amount} required />
                 </div>
                 <div className="form-field">
-                  <Label>{locale === "fi" ? "Säästetty (€)" : "Saved (€)"}</Label>
+                  <Label className="metric-card-label-info">
+                    {locale === "fi" ? "Säästetty (€)" : "Saved (€)"}
+                    {editTarget.derived && (
+                      <span className={`metric-info-wrap ${savedInfoOpen ? "is-open" : ""}`}>
+                        <button type="button" className="metric-info-trigger" onClick={() => setSavedInfoOpen((v) => !v)}>
+                          <Info />
+                        </button>
+                        <span className="metric-info-popup">
+                          {locale === "fi"
+                            ? "Lasketaan automaattisesti linkitetystä budjettikategoriasta"
+                            : "Derived automatically from the linked budget category"}
+                        </span>
+                      </span>
+                    )}
+                  </Label>
                   <Input name="saved_amount" type="text" inputMode="decimal" defaultValue={editTarget.saved_amount} disabled={editTarget.derived} />
-                  {editTarget.derived && (
-                    <p className="form-field-note">
-                      {locale === "fi" ? "Lasketaan automaattisesti linkitetystä budjettikategoriasta" : "Derived automatically from the linked budget category"}
-                    </p>
-                  )}
                 </div>
               </div>
-              {editTarget.derived && editTarget.linked_category_name && (
-                <p className="goal-linked-note">
-                  {locale === "fi" ? "Linkitetty budjettiin: " : "Linked to budget: "}
-                  <span className="goal-linked-name">
-                    {editTarget.linked_group_name ? `${editTarget.linked_group_name} / ` : ""}{editTarget.linked_category_name}
-                  </span>
-                  {" · "}
-                  {locale === "fi" ? "poista linkitys valitsemalla ”Ei kategoriaa”" : "unlink by picking ”No category”"}
-                </p>
-              )}
               <div className="form-field">
                 <Label>{locale === "fi" ? "Tavoitepäivä" : "Target date"}</Label>
                 <DateField name="target_date" defaultValue={editTarget.target_date || ""} />
               </div>
-              <div className="form-field">
-                <Label>{locale === "fi" ? "Kategoria" : "Category"}</Label>
-                <CategoryPicker
-                  value={editCategory}
-                  onChange={setEditCategory}
-                  categories={categories}
-                  placeholder={locale === "fi" ? "Valitse kategoria" : "Select category"}
-                  noneLabel={locale === "fi" ? "Ei kategoriaa" : "No category"}
-                  searchPlaceholder={locale === "fi" ? "Hae tai luo uusi..." : "Search or create..."}
-                  onCreate={createCategory}
-                  createLabel={(q) => (locale === "fi" ? `Luo "${q}"` : `Create "${q}"`)}
-                />
-              </div>
+              <BudgetLinkControl linkType="savings_goal" targetId={editTarget.id} />
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Description"}</Label>
                 <textarea name="description" className="input goal-desc-input" rows={2} defaultValue={editTarget.description || ""} placeholder={locale === "fi" ? "Muistiinpanot, linkit..." : "Notes, links..."} />

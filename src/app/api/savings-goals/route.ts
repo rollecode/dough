@@ -2,21 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { availableForCategory } from "@/lib/budget-math";
+import { setBudgetLink } from "@/lib/budget-links";
 import { eventBus } from "@/lib/event-bus";
-
-// Point categories.savings_goal_id (the link the derivation follows) at the picked category:
-// clear every previous link for this goal, then set the new one when a category was picked.
-// A cleared picker (null/empty) therefore unlinks the goal back to manual saved-amount tracking.
-function syncCategoryLink(db: ReturnType<typeof getDb>, goalId: number, categoryId: unknown) {
-  db.prepare("UPDATE categories SET savings_goal_id = NULL WHERE savings_goal_id = ?").run(goalId);
-  const catId = parseInt(String(categoryId ?? ""), 10);
-  if (catId > 0) {
-    db.prepare("UPDATE categories SET savings_goal_id = ? WHERE id = ?").run(goalId, catId);
-    console.info("[savings-goals] Linked goal", goalId, "to category", catId);
-  } else {
-    console.info("[savings-goals] Unlinked goal", goalId, "from budget");
-  }
-}
 
 export async function GET() {
   try {
@@ -95,7 +82,7 @@ export async function POST(request: Request) {
 
     // Maintain the derivation link too (categories.savings_goal_id): picking a category here must
     // actually tie the goal's progress to the budget, same as linking from the budget inspector.
-    syncCategoryLink(db, Number(result.lastInsertRowid), ynab_category_id);
+    setBudgetLink(db, "savings_goal", Number(result.lastInsertRowid), ynab_category_id);
 
     console.info("[savings-goals] Created:", name, "id:", result.lastInsertRowid);
     eventBus.emit("data:updated", { source: "savings-goal-added" });
@@ -156,7 +143,7 @@ export async function PUT(request: Request) {
       // goal's progress to the budget, selecting none unlinks it back to manual tracking. Multiple
       // links made from the budget inspector collapse to the single picked category on edit.
       if (body.ynab_category_id !== undefined) {
-        syncCategoryLink(db, Number(id), body.ynab_category_id);
+        setBudgetLink(db, "savings_goal", Number(id), body.ynab_category_id);
       }
       console.info("[savings-goals] Updated", id);
       eventBus.emit("data:updated", { source: "savings-goal-updated" });

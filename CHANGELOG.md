@@ -1,6 +1,7 @@
 ### 3.14.0: 2026-07-07
 
 * Make savings-goal budget links real and visible: picking a category in the goal modal now actually ties the goal's progress to the budget (previously only the budget inspector's link drove derivation while the modal wrote a dead field), clearing the picker unlinks the goal back to a manually tracked savings monitor, the modal shows which budget group/category the goal is linked to, and deleting a goal clears its category links
+* Replace the goal modal's category picker with a shared budget-link control used by the savings, subscription, debt and investment editors alike: it shows where the item is linked (clickable, jumps to the budget page and flashes the linked category row via `/budget?cat=<id>`), unlinks with one click, and links by picking a category with immediate effect; the derived saved-amount explanation moves behind the standard info-icon tooltip
 * Disable the saved-amount field on a linked goal (the value is derived from the linked category's available balance, so typing into it never showed up): it now greys out at half opacity with a note saying it is derived, and the stored manual value survives for a later unlink
 
 ### 3.13.0: 2026-07-07

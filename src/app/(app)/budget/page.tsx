@@ -167,6 +167,7 @@ export default function BudgetPage() {
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [addCatGroup, setAddCatGroup] = useState("");
   const [inspectorId, setInspectorId] = useState<number | null>(null);
+
   const [catSaved, setCatSaved] = useState(false);
   const [targetEditing, setTargetEditing] = useState(false);
   const [targetDraft, setTargetDraft] = useState<string>("");
@@ -180,6 +181,25 @@ export default function BudgetPage() {
   const [deleteDest, setDeleteDest] = useState<string>("rta");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [localGroups, setLocalGroups] = useState<{ key: string; label: string; items: BudgetCategory[] }[]>([]);
+  // Deep link from a finance modal (/budget?cat=<id>): once the rows are in, scroll the linked
+  // category into view and flash it so the eye lands where the link points. Consumed once.
+  const deepLinkCatRef = useRef<number | null>(null);
+  useEffect(() => {
+    const v = parseInt(new URLSearchParams(window.location.search).get("cat") || "", 10);
+    if (v > 0) deepLinkCatRef.current = v;
+  }, []);
+  useEffect(() => {
+    const target = deepLinkCatRef.current;
+    if (!target || localGroups.length === 0) return;
+    const el = document.getElementById(`budget-cat-${target}`);
+    if (!el) return;
+    deepLinkCatRef.current = null;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("is-deeplink-target");
+    setTimeout(() => el.classList.remove("is-deeplink-target"), 2600);
+    console.debug("[budget] Deep link scrolled to category", target);
+  }, [localGroups]);
+
   const [bdrag, setBdrag] = useState<{ type: "row" | "group"; id: number | string; fromGroup: string } | null>(null);
   const [dropAt, setDropAt] = useState<{ groupKey: string; index: number } | null>(null);
   const [dropGroupAt, setDropGroupAt] = useState<number | null>(null);
@@ -971,6 +991,7 @@ export default function BudgetPage() {
                   <Fragment key={c.id}>
                     {rowDropHere && dropAt!.index === rIdx && <div className="budget-drop-line" aria-hidden="true" />}
                     <div
+                      id={`budget-cat-${c.id}`}
                       className={`budget-row-drag ${isRowGhost ? "is-drag-ghost" : ""}`}
                       onDragOver={dragEnabled ? (e) => onRowDragOver(e, group.key, rIdx) : undefined}
                     >
