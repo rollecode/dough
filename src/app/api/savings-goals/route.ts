@@ -4,6 +4,20 @@ import { getDb } from "@/lib/db";
 import { availableForCategory } from "@/lib/budget-math";
 import { eventBus } from "@/lib/event-bus";
 
+// Point categories.savings_goal_id (the link the derivation follows) at the picked category:
+// clear every previous link for this goal, then set the new one when a category was picked.
+// A cleared picker (null/empty) therefore unlinks the goal back to manual saved-amount tracking.
+function syncCategoryLink(db: ReturnType<typeof getDb>, goalId: number, categoryId: unknown) {
+  db.prepare("UPDATE categories SET savings_goal_id = NULL WHERE savings_goal_id = ?").run(goalId);
+  const catId = parseInt(String(categoryId ?? ""), 10);
+  if (catId > 0) {
+    db.prepare("UPDATE categories SET savings_goal_id = ? WHERE id = ?").run(goalId, catId);
+    console.info("[savings-goals] Linked goal", goalId, "to category", catId);
+  } else {
+    console.info("[savings-goals] Unlinked goal", goalId, "from budget");
+  }
+}
+
 export async function GET() {
   try {
     const user = await getSession();
@@ -22,16 +36,30 @@ export async function GET() {
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const linkRows = db
-      .prepare("SELECT id AS category_id, name, savings_goal_id FROM categories WHERE savings_goal_id IS NOT NULL")
-      .all() as { category_id: number; name: string; savings_goal_id: number }[];
+      .prepare("SELECT id AS category_id, name, COALESCE(group_name, '') AS group_name, savings_goal_id FROM categories WHERE savings_goal_id IS NOT NULL")
+      .all() as { category_id: number; name: string; group_name: string; savings_goal_id: number }[];
     const assignedByGoal = new Map<number, number>();
+    const linkedByGoal = new Map<number, { category_id: number; name: string; group_name: string }>();
     for (const r of linkRows) {
       const v = availableForCategory(db, r.category_id, r.name, month);
       assignedByGoal.set(r.savings_goal_id, (assignedByGoal.get(r.savings_goal_id) || 0) + v);
+      // First linked category wins for display; multi-links (possible from the budget inspector)
+      // still sum into the derived amount above.
+      if (!linkedByGoal.has(r.savings_goal_id)) linkedByGoal.set(r.savings_goal_id, r);
     }
-    const withDerived = goals.map((g) =>
-      assignedByGoal.has(g.id) ? { ...g, saved_amount: Math.round(assignedByGoal.get(g.id)! * 100) / 100 } : g
-    );
+    // Expose the link so the UI can show where the goal is tied in the budget, disable the manual
+    // saved field for derived goals, and let the modal link/unlink by category id.
+    const withDerived = goals.map((g) => {
+      const link = linkedByGoal.get(g.id);
+      return {
+        ...g,
+        saved_amount: assignedByGoal.has(g.id) ? Math.round(assignedByGoal.get(g.id)! * 100) / 100 : g.saved_amount,
+        derived: assignedByGoal.has(g.id),
+        linked_category_id: link ? link.category_id : null,
+        linked_category_name: link ? link.name : null,
+        linked_group_name: link ? link.group_name : null,
+      };
+    });
 
     console.debug("[savings-goals] Loaded", withDerived.length, "savings goals,", assignedByGoal.size, "linked to budget");
     return NextResponse.json({ goals: withDerived });
@@ -64,6 +92,10 @@ export async function POST(request: Request) {
         target_date || null,
         description || ""
       );
+
+    // Maintain the derivation link too (categories.savings_goal_id): picking a category here must
+    // actually tie the goal's progress to the budget, same as linking from the budget inspector.
+    syncCategoryLink(db, Number(result.lastInsertRowid), ynab_category_id);
 
     console.info("[savings-goals] Created:", name, "id:", result.lastInsertRowid);
     eventBus.emit("data:updated", { source: "savings-goal-added" });
@@ -120,6 +152,12 @@ export async function PUT(request: Request) {
       updates.push("updated_at = datetime('now')");
       values.push(id);
       db.prepare(`UPDATE savings_goals SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+      // Keep the derivation link in sync with the picked category: selecting a category links the
+      // goal's progress to the budget, selecting none unlinks it back to manual tracking. Multiple
+      // links made from the budget inspector collapse to the single picked category on edit.
+      if (body.ynab_category_id !== undefined) {
+        syncCategoryLink(db, Number(id), body.ynab_category_id);
+      }
       console.info("[savings-goals] Updated", id);
       eventBus.emit("data:updated", { source: "savings-goal-updated" });
     }
@@ -141,6 +179,8 @@ export async function DELETE(request: Request) {
 
     const db = getDb();
     db.prepare("DELETE FROM savings_goals WHERE id = ?").run(id);
+    // Clear the budget link so no category keeps pointing at a goal that no longer exists.
+    db.prepare("UPDATE categories SET savings_goal_id = NULL WHERE savings_goal_id = ?").run(id);
 
     console.info("[savings-goals] Deleted", id);
     eventBus.emit("data:updated", { source: "savings-goal-deleted" });

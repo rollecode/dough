@@ -1,3 +1,8 @@
+### 3.14.0: 2026-07-07
+
+* Make savings-goal budget links real and visible: picking a category in the goal modal now actually ties the goal's progress to the budget (previously only the budget inspector's link drove derivation while the modal wrote a dead field), clearing the picker unlinks the goal back to a manually tracked savings monitor, the modal shows which budget group/category the goal is linked to, and deleting a goal clears its category links
+* Disable the saved-amount field on a linked goal (the value is derived from the linked category's available balance, so typing into it never showed up): it now greys out at half opacity with a note saying it is derived, and the stored manual value survives for a later unlink
+
 ### 3.13.0: 2026-07-07
 
 * Add a write-scoped v1 endpoint for creating a transaction (`POST /api/v1/transactions/create`), so an authorized API client can add a row Synci has not imported yet - most importantly a pending card hold (varaus) - and dough matches the bank's available balance to the cent; amount is the absolute value with `inflow` for direction, `cleared` can be `uncleared` for a pending hold, and marking it an internal transfer with a counterpart account maintains the opposite leg, local mode only

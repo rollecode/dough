@@ -2488,6 +2488,26 @@
   font-family: inherit;
 }
 
+/* Small helper under a form field (e.g. the derived saved amount explanation) */
+.form-field-note {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+}
+
+/* Where a savings goal is linked in the budget, shown in the goal modal */
+.goal-linked-note {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
+.goal-linked-name {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
 .list-item-amount {
   text-align: right;
 }

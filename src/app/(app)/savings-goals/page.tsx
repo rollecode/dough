@@ -33,6 +33,12 @@ interface SavingsGoal {
   description: string | null;
   include_in_calculations: number;
   is_active: number;
+  // Budget link: when derived is true the saved amount comes from the linked category's available
+  // balance and the manual field is read-only.
+  derived: boolean;
+  linked_category_id: number | null;
+  linked_category_name: string | null;
+  linked_group_name: string | null;
 }
 
 // Render free text with http(s) URLs turned into clickable links.
@@ -150,16 +156,21 @@ export default function SavingsGoalsPage() {
     if (!editTarget || !editFormRef.current) return;
     const fd = new FormData(editFormRef.current);
     const cat = categories.find((c) => c.name === editCategory);
-    const body = {
+    const body: Record<string, unknown> = {
       id: editTarget.id,
       name: fd.get("name") as string,
       target_amount: parseFloat((fd.get("target_amount") as string).replace(",", ".")),
-      saved_amount: parseFloat((fd.get("saved_amount") as string || "0").replace(",", ".")),
       target_date: (fd.get("target_date") as string) || null,
       description: (fd.get("description") as string) || "",
       ynab_category_id: cat ? String(cat.id) : null,
       ynab_category_name: editCategory || null,
     };
+    // The saved amount is only writable for unlinked goals: on a derived goal the field is disabled
+    // (a disabled input is absent from FormData, and writing 0 over the stored manual value would
+    // destroy it for a later unlink).
+    if (!editTarget.derived) {
+      body.saved_amount = parseFloat((fd.get("saved_amount") as string || "0").replace(",", "."));
+    }
     console.info("[savings-goals] Editing:", body.id);
     try {
       await fetch("/api/savings-goals", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -289,7 +300,7 @@ export default function SavingsGoalsPage() {
             const monthly = calcMonthlySavings(goal);
             return (
               <div key={goal.id} className="list-item list-item-col">
-                <div className="list-item-main" onClick={() => { setEditTarget(goal); setEditCategory(goal.ynab_category_name || ""); setEditOpen(true); }}>
+                <div className="list-item-main" onClick={() => { setEditTarget(goal); setEditCategory(goal.linked_category_name || goal.ynab_category_name || ""); setEditOpen(true); }}>
                   <div className="list-item-body">
                     <div className="list-item-name-row">
                       <p className="list-item-name">{goal.name}</p>
@@ -299,7 +310,7 @@ export default function SavingsGoalsPage() {
                       <F v={goal.saved_amount} s="" /> / <F v={goal.target_amount} /> · {progress}%
                       {goal.target_date && ` · ${locale === "fi" ? "tavoite" : "by"} ${fmtDate(goal.target_date)}`}
                       {monthly > 0 && goal.target_date && <> · <F v={monthly} s={` €/${locale === "fi" ? "kk" : "mo"}`} /></>}
-                      {goal.ynab_category_name && ` · ${goal.ynab_category_name}`}
+                      {(goal.linked_category_name || goal.ynab_category_name) && ` · ${goal.linked_category_name || goal.ynab_category_name}`}
                     </p>
                     {goal.description && <p className="goal-desc"><Linkify text={goal.description} /></p>}
                     <Progress value={progress} className="progress-thin" />
@@ -341,9 +352,24 @@ export default function SavingsGoalsPage() {
                 </div>
                 <div className="form-field">
                   <Label>{locale === "fi" ? "Säästetty (€)" : "Saved (€)"}</Label>
-                  <Input name="saved_amount" type="text" inputMode="decimal" defaultValue={editTarget.saved_amount} />
+                  <Input name="saved_amount" type="text" inputMode="decimal" defaultValue={editTarget.saved_amount} disabled={editTarget.derived} />
+                  {editTarget.derived && (
+                    <p className="form-field-note">
+                      {locale === "fi" ? "Lasketaan automaattisesti linkitetystä budjettikategoriasta" : "Derived automatically from the linked budget category"}
+                    </p>
+                  )}
                 </div>
               </div>
+              {editTarget.derived && editTarget.linked_category_name && (
+                <p className="goal-linked-note">
+                  {locale === "fi" ? "Linkitetty budjettiin: " : "Linked to budget: "}
+                  <span className="goal-linked-name">
+                    {editTarget.linked_group_name ? `${editTarget.linked_group_name} / ` : ""}{editTarget.linked_category_name}
+                  </span>
+                  {" · "}
+                  {locale === "fi" ? "poista linkitys valitsemalla ”Ei kategoriaa”" : "unlink by picking ”No category”"}
+                </p>
+              )}
               <div className="form-field">
                 <Label>{locale === "fi" ? "Tavoitepäivä" : "Target date"}</Label>
                 <DateField name="target_date" defaultValue={editTarget.target_date || ""} />
