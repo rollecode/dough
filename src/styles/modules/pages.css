@@ -2459,6 +2459,7 @@
 .list-item-meta {
   font-size: 13px;
   line-height: 1rem;
+  font-weight: 600;
   color: var(--muted-foreground);
 }
 
