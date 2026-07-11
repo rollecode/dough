@@ -241,13 +241,11 @@ export default function DashboardPage() {
   // Real income from YNAB month budget (matches YNAB's own reports)
   const realIncome = data.monthBudget.income;
 
-  // Available = budgetable checking + savings (excluding budget-excluded accounts). Each account's
-  // balance is netted against its budget-excluded transactions, so an excluded outflow does not shrink
-  // the spendable pool the daily budget divides up (the money still shows in the real account balance).
+  // Available = total checking + savings accounts (excluding budget-excluded accounts)
   const availableBalance = Math.round(
     data.summary.accounts
       .filter((a) => (a.type === "checking" || a.type === "savings") && !excludedAccountIds.includes(a.id))
-      .reduce((s, a) => s + a.balance - (a.budgetExcludedNet || 0), 0) * 100
+      .reduce((s, a) => s + a.balance, 0) * 100
   ) / 100;
 
   // Upcoming income = active, unmatched income sources with expected_day still ahead

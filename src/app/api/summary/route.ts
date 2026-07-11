@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId, getHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
-import { cashFlowHistory, budgetExcludedNetByAccount, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
+import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 import { spawn } from "child_process";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -82,14 +82,9 @@ export async function GET(request: Request) {
     const excludedRaw = getExcludedSetting("budget_excluded_accounts");
     const excludedIds: string[] = excludedRaw ? JSON.parse(excludedRaw) : [];
 
-    // Budgetable checking+savings balance: real balances of the budgeted accounts, with the net of
-    // any budget-excluded transactions on those accounts pulled back out (an excluded outflow moved
-    // the real balance but must not shrink the daily budget). Accounts already excluded at the
-    // account level drop out entirely, balance and excluded transactions alike.
-    const excludedNetByAccount = budgetExcludedNetByAccount(db);
     const checkingSavings = summary.accounts
       .filter((a: any) => (a.type === "checking" || a.type === "savings") && !excludedIds.includes(a.id))
-      .reduce((s: number, a: any) => s + a.balance - (excludedNetByAccount.get(a.id) || 0), 0);
+      .reduce((s: number, a: any) => s + a.balance, 0);
 
     // Load account notes for context
     const accountNotesRows = db

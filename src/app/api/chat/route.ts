@@ -6,7 +6,7 @@ import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { localDateIso } from "@/lib/date-utils";
 import { eventBus } from "@/lib/event-bus";
-import { cashFlowHistory, budgetExcludedNetByAccount, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
+import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 
 export async function POST(request: Request) {
   try {
@@ -69,12 +69,9 @@ export async function POST(request: Request) {
           ).all() as { id: string; name: string; type: string; balance: number }[];
           const accountSource = localAccounts.length > 0 ? localAccounts : summary.accounts;
 
-          // Budgetable balance: net out budget-excluded transactions on the budgeted accounts (see
-          // summary route) so the daily budget ignores money the household chose to exclude.
-          const chatExcludedNet = budgetExcludedNetByAccount(getDb());
           const checkingSavings = accountSource
             .filter((a: any) => (a.type === "checking" || a.type === "savings") && !excludedIds.includes(a.id))
-            .reduce((s: number, a: any) => s + a.balance - (chatExcludedNet.get(a.id) || 0), 0);
+            .reduce((s: number, a: any) => s + a.balance, 0);
 
           // Load account notes for AI context
           const accountNotesRows = getDb()

@@ -1,3 +1,7 @@
+### 3.15.1: 2026-07-11
+
+* Keep the daily budget on real cash balances for excluded transactions instead of adding the excluded amount back: excluding a transaction still drops it from spending, category and cash-flow reporting and holds Ready to Assign steady, but no longer inflates the spendable pool (which double-counted money that moved in from an excluded account)
+
 ### 3.15.0: 2026-07-11
 
 * Add a per-transaction "exclude from budget" toggle in the transaction editor: an excluded row drops out of every budget figure (daily budget, category activity and available, Ready to Assign, cash flow, income, spending trends) but keeps affecting the real account balance and staying in the ledger, and shows an "Excluded" badge

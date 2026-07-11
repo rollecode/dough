@@ -249,17 +249,6 @@ export function monthBudgetNumbers(
   return { income, readyToAssign };
 }
 
-// Net signed amount of budget-excluded transactions per account. An excluded row still moved the
-// real account balance; subtracting this net from a real balance yields the "budgetable" balance the
-// budget pretends is there (excluded outflows added back, excluded inflows removed). Used to keep the
-// daily budget and Ready to Assign from counting money the household chose to exclude.
-export function budgetExcludedNetByAccount(db: ReturnType<typeof getDb>): Map<string, number> {
-  const rows = db.prepare(
-    "SELECT account_id, ROUND(SUM(amount), 2) AS net FROM transactions WHERE COALESCE(budget_excluded, 0) = 1 GROUP BY account_id"
-  ).all() as { account_id: string; net: number }[];
-  return new Map(rows.map((r) => [r.account_id, r.net]));
-}
-
 // "How long your money lasts": cash on hand divided by recent average daily spending. A reliable
 // local proxy for Age of Money when YNAB's own figure isn't available (YNAB's exact FIFO method
 // can't be faithfully reproduced from local data). Returns null when there's no spending to gauge.

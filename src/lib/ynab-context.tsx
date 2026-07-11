@@ -9,7 +9,6 @@ interface YnabAccount {
   type: string;
   balance: number;
   clearedBalance: number;
-  budgetExcludedNet?: number;
 }
 
 interface YnabCategory {
