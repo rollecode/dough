@@ -1,3 +1,8 @@
+### 3.14.2: 2026-07-11
+
+* Fix every transfer opening with an empty Vastatili ("Ei toista tiliä"): the edit dialog always reset the counterpart to blank, so a paired transfer looked counterpart-less and saving it stripped the counterpart off; the dialog now pre-selects the real counterpart account parsed from the transfer's "Transfer : <account>" leg
+* Make internal-transfer counterpart maintenance idempotent: re-saving an already-paired transfer reuses its existing opposite leg instead of fabricating a duplicate; shared by the edit and create paths via reconcileCounterpartLeg
+
 ### 3.14.1: 2026-07-11
 
 * Fix "Tavoitteet täyteen" (fund to targets) computing 0 while many categories are underfunded: the auto-assign underfunded plan read only manual `category_targets` and ignored every target that comes from a budget link (subscription, bill, debt, investment, savings goal), so a budget built entirely on links funded nothing; the budget row and auto-assign now resolve targets through one shared `makeTargetResolver`, and fund-to-targets tops each category up to the target the row shows

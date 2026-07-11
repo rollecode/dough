@@ -31,3 +31,11 @@ export function normTransferPayee(p: string): string {
 export function isGenericTransferPayee(p: string): boolean {
   return /^(transfer|siirto|starting balance|reconciliation)/i.test(p.trim());
 }
+
+// The counterpart account name carried by a transfer leg's payee ("Transfer : <account>"), or ""
+// when the payee is not a "Transfer : ..." leg. Used to pre-select the Vastatili in the edit dialog
+// so opening a paired transfer shows its real counterpart instead of "no second account".
+export function transferCounterpartName(payee: string): string {
+  const m = /^Transfer\s*:\s*(.+)$/.exec((payee || "").trim());
+  return m ? m[1].trim() : "";
+}

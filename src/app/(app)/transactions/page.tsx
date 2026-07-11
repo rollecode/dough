@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/locale-context";
-import { isTransfer, transferCategoryLabel } from "@/lib/transaction-utils";
+import { isTransfer, transferCategoryLabel, transferCounterpartName } from "@/lib/transaction-utils";
 import { useYnab, type YnabTransaction } from "@/lib/ynab-context";
 import { useEvent } from "@/lib/use-events";
 import { relativeDate, dayHeading } from "@/lib/date-utils";
@@ -283,6 +283,15 @@ export default function TransactionsPage() {
       return true;
     });
 
+  // The counterpart account id a transfer leg points at, resolved from its "Transfer : <account>"
+  // payee, so opening a paired transfer pre-selects its real Vastatili instead of defaulting to
+  // "no second account" (which, if saved, would strip the counterpart off a good transfer).
+  const counterpartIdFor = (payee: string): string => {
+    const name = transferCounterpartName(payee);
+    if (!name) return "";
+    return allAccounts.find((a) => a.name === name)?.id || "";
+  };
+
   // Deep link from elsewhere (e.g. the budget activity popover): /transactions?tx=<id> opens that
   // transaction's editor directly, regardless of the current month/filter.
   useEffect(() => {
@@ -293,7 +302,7 @@ export default function TransactionsPage() {
     if (t) {
       setEditTx({ id: t.id, payee: t.payee, amount: t.amount, category: t.category, memo: t.memo, account_id: t.account_id || "", date: t.date });
       setEditType(isTransfer(t.payee, t.category) ? "transfer" : t.amount > 0 ? "income" : "expense");
-      setEditTransferTo("");
+      setEditTransferTo(isTransfer(t.payee, t.category) ? counterpartIdFor(t.payee) : "");
       setSplitMode(false);
       setSplitLines([]);
       window.history.replaceState({}, "", "/transactions");
@@ -446,7 +455,7 @@ export default function TransactionsPage() {
             const openEdit = () => {
               setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date });
               setEditType(txIsTransfer ? "transfer" : tx.amount > 0 ? "income" : "expense");
-              setEditTransferTo("");
+              setEditTransferTo(txIsTransfer ? counterpartIdFor(tx.payee) : "");
               if (tx.isSplit && tx.parts) {
                 setSplitMode(true);
                 setSplitLines(tx.parts.map((p) => ({ category: p.category, amount: String(Math.abs(p.amount)) })));
