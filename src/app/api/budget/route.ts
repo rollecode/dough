@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
-import { monthBudgetNumbers, monthlyTargetEquivalent, byDateMonthlyTarget, ageOfMoneyData, walkCategory, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
+import { monthBudgetNumbers, makeTargetResolver, ageOfMoneyData, walkCategory, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
 
 interface CategoryRow {
   id: number;
@@ -92,38 +92,10 @@ export async function GET(request: Request) {
 
     const budgeted = budgetedForMonth(db, month);
     const activity = activityForMonth(db, month);
-    const targets = db
-      .prepare("SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, snooze_until_month FROM category_targets")
-      .all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
-    const targetMap = new Map(targets.map((t) => [t.category_id, t]));
-    // Things a category can be linked to (the link supplies the target and display name).
-    const subMap = new Map(
-      (db.prepare("SELECT id, name, amount FROM subscriptions").all() as { id: number; name: string; amount: number }[]).map((s) => [s.id, s])
-    );
-    const billMap = new Map(
-      (db.prepare("SELECT id, name, amount FROM recurring_bills").all() as { id: number; name: string; amount: number }[]).map((b) => [b.id, b])
-    );
-    const debtMap = new Map(
-      (db.prepare(
-        "SELECT a.id, a.name, COALESCE(o.minimum_payment, 0) AS amount FROM ynab_accounts a LEFT JOIN debt_overrides o ON o.ynab_account_id = a.id"
-      ).all() as { id: string; name: string; amount: number }[]).map((d) => [d.id, d])
-    );
-    // Investments supply their monthly contribution as the category target (display/target-only).
-    const investmentMap = new Map(
-      (db.prepare(
-        "SELECT a.id, a.name, COALESCE(o.monthly_contribution, 0) AS amount FROM ynab_accounts a LEFT JOIN investment_overrides o ON o.ynab_account_id = a.id WHERE a.type = 'otherAsset' AND a.closed = 0"
-      ).all() as { id: string; name: string; amount: number }[]).map((i) => [i.id, i])
-    );
-    // Savings goals supply a by-date target (reach the goal amount by its date). Progress is derived
-    // from assignments in the savings-goals API, so assigning here reflects there without mutation.
-    const savingsGoalMap = new Map(
-      (db.prepare(
-        "SELECT id, name, target_amount, COALESCE(target_date, '') AS target_date FROM savings_goals WHERE is_active = 1"
-      ).all() as { id: number; name: string; target_amount: number; target_date: string }[]).map((g) => [g.id, g])
-    );
-
-    const snoozedRows = db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[];
-    const snoozedSet = new Set(snoozedRows.map((r) => r.category_id));
+    // Resolve each category's effective target (manual category_targets OR a link to a
+    // subscription/bill/debt/investment/savings goal). Shared with auto-assign so "fund to targets"
+    // funds exactly the targets shown here. See makeTargetResolver in lib/budget-math.
+    const resolveTarget = makeTargetResolver(db, month);
 
     // Lifetime transaction count per category (matched by name, like the rest of the budget), so the
     // delete flow knows when it must reassign a category's transactions before removing it.
@@ -135,59 +107,32 @@ export async function GET(request: Request) {
       const a = activity.get(c.name) || 0;
       const carry = carryoverThrough(db, c.id, c.name, month);
       const available = Math.round((carry + b - a) * 100) / 100;
-      const t = targetMap.get(c.id);
-      // A linked subscription/bill/debt/investment/savings goal supplies the target and display
-      // name, overriding any manual target. Links are mutually exclusive. A savings goal is special:
-      // it sets a by-date target (reach the goal amount by its date); the others set a monthly amount.
-      const linkedSub = c.subscription_id ? subMap.get(c.subscription_id) : undefined;
-      const linkedBill = !linkedSub && c.bill_id ? billMap.get(c.bill_id) : undefined;
-      const linkedDebt = !linkedSub && !linkedBill && c.debt_account_id ? debtMap.get(c.debt_account_id) : undefined;
-      const linkedInvest = !linkedSub && !linkedBill && !linkedDebt && c.investment_account_id ? investmentMap.get(c.investment_account_id) : undefined;
-      const linkedGoal = !linkedSub && !linkedBill && !linkedDebt && !linkedInvest && c.savings_goal_id ? savingsGoalMap.get(c.savings_goal_id) : undefined;
-      const linked = linkedSub || linkedBill || linkedDebt || linkedInvest;
-      const goalByDate = !!(linkedGoal && linkedGoal.target_date);
-      const linked_type = linkedSub ? "subscription" : linkedBill ? "bill" : linkedDebt ? "debt" : linkedInvest ? "investment" : linkedGoal ? "savings" : "";
-      const target_amount = linkedGoal
-        ? (goalByDate ? (linkedGoal.target_amount || 0) : 0)
-        : (linked && linked.amount > 0 ? linked.amount : (linked ? 0 : (t?.monthly_amount || 0)));
-      const target_cadence = goalByDate ? "by_date" : (linked ? "monthly" : (t?.cadence || "monthly"));
-      const target_date = goalByDate ? (linkedGoal!.target_date) : (linked ? "" : (t?.target_date || ""));
-      // The amount needed this month. A "by_date" target spreads (goal − already saved) over the
-      // months left; every other cadence distributes its per-period amount across the month.
-      const target_monthly = target_amount > 0
-        ? (target_cadence === "by_date"
-            ? byDateMonthlyTarget(target_amount, carry, month, target_date)
-            : monthlyTargetEquivalent(target_amount, target_cadence, month))
-        : 0;
-      const snooze_until_month = t?.snooze_until_month || "";
-      const snoozed = snoozedSet.has(c.id);
-      // A snoozed-for-the-month category never nudges its target
-      const target_active = target_monthly > 0 && !snoozed && (!snooze_until_month || snooze_until_month < month);
+      const t = resolveTarget(c, carry);
       return {
         id: c.id,
         name: c.name,
         group_name: c.group_name,
         description: c.description || "",
         is_active: c.is_active,
-        snoozed: snoozed ? 1 : 0,
+        snoozed: t.snoozed ? 1 : 0,
         budgeted: Math.round(b * 100) / 100,
         activity: Math.round(a * 100) / 100,
         carryover: carry,
         available,
-        target_monthly: Math.round(target_monthly * 100) / 100,
-        target_amount: Math.round(target_amount * 100) / 100,
-        target_cadence,
-        target_date,
-        snooze_until_month,
-        target_active,
+        target_monthly: t.target_monthly,
+        target_amount: t.target_amount,
+        target_cadence: t.target_cadence,
+        target_date: t.target_date,
+        snooze_until_month: t.snooze_until_month,
+        target_active: t.target_active,
         subscription_id: c.subscription_id ?? null,
         bill_id: c.bill_id ?? null,
         debt_account_id: c.debt_account_id ?? null,
         savings_goal_id: c.savings_goal_id ?? null,
         investment_account_id: c.investment_account_id ?? null,
-        subscription_name: linkedSub?.name || "",
-        linked_type,
-        linked_name: (linked || linkedGoal)?.name || "",
+        subscription_name: t.subscription_name,
+        linked_type: t.linked_type,
+        linked_name: t.linked_name,
         tx_count: txCountMap.get(c.name) || 0,
       };
     });

@@ -1,3 +1,9 @@
+### 3.14.1: 2026-07-11
+
+* Fix "Tavoitteet täyteen" (fund to targets) computing 0 while many categories are underfunded: the auto-assign underfunded plan read only manual `category_targets` and ignored every target that comes from a budget link (subscription, bill, debt, investment, savings goal), so a budget built entirely on links funded nothing; the budget row and auto-assign now resolve targets through one shared `makeTargetResolver`, and fund-to-targets tops each category up to the target the row shows
+* Make the transaction list item meta line semibold
+* Fix a horizontal scrollbar on the debts tab by letting the grid cells and edit row shrink within their column (`min-width: 0`)
+
 ### 3.14.0: 2026-07-07
 
 * Make savings-goal budget links real and visible: picking a category in the goal modal now actually ties the goal's progress to the budget (previously only the budget inspector's link drove derivation while the modal wrote a dead field), clearing the picker unlinks the goal back to a manually tracked savings monitor, the modal shows which budget group/category the goal is linked to, and deleting a goal clears its category links

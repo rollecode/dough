@@ -308,6 +308,110 @@ export function byDateMonthlyTarget(goal: number, alreadySaved: number, month: s
   return Math.round((remaining / n) * 100) / 100;
 }
 
+// ---- Shared category target resolution ----
+// A category's monthly target can come from a manual category_targets row OR from a link to a
+// subscription, recurring bill, debt account, investment account, or savings goal. The budget row
+// (app/api/budget/route.ts) and the auto-assign "fund to targets" mode (lib/auto-assign.ts) must
+// resolve targets identically, or the two disagree: before this was shared, auto-assign read only
+// category_targets and so ignored every link-derived target, leaving those yellow rows unfunded.
+// makeTargetResolver builds every lookup once for a month and returns a closure computing the
+// effective target for a category (the caller supplies the carry-in, needed for by-date targets).
+
+export interface CategoryTargetInput {
+  id: number;
+  subscription_id: number | null;
+  bill_id: number | null;
+  debt_account_id: string | null;
+  investment_account_id: string | null;
+  savings_goal_id: number | null;
+}
+
+export interface ResolvedTarget {
+  target_amount: number;
+  target_cadence: string;
+  target_date: string;
+  target_monthly: number;
+  target_active: boolean;
+  linked_type: "" | "subscription" | "bill" | "debt" | "investment" | "savings";
+  linked_name: string;
+  subscription_name: string;
+  snooze_until_month: string;
+  snoozed: boolean;
+}
+
+export function makeTargetResolver(
+  db: ReturnType<typeof getDb>,
+  month: string
+): (cat: CategoryTargetInput, carry: number) => ResolvedTarget {
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const targets = db.prepare(
+    "SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, snooze_until_month FROM category_targets"
+  ).all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
+  const targetMap = new Map(targets.map((t) => [t.category_id, t]));
+  const subMap = new Map(
+    (db.prepare("SELECT id, name, amount FROM subscriptions").all() as { id: number; name: string; amount: number }[]).map((s) => [s.id, s])
+  );
+  const billMap = new Map(
+    (db.prepare("SELECT id, name, amount FROM recurring_bills").all() as { id: number; name: string; amount: number }[]).map((b) => [b.id, b])
+  );
+  const debtMap = new Map(
+    (db.prepare(
+      "SELECT a.id, a.name, COALESCE(o.minimum_payment, 0) AS amount FROM ynab_accounts a LEFT JOIN debt_overrides o ON o.ynab_account_id = a.id"
+    ).all() as { id: string; name: string; amount: number }[]).map((d) => [d.id, d])
+  );
+  const investmentMap = new Map(
+    (db.prepare(
+      "SELECT a.id, a.name, COALESCE(o.monthly_contribution, 0) AS amount FROM ynab_accounts a LEFT JOIN investment_overrides o ON o.ynab_account_id = a.id WHERE a.type = 'otherAsset' AND a.closed = 0"
+    ).all() as { id: string; name: string; amount: number }[]).map((i) => [i.id, i])
+  );
+  const savingsGoalMap = new Map(
+    (db.prepare(
+      "SELECT id, name, target_amount, COALESCE(target_date, '') AS target_date FROM savings_goals WHERE is_active = 1"
+    ).all() as { id: number; name: string; target_amount: number; target_date: string }[]).map((g) => [g.id, g])
+  );
+  const snoozedSet = new Set((db.prepare("SELECT category_id FROM category_snoozes WHERE month = ?").all(month) as { category_id: number }[]).map((r) => r.category_id));
+
+  return (cat: CategoryTargetInput, carry: number): ResolvedTarget => {
+    const t = targetMap.get(cat.id);
+    // A linked subscription/bill/debt/investment/savings goal supplies the target and display name,
+    // overriding any manual target. Links are mutually exclusive. A savings goal is special: it sets
+    // a by-date target (reach the goal amount by its date); the others set a monthly amount.
+    const linkedSub = cat.subscription_id ? subMap.get(cat.subscription_id) : undefined;
+    const linkedBill = !linkedSub && cat.bill_id ? billMap.get(cat.bill_id) : undefined;
+    const linkedDebt = !linkedSub && !linkedBill && cat.debt_account_id ? debtMap.get(cat.debt_account_id) : undefined;
+    const linkedInvest = !linkedSub && !linkedBill && !linkedDebt && cat.investment_account_id ? investmentMap.get(cat.investment_account_id) : undefined;
+    const linkedGoal = !linkedSub && !linkedBill && !linkedDebt && !linkedInvest && cat.savings_goal_id ? savingsGoalMap.get(cat.savings_goal_id) : undefined;
+    const linked = linkedSub || linkedBill || linkedDebt || linkedInvest;
+    const goalByDate = !!(linkedGoal && linkedGoal.target_date);
+    const linked_type: ResolvedTarget["linked_type"] = linkedSub ? "subscription" : linkedBill ? "bill" : linkedDebt ? "debt" : linkedInvest ? "investment" : linkedGoal ? "savings" : "";
+    const target_amount = linkedGoal
+      ? (goalByDate ? (linkedGoal.target_amount || 0) : 0)
+      : (linked && linked.amount > 0 ? linked.amount : (linked ? 0 : (t?.monthly_amount || 0)));
+    const target_cadence = goalByDate ? "by_date" : (linked ? "monthly" : (t?.cadence || "monthly"));
+    const target_date = goalByDate ? (linkedGoal!.target_date) : (linked ? "" : (t?.target_date || ""));
+    const target_monthly = target_amount > 0
+      ? (target_cadence === "by_date"
+          ? byDateMonthlyTarget(target_amount, carry, month, target_date)
+          : monthlyTargetEquivalent(target_amount, target_cadence, month))
+      : 0;
+    const snooze_until_month = t?.snooze_until_month || "";
+    const snoozed = snoozedSet.has(cat.id);
+    const target_active = target_monthly > 0 && !snoozed && (!snooze_until_month || snooze_until_month < month);
+    return {
+      target_amount: round(target_amount),
+      target_cadence,
+      target_date,
+      target_monthly: round(target_monthly),
+      target_active,
+      linked_type,
+      linked_name: (linked || linkedGoal)?.name || "",
+      subscription_name: linkedSub?.name || "",
+      snooze_until_month,
+      snoozed,
+    };
+  };
+}
+
 function ymOffset(monthYM: string, offset: number): string {
   const [y, m] = monthYM.split("-").map(Number);
   const d = new Date(y, m - 1 + offset, 1);
