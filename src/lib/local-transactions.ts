@@ -63,6 +63,7 @@ export interface LocalTransactionUpdate {
   date?: string;
   category?: string;
   transfer_account_id?: string;
+  budget_excluded?: boolean; // exclude from all budget figures (balance still changes)
 }
 
 export function updateLocalTransaction(
@@ -71,9 +72,9 @@ export function updateLocalTransaction(
 ): { found: boolean } {
   const db = getDb();
   const prev = db
-    .prepare("SELECT amount, account_id, category, payee, memo, date FROM transactions WHERE ynab_id = ?")
+    .prepare("SELECT amount, account_id, category, payee, memo, date, COALESCE(budget_excluded, 0) AS budget_excluded FROM transactions WHERE ynab_id = ?")
     .get(params.transaction_id) as
-    | { amount: number; account_id: string; category: string; payee: string; memo: string | null; date: string }
+    | { amount: number; account_id: string; category: string; payee: string; memo: string | null; date: string; budget_excluded: number }
     | undefined;
   if (!prev) {
     console.warn("[local-transactions] Update target not found:", params.transaction_id);
@@ -92,9 +93,10 @@ export function updateLocalTransaction(
   const newPayee = params.payee_name !== undefined ? params.payee_name : prev.payee;
   const newMemo = params.memo !== undefined ? params.memo : prev.memo || "";
   const newDate = params.date || prev.date;
+  const newExcluded = params.budget_excluded !== undefined ? (params.budget_excluded ? 1 : 0) : prev.budget_excluded;
 
-  db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ?, category = ? WHERE ynab_id = ?")
-    .run(signed, newPayee, newMemo, newAccount, newDate, newCategory, params.transaction_id);
+  db.prepare("UPDATE transactions SET amount = ?, payee = ?, memo = ?, account_id = ?, date = ?, category = ?, budget_excluded = ? WHERE ynab_id = ?")
+    .run(signed, newPayee, newMemo, newAccount, newDate, newCategory, newExcluded, params.transaction_id);
   // Remove the old amount from the old account, add the new one to the new account
   db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
   db.prepare("UPDATE ynab_accounts SET balance = balance + ? WHERE id = ?").run(signed, newAccount);
@@ -157,6 +159,7 @@ export interface LocalTransactionCreate {
   category?: string;
   cleared?: string; // free-text ledger state; defaults to 'cleared'. Use 'uncleared' for pending holds.
   transfer_account_id?: string;
+  budget_excluded?: boolean; // exclude from all budget figures (balance still changes)
 }
 
 // Insert a new transaction into Dough's local ledger and apply its balance effect. Mirrors the
@@ -181,10 +184,11 @@ export function createLocalTransaction(
   const memo = params.memo ?? "";
   const category = params.category ?? "";
   const cleared = params.cleared || "cleared";
+  const excluded = params.budget_excluded ? 1 : 0;
   const id = `local_${randomUUID()}`;
 
-  db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)")
-    .run(userId, id, date, signed, payee, category, memo, account, cleared);
+  db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared, budget_excluded) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)")
+    .run(userId, id, date, signed, payee, category, memo, account, cleared, excluded);
   db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(signed, account);
 
   // Internal transfer with a chosen counterpart account: make sure the other leg exists exactly once

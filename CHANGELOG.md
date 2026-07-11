@@ -1,3 +1,8 @@
+### 3.15.0: 2026-07-11
+
+* Add a per-transaction "exclude from budget" toggle in the transaction editor: an excluded row drops out of every budget figure (daily budget, category activity and available, Ready to Assign, cash flow, income, spending trends) but keeps affecting the real account balance and staying in the ledger, and shows an "Ei budjetissa" badge
+* Net excluded transactions out of the budgetable balance so Ready to Assign and the daily budget stay consistent while the real account balance still reflects the money that moved
+
 ### 3.14.2: 2026-07-11
 
 * Fix every transfer opening with an empty Vastatili ("Ei toista tiliä"): the edit dialog always reset the counterpart to blank, so a paired transfer looked counterpart-less and saving it stripped the counterpart off; the dialog now pre-selects the real counterpart account parsed from the transfer's "Transfer : <account>" leg

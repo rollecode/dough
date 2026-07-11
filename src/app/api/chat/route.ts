@@ -6,7 +6,7 @@ import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { localDateIso } from "@/lib/date-utils";
 import { eventBus } from "@/lib/event-bus";
-import { cashFlowHistory } from "@/lib/budget-math";
+import { cashFlowHistory, budgetExcludedNetByAccount, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 
 export async function POST(request: Request) {
   try {
@@ -69,9 +69,12 @@ export async function POST(request: Request) {
           ).all() as { id: string; name: string; type: string; balance: number }[];
           const accountSource = localAccounts.length > 0 ? localAccounts : summary.accounts;
 
+          // Budgetable balance: net out budget-excluded transactions on the budgeted accounts (see
+          // summary route) so the daily budget ignores money the household chose to exclude.
+          const chatExcludedNet = budgetExcludedNetByAccount(getDb());
           const checkingSavings = accountSource
             .filter((a: any) => (a.type === "checking" || a.type === "savings") && !excludedIds.includes(a.id))
-            .reduce((s: number, a: any) => s + a.balance, 0);
+            .reduce((s: number, a: any) => s + a.balance - (chatExcludedNet.get(a.id) || 0), 0);
 
           // Load account notes for AI context
           const accountNotesRows = getDb()
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
 
           // Use local transactions table for recent transactions — always fresh
           const recentTx = chatDb.prepare(
-            "SELECT t.date, t.payee, t.amount, t.category, u.display_name as spender FROM transactions t LEFT JOIN users u ON t.user_id = u.id WHERE t.payee NOT LIKE 'Transfer%' AND t.payee NOT LIKE 'Starting Balance%' AND t.payee NOT LIKE 'Reconciliation%' GROUP BY t.ynab_id ORDER BY t.date DESC LIMIT 10"
+            "SELECT t.date, t.payee, t.amount, t.category, u.display_name as spender FROM transactions t LEFT JOIN users u ON t.user_id = u.id WHERE t.payee NOT LIKE 'Transfer%' AND t.payee NOT LIKE 'Starting Balance%' AND t.payee NOT LIKE 'Reconciliation%' AND COALESCE(t.budget_excluded, 0) = 0 GROUP BY t.ynab_id ORDER BY t.date DESC LIMIT 10"
           ).all() as { date: string; payee: string; amount: number; category: string; spender: string | null }[];
 
           // Load recurring bills with paid/overdue status
@@ -300,7 +303,7 @@ export async function POST(request: Request) {
           const debtNames: string[] = debts.map((d: { name: string }) => d.name.toLowerCase());
           const debtNameSet = new Set(debtNames);
           const todayTxRows = chatDb.prepare(
-            "SELECT amount, payee, category FROM transactions WHERE date = ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' GROUP BY ynab_id"
+            "SELECT amount, payee, category FROM transactions WHERE date = ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND " + NOT_BUDGET_EXCLUDED + " GROUP BY ynab_id"
           ).all(todayStr) as { amount: number; payee: string; category: string }[];
           const isFixedCost = (p: string, c: string) => {
             const pl = p.toLowerCase(); const cl = c.toLowerCase();
@@ -316,7 +319,7 @@ export async function POST(request: Request) {
           const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
           const localMonthlyExpenses = Math.round(
             (chatDb.prepare(
-              "SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM (SELECT amount FROM transactions WHERE date >= ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%' AND category != 'Uncategorized' GROUP BY ynab_id)"
+              "SELECT COALESCE(SUM(ABS(amount)), 0) as total FROM (SELECT amount FROM transactions WHERE date >= ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%' AND category != 'Uncategorized' AND " + NOT_BUDGET_EXCLUDED + " GROUP BY ynab_id)"
             ).get(monthStart) as { total: number }).total * 100
           ) / 100;
           const daysToNextIncome = (() => {

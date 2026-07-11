@@ -36,6 +36,7 @@ export const POST = apiRoute("write", async (request, identity) => {
     date: body.date ? String(body.date) : undefined,
     category: body.category !== undefined ? String(body.category) : undefined,
     transfer_account_id: body.transfer_account_id ? String(body.transfer_account_id) : undefined,
+    budget_excluded: typeof body.budget_excluded === "boolean" ? body.budget_excluded : undefined,
   });
   if (!result.found) {
     return NextResponse.json({ error: `No transaction with id ${transaction_id}` }, { status: 404 });

@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { localDateIso } from "@/lib/date-utils";
-import { cashFlowForMonth, localMonthCategories } from "@/lib/budget-math";
+import { cashFlowForMonth, localMonthCategories, budgetExcludedNetByAccount } from "@/lib/budget-math";
 
 export async function GET() {
   try {
@@ -35,8 +35,12 @@ export async function GET() {
     // Same-day tie-break on MAX(rowid) DESC (insertion order) so a just-added transaction shows at
     // the top of Today; the output alias `id` is ynab_id (random local_<uuid> for new rows).
     const transactions = db.prepare(
-      "SELECT ynab_id as id, date, amount, payee, category, memo, approved, cleared, account_id, COALESCE(split_group, '') AS split_group FROM transactions WHERE date >= ? GROUP BY ynab_id ORDER BY date DESC, MAX(rowid) DESC"
-    ).all(sinceDate) as { id: string; date: string; amount: number; payee: string; category: string; memo: string | null; approved: number; cleared: string; account_id: string; split_group: string }[];
+      "SELECT ynab_id as id, date, amount, payee, category, memo, approved, cleared, account_id, COALESCE(split_group, '') AS split_group, COALESCE(budget_excluded, 0) AS budget_excluded FROM transactions WHERE date >= ? GROUP BY ynab_id ORDER BY date DESC, MAX(rowid) DESC"
+    ).all(sinceDate) as { id: string; date: string; amount: number; payee: string; category: string; memo: string | null; approved: number; cleared: string; account_id: string; split_group: string; budget_excluded: number }[];
+
+    // Per-account net of budget-excluded transactions, so the dashboard can compute the budgetable
+    // balance (real balance minus excluded net) for its client-side daily-budget simulation.
+    const excludedNetByAcct = budgetExcludedNetByAccount(db);
 
     const monthBudgetRow = db.prepare("SELECT income, budgeted, activity, to_be_budgeted as toBeBudgeted FROM ynab_month_budget WHERE month = ?").get(currentMonth) as { income: number; budgeted: number; activity: number; toBeBudgeted: number } | undefined;
 
@@ -57,8 +61,12 @@ export async function GET() {
     const monthActivity = cash ? -cash.expenses : (monthBudgetRow?.activity || 0);
 
     const data = {
-      summary: { totalBalance, accounts, categories },
-      transactions: transactions.map((t) => ({ ...t, approved: !!t.approved })),
+      summary: {
+        totalBalance,
+        accounts: accounts.map((a) => ({ ...a, budgetExcludedNet: excludedNetByAcct.get(a.id) || 0 })),
+        categories,
+      },
+      transactions: transactions.map((t) => ({ ...t, approved: !!t.approved, excluded: !!t.budget_excluded })),
       monthBudget: {
         income: monthIncome,
         budgeted: monthBudgetRow?.budgeted || 0,

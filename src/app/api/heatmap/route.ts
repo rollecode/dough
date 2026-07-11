@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 
 export async function GET() {
   try {
@@ -14,7 +15,7 @@ export async function GET() {
     const sinceDate = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-01`;
 
     const transactions = db.prepare(
-      "SELECT date, payee, amount, category FROM transactions WHERE date >= ? AND amount < 0 GROUP BY ynab_id ORDER BY date ASC"
+      "SELECT date, payee, amount, category FROM transactions WHERE date >= ? AND amount < 0 AND " + NOT_BUDGET_EXCLUDED + " GROUP BY ynab_id ORDER BY date ASC"
     ).all(sinceDate) as { date: string; payee: string; amount: number; category: string }[];
 
     console.debug("[heatmap] Loaded", transactions.length, "transactions since", sinceDate);

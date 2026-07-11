@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 import { getDb } from "./db";
-import { localMonthCategories } from "./budget-math";
+import { localMonthCategories, NOT_BUDGET_EXCLUDED } from "./budget-math";
 
 /**
  * Assemble a financial-context object from Dough's own local tables, in the same
@@ -32,7 +32,7 @@ export function buildLocalFinancialData(database: Database.Database = getDb()) {
   const since = `${tenMonthsAgo.getFullYear()}-${String(tenMonthsAgo.getMonth() + 1).padStart(2, "0")}-01`;
   const transactions = database
     .prepare(
-      "SELECT ynab_id AS id, date, amount, payee, category, memo, account_id FROM transactions WHERE date >= ? GROUP BY ynab_id ORDER BY date DESC"
+      "SELECT ynab_id AS id, date, amount, payee, category, memo, account_id FROM transactions WHERE date >= ? AND " + NOT_BUDGET_EXCLUDED + " GROUP BY ynab_id ORDER BY date DESC"
     )
     .all(since) as { id: string; date: string; amount: number; payee: string; category: string; memo: string | null; account_id: string }[];
 

@@ -17,8 +17,16 @@ function ym(monthYM: string, offset: number): string {
 // (tracking) account — investing, debt paydown — IS activity, and so are reconciliation/balance
 // adjustments categorised to it, matching YNAB. The counterparty account is the name after
 // "Transfer : " (11 chars), matched to ynab_accounts; an unknown counterparty counts as activity.
+// A transaction flagged budget_excluded is invisible to every budget figure (activity, available,
+// Ready to Assign, cash flow, income, spending). Its money still moved the real account balance, so
+// balance/reconcile reads keep it; the budgetable-balance reconciliation (budgetExcludedNetByAccount)
+// nets it back out so Ready to Assign and the daily budget stay consistent. Appended to every
+// spending/income predicate below and inlined into the routes that build their own predicate.
+export const NOT_BUDGET_EXCLUDED = "COALESCE(budget_excluded, 0) = 0";
+
 export const CATEGORY_ACTIVITY_PREDICATE =
-  "(payee NOT LIKE 'Transfer%' OR EXISTS (SELECT 1 FROM ynab_accounts a WHERE a.name = SUBSTR(payee, 12) AND a.on_budget = 0))";
+  "(payee NOT LIKE 'Transfer%' OR EXISTS (SELECT 1 FROM ynab_accounts a WHERE a.name = SUBSTR(payee, 12) AND a.on_budget = 0)) AND " +
+  NOT_BUDGET_EXCLUDED;
 
 // Opening balance anchor for a category: the carry-in available as of anchor_month, seeded
 // from YNAB at cutover (see seedOpeningBalancesFromYnab). When present, the carryover walk
@@ -46,7 +54,7 @@ export function incomeInflowForMonth(db: ReturnType<typeof getDb>, month: string
   const end = `${month}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}`;
   return (db
     .prepare(
-      "SELECT COALESCE(SUM(amount), 0) AS v FROM transactions WHERE amount > 0 AND (category = 'Inflow: Ready to Assign' OR category LIKE 'Inflow%') AND date >= ? AND date <= ?"
+      "SELECT COALESCE(SUM(amount), 0) AS v FROM transactions WHERE amount > 0 AND (category = 'Inflow: Ready to Assign' OR category LIKE 'Inflow%') AND date >= ? AND date <= ? AND " + NOT_BUDGET_EXCLUDED
     )
     .get(start, end) as { v: number }).v || 0;
 }
@@ -67,7 +75,8 @@ function monthBounds(month: string): { start: string; end: string } {
 // and uncategorised-transfer categories.
 const CASHFLOW_REAL =
   "category NOT IN ('Internal transfer', 'Uncategorized') " +
-  "AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%'";
+  "AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%' " +
+  "AND " + NOT_BUDGET_EXCLUDED;
 
 // Cash flow for a month straight from the local ledger: income is every real inflow, expenses every
 // real outflow, both excluding internal transfers. This is the money-in/money-out lens the dashboard
@@ -226,11 +235,29 @@ export function monthBudgetNumbers(
   // in any category. Reconciling against balances surfaces that money as assignable. Past and future
   // months keep the carry-forward, since account balances are only meaningful for "now".
   if (inLocalEra && month === localDateIso().slice(0, 7)) {
+    // Budgetable on-budget balance = real balance minus the net of budget-excluded transactions on
+    // on-budget accounts. An excluded outflow dropped the real balance but was pulled out of category
+    // activity, so without this its cost would silently fall onto Ready to Assign (breaking the golden
+    // equation). Netting it back keeps RTA and every category available consistent.
     const onBudget = (db.prepare("SELECT COALESCE(SUM(balance), 0) AS v FROM ynab_accounts WHERE on_budget = 1 AND closed = 0").get() as { v: number }).v || 0;
-    readyToAssign = round(onBudget - sumCategoryAvailable(db, month) - futureCommitted);
+    const excludedNet = (db.prepare(
+      "SELECT COALESCE(SUM(t.amount), 0) AS v FROM transactions t JOIN ynab_accounts a ON a.id = t.account_id WHERE a.on_budget = 1 AND a.closed = 0 AND COALESCE(t.budget_excluded, 0) = 1"
+    ).get() as { v: number }).v || 0;
+    readyToAssign = round(onBudget - excludedNet - sumCategoryAvailable(db, month) - futureCommitted);
   }
 
   return { income, readyToAssign };
+}
+
+// Net signed amount of budget-excluded transactions per account. An excluded row still moved the
+// real account balance; subtracting this net from a real balance yields the "budgetable" balance the
+// budget pretends is there (excluded outflows added back, excluded inflows removed). Used to keep the
+// daily budget and Ready to Assign from counting money the household chose to exclude.
+export function budgetExcludedNetByAccount(db: ReturnType<typeof getDb>): Map<string, number> {
+  const rows = db.prepare(
+    "SELECT account_id, ROUND(SUM(amount), 2) AS net FROM transactions WHERE COALESCE(budget_excluded, 0) = 1 GROUP BY account_id"
+  ).all() as { account_id: string; net: number }[];
+  return new Map(rows.map((r) => [r.account_id, r.net]));
 }
 
 // "How long your money lasts": cash on hand divided by recent average daily spending. A reliable
@@ -239,7 +266,7 @@ export function monthBudgetNumbers(
 export function moneyLastsDays(db: ReturnType<typeof getDb>): number | null {
   const cash = (db.prepare("SELECT COALESCE(SUM(balance), 0) AS v FROM ynab_accounts WHERE type IN ('checking','savings') AND closed = 0").get() as { v: number }).v || 0;
   const spent = (db
-    .prepare("SELECT COALESCE(SUM(-amount), 0) AS v FROM transactions WHERE amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' AND date >= date('now', '-30 days')")
+    .prepare("SELECT COALESCE(SUM(-amount), 0) AS v FROM transactions WHERE amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' AND payee NOT LIKE 'Reconciliation%' AND date >= date('now', '-30 days') AND " + NOT_BUDGET_EXCLUDED)
     .get() as { v: number }).v || 0;
   if (spent <= 0 || cash <= 0) return null;
   const perDay = spent / 30;

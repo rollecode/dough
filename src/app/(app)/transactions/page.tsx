@@ -13,6 +13,7 @@ import { DateField } from "@/components/ui/date-field";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -97,6 +98,7 @@ export default function TransactionsPage() {
   const [editTx, setEditTx] = useState<{ id: string; payee: string; amount: number; category: string; memo: string | null; account_id: string; date: string } | null>(null);
   const [editType, setEditType] = useState<"expense" | "income" | "transfer">("expense");
   const [editTransferTo, setEditTransferTo] = useState("");
+  const [editExcluded, setEditExcluded] = useState(false);
   const [editSuggestions, setEditSuggestions] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [splitMode, setSplitMode] = useState(false);
@@ -182,6 +184,7 @@ export default function TransactionsPage() {
           category,
           inflow,
           transfer_account_id: editType === "transfer" && editTransferTo ? editTransferTo : undefined,
+          budget_excluded: editExcluded,
         }),
       });
       const result = await res.json();
@@ -303,6 +306,7 @@ export default function TransactionsPage() {
       setEditTx({ id: t.id, payee: t.payee, amount: t.amount, category: t.category, memo: t.memo, account_id: t.account_id || "", date: t.date });
       setEditType(isTransfer(t.payee, t.category) ? "transfer" : t.amount > 0 ? "income" : "expense");
       setEditTransferTo(isTransfer(t.payee, t.category) ? counterpartIdFor(t.payee) : "");
+      setEditExcluded(!!t.excluded);
       setSplitMode(false);
       setSplitLines([]);
       window.history.replaceState({}, "", "/transactions");
@@ -456,6 +460,7 @@ export default function TransactionsPage() {
               setEditTx({ id: tx.id, payee: tx.payee, amount: tx.amount, category: tx.category, memo: tx.memo, account_id: tx.account_id || "", date: tx.date });
               setEditType(txIsTransfer ? "transfer" : tx.amount > 0 ? "income" : "expense");
               setEditTransferTo(txIsTransfer ? counterpartIdFor(tx.payee) : "");
+              setEditExcluded(!!tx.excluded);
               if (tx.isSplit && tx.parts) {
                 setSplitMode(true);
                 setSplitLines(tx.parts.map((p) => ({ category: p.category, amount: String(Math.abs(p.amount)) })));
@@ -494,6 +499,7 @@ export default function TransactionsPage() {
                   <p className="list-item-name">{tx.payee}</p>
                   {txIsTransfer && <Badge variant="secondary">{locale === "fi" ? "Siirto" : "Transfer"}</Badge>}
                   {tx.isSplit && <Badge variant="secondary">{locale === "fi" ? "Jaettu" : "Split"}</Badge>}
+                  {tx.excluded && <Badge variant="secondary">{locale === "fi" ? "Ei budjetissa" : "Excluded"}</Badge>}
                 </div>
                 <p className="list-item-meta">{(() => {
                   const acct = allAccounts.find((a) => a.id === tx.account_id)?.name || "";
@@ -637,6 +643,13 @@ export default function TransactionsPage() {
               <div className="form-field">
                 <Label>{locale === "fi" ? "Kuvaus" : "Memo"}</Label>
                 <PayeeInput value={editTx.memo || ""} onChange={(v) => setEditTx({ ...editTx, memo: v })} payees={memos} placeholder={locale === "fi" ? "esim. bussikortti" : "e.g. bus card"} />
+              </div>
+              <div className="form-field">
+                <div className="settings-row">
+                  <Switch checked={editExcluded} onCheckedChange={setEditExcluded} />
+                  <Label>{locale === "fi" ? "Jätä pois budjetista" : "Exclude from budget"}</Label>
+                </div>
+                <p className="settings-help">{locale === "fi" ? "Ei lasketa mihinkään budjettilukuun (päiväbudjetti, kategoriat, kassavirta, tulot). Tilin saldo muuttuu silti." : "Left out of every budget figure (daily budget, categories, cash flow, income). The account balance still changes."}</p>
               </div>
               <div className="insp-actions">
                 <Button onClick={handleEditSave} disabled={editSaving}>

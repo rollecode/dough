@@ -186,6 +186,7 @@ export async function PUT(request: Request) {
         date,
         category,
         transfer_account_id: body.transfer_account_id ? String(body.transfer_account_id) : undefined,
+        budget_excluded: body.budget_excluded !== undefined ? !!body.budget_excluded : undefined,
       });
       return NextResponse.json({ success: true });
     }

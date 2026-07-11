@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
 
     // This month by category (actual spending so far)
     const recent = db.prepare(
-      "SELECT category, SUM(ABS(amount)) as total FROM transactions WHERE date >= ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%' AND category != 'Uncategorized' AND category != 'Inflow: Ready to Assign' AND category != '' GROUP BY category"
+      "SELECT category, SUM(ABS(amount)) as total FROM transactions WHERE date >= ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%' AND category != 'Uncategorized' AND category != 'Inflow: Ready to Assign' AND category != '' AND " + NOT_BUDGET_EXCLUDED + " GROUP BY category"
     ).all(thisMonthStart) as { category: string; total: number }[];
 
     // Last month same period (day 1 to same day of month) for fair comparison
@@ -27,7 +28,7 @@ export async function GET() {
     const lastMonthSameDayStr = `${lastMonthSameDay.getFullYear()}-${String(lastMonthSameDay.getMonth() + 1).padStart(2, "0")}-${String(lastMonthSameDay.getDate()).padStart(2, "0")}`;
 
     const previous = db.prepare(
-      "SELECT category, SUM(ABS(amount)) as total FROM transactions WHERE date >= ? AND date < ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%' AND category != 'Uncategorized' AND category != 'Inflow: Ready to Assign' AND category != '' GROUP BY category"
+      "SELECT category, SUM(ABS(amount)) as total FROM transactions WHERE date >= ? AND date < ? AND amount < 0 AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting Balance%' AND payee NOT LIKE 'Reconciliation%' AND category != 'Uncategorized' AND category != 'Inflow: Ready to Assign' AND category != '' AND " + NOT_BUDGET_EXCLUDED + " GROUP BY category"
     ).all(lastMonthStart, lastMonthSameDayStr) as { category: string; total: number }[];
 
     const recentMap = new Map(recent.map((r) => [r.category, r.total]));

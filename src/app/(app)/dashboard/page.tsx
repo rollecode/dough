@@ -241,11 +241,13 @@ export default function DashboardPage() {
   // Real income from YNAB month budget (matches YNAB's own reports)
   const realIncome = data.monthBudget.income;
 
-  // Available = total checking + savings accounts (excluding budget-excluded accounts)
+  // Available = budgetable checking + savings (excluding budget-excluded accounts). Each account's
+  // balance is netted against its budget-excluded transactions, so an excluded outflow does not shrink
+  // the spendable pool the daily budget divides up (the money still shows in the real account balance).
   const availableBalance = Math.round(
     data.summary.accounts
       .filter((a) => (a.type === "checking" || a.type === "savings") && !excludedAccountIds.includes(a.id))
-      .reduce((s, a) => s + a.balance, 0) * 100
+      .reduce((s, a) => s + a.balance - (a.budgetExcludedNet || 0), 0) * 100
   ) / 100;
 
   // Upcoming income = active, unmatched income sources with expected_day still ahead
@@ -281,10 +283,10 @@ export default function DashboardPage() {
     return false;
   };
   const todaySpentAll = data.transactions
-    .filter((t) => t.date === todayStr && t.amount < 0 && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
+    .filter((t) => t.date === todayStr && t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   const todaySpentPersonal = data.transactions
-    .filter((t) => t.date === todayStr && t.amount < 0 && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category)
+    .filter((t) => t.date === todayStr && t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category)
       && (linkedAccountIds.length === 0 || linkedAccountIds.includes(t.account_id || "")))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
 
@@ -401,7 +403,7 @@ export default function DashboardPage() {
   // Burn rate = average daily real spending this month
   const daysPassed = now.getDate();
   const realSpendingTotal = data.transactions
-    .filter((t) => t.amount < 0 && !isTransfer(t.payee, t.category))
+    .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   const dailyBurnRate = daysPassed > 0 ? Math.round((realSpendingTotal / daysPassed) * 100) / 100 : 0;
 
@@ -426,7 +428,7 @@ export default function DashboardPage() {
     data.transactions
       .filter((t) => {
         const day = parseInt(t.date.split("-")[2], 10);
-        return day >= start && day <= end && t.amount < 0 && !isTransfer(t.payee, t.category);
+        return day >= start && day <= end && t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category);
       })
       .reduce((s, t) => s + Math.abs(t.amount), 0);
 
@@ -440,7 +442,7 @@ export default function DashboardPage() {
 
   // Personal spending share: configured % or calculated from actual spending ratio
   const personalMonthSpend = data.transactions
-    .filter((t) => t.amount < 0 && !isTransfer(t.payee, t.category)
+    .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category)
       && (linkedAccountIds.length === 0 || linkedAccountIds.includes(t.account_id || "")))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   const calculatedShare = realSpendingTotal > 0 ? personalMonthSpend / realSpendingTotal : 0.5;
@@ -451,7 +453,7 @@ export default function DashboardPage() {
   // Build spending chart data from transactions (exclude transfers)
   const spendingByDay: Record<string, number> = {};
   const sortedTx = [...data.transactions]
-    .filter((t) => t.amount < 0 && !isTransfer(t.payee, t.category))
+    .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   let cumulative = 0;
@@ -474,7 +476,7 @@ export default function DashboardPage() {
     discretionaryByDay[day] = Math.round(discCumulative);
   }
   const discretionarySpendingTrue = data.transactions
-    .filter((t) => t.amount < 0 && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
+    .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   const dailyDiscretionaryTrue = daysPassed > 0 ? Math.round((discretionarySpendingTrue / daysPassed) * 100) / 100 : 0;
 

@@ -36,6 +36,7 @@ export const POST = apiRoute("write", async (request, identity) => {
     category: body.category !== undefined ? String(body.category) : undefined,
     cleared: body.cleared !== undefined ? String(body.cleared) : undefined,
     transfer_account_id: body.transfer_account_id ? String(body.transfer_account_id) : undefined,
+    budget_excluded: typeof body.budget_excluded === "boolean" ? body.budget_excluded : undefined,
   });
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });

@@ -464,6 +464,15 @@ function initializeDb(db: Database.Database) {
     console.info("[db] Adding split_group column to transactions");
     db.exec("ALTER TABLE transactions ADD COLUMN split_group TEXT DEFAULT ''");
   }
+  // Per-transaction "exclude from budget" flag. An excluded row still affects the real account
+  // balance (the money moved) and stays in the ledger, but is invisible to every budget figure:
+  // category activity/available, Ready to Assign, cash flow, income, spending reports, the daily
+  // budget. Named budget_excluded (not "excluded") because SQLite UPSERT reserves the `excluded`
+  // pseudo-table. See budgetExcludedNetByAccount in budget-math for the balance reconciliation.
+  if (!txCols.some((c) => c.name === "budget_excluded")) {
+    console.info("[db] Adding budget_excluded column to transactions");
+    db.exec("ALTER TABLE transactions ADD COLUMN budget_excluded INTEGER NOT NULL DEFAULT 0");
+  }
 
   // Add account independence columns to ynab_accounts (also serves locally-managed accounts)
   const acctCols = db.prepare("PRAGMA table_info(ynab_accounts)").all() as { name: string }[];

@@ -10,6 +10,7 @@ interface TxRow {
   memo: string | null;
   account_id: string;
   account_name: string | null;
+  budget_excluded: number;
 }
 
 // GET /api/v1/transactions - transactions newest first. Filters (all optional):
@@ -46,11 +47,11 @@ export const GET = apiRoute("read", (request) => {
   const rows = getDb()
     .prepare(
       "SELECT t.ynab_id AS id, t.date, t.amount, t.payee, t.category, t.memo, t.account_id, " +
-        "a.name AS account_name FROM transactions t LEFT JOIN ynab_accounts a ON a.id = t.account_id " +
+        "a.name AS account_name, COALESCE(t.budget_excluded, 0) AS budget_excluded FROM transactions t LEFT JOIN ynab_accounts a ON a.id = t.account_id " +
         (where.length ? "WHERE " + where.join(" AND ") + " " : "") +
         "GROUP BY t.ynab_id ORDER BY t.date DESC, t.id DESC LIMIT ?"
     )
     .all(...args, limit) as TxRow[];
 
-  return { transactions: rows, count: rows.length, limit };
+  return { transactions: rows.map((r) => ({ ...r, excluded: !!r.budget_excluded })), count: rows.length, limit };
 });
