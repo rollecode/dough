@@ -17,16 +17,16 @@ function ym(monthYM: string, offset: number): string {
 // (tracking) account — investing, debt paydown — IS activity, and so are reconciliation/balance
 // adjustments categorised to it, matching YNAB. The counterparty account is the name after
 // "Transfer : " (11 chars), matched to ynab_accounts; an unknown counterparty counts as activity.
-// A transaction flagged budget_excluded is invisible to every budget figure (activity, available,
-// Ready to Assign, cash flow, income, spending). Its money still moved the real account balance, so
-// balance/reconcile reads keep it; the budgetable-balance reconciliation (budgetExcludedNetByAccount)
-// nets it back out so Ready to Assign and the daily budget stay consistent. Appended to every
-// spending/income predicate below and inlined into the routes that build their own predicate.
+// A transaction flagged budget_excluded is hidden from SPENDING REPORTS (cash flow, trends, heatmap,
+// burn rate, today's spent, the month's expense totals) so a one-off does not distort the analysis.
+// It deliberately does NOT change the budget's accounting: its money really left the account, so the
+// category it is filed under still absorbs it and Ready to Assign is untouched. Excluding it from
+// category activity as well would leave the cost absorbed nowhere, and the budget would claim money
+// the accounts do not hold. Applied only to the reporting queries, never to activity/available/RTA.
 export const NOT_BUDGET_EXCLUDED = "COALESCE(budget_excluded, 0) = 0";
 
 export const CATEGORY_ACTIVITY_PREDICATE =
-  "(payee NOT LIKE 'Transfer%' OR EXISTS (SELECT 1 FROM ynab_accounts a WHERE a.name = SUBSTR(payee, 12) AND a.on_budget = 0)) AND " +
-  NOT_BUDGET_EXCLUDED;
+  "(payee NOT LIKE 'Transfer%' OR EXISTS (SELECT 1 FROM ynab_accounts a WHERE a.name = SUBSTR(payee, 12) AND a.on_budget = 0))";
 
 // Opening balance anchor for a category: the carry-in available as of anchor_month, seeded
 // from YNAB at cutover (see seedOpeningBalancesFromYnab). When present, the carryover walk
@@ -54,7 +54,7 @@ export function incomeInflowForMonth(db: ReturnType<typeof getDb>, month: string
   const end = `${month}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}`;
   return (db
     .prepare(
-      "SELECT COALESCE(SUM(amount), 0) AS v FROM transactions WHERE amount > 0 AND (category = 'Inflow: Ready to Assign' OR category LIKE 'Inflow%') AND date >= ? AND date <= ? AND " + NOT_BUDGET_EXCLUDED
+      "SELECT COALESCE(SUM(amount), 0) AS v FROM transactions WHERE amount > 0 AND (category = 'Inflow: Ready to Assign' OR category LIKE 'Inflow%') AND date >= ? AND date <= ?"
     )
     .get(start, end) as { v: number }).v || 0;
 }
@@ -235,15 +235,8 @@ export function monthBudgetNumbers(
   // in any category. Reconciling against balances surfaces that money as assignable. Past and future
   // months keep the carry-forward, since account balances are only meaningful for "now".
   if (inLocalEra && month === localDateIso().slice(0, 7)) {
-    // Budgetable on-budget balance = real balance minus the net of budget-excluded transactions on
-    // on-budget accounts. An excluded outflow dropped the real balance but was pulled out of category
-    // activity, so without this its cost would silently fall onto Ready to Assign (breaking the golden
-    // equation). Netting it back keeps RTA and every category available consistent.
     const onBudget = (db.prepare("SELECT COALESCE(SUM(balance), 0) AS v FROM ynab_accounts WHERE on_budget = 1 AND closed = 0").get() as { v: number }).v || 0;
-    const excludedNet = (db.prepare(
-      "SELECT COALESCE(SUM(t.amount), 0) AS v FROM transactions t JOIN ynab_accounts a ON a.id = t.account_id WHERE a.on_budget = 1 AND a.closed = 0 AND COALESCE(t.budget_excluded, 0) = 1"
-    ).get() as { v: number }).v || 0;
-    readyToAssign = round(onBudget - excludedNet - sumCategoryAvailable(db, month) - futureCommitted);
+    readyToAssign = round(onBudget - sumCategoryAvailable(db, month) - futureCommitted);
   }
 
   return { income, readyToAssign };

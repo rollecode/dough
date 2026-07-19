@@ -1,3 +1,7 @@
+### 3.15.2: 2026-07-11
+
+* Fix the budget claiming more money to allocate than the accounts actually hold once a transaction was excluded: exclusion pulled the cost out of both the category and Ready to Assign, so money that had really left the account was absorbed nowhere. `budget_excluded` now only hides a transaction from spending reports (cash flow, trends, heatmap, burn rate, today's spent, month expenses); the category it is filed under still absorbs the cost and Ready to Assign stays untouched, so the accounts and the budget reconcile again
+
 ### 3.15.1: 2026-07-11
 
 * Keep the daily budget on real cash balances for excluded transactions instead of adding the excluded amount back: excluding a transaction still drops it from spending, category and cash-flow reporting and holds Ready to Assign steady, but no longer inflates the spendable pool (which double-counted money that moved in from an excluded account)
