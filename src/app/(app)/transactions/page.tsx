@@ -649,7 +649,7 @@ export default function TransactionsPage() {
                   <Switch checked={editExcluded} onCheckedChange={setEditExcluded} />
                   <Label>{locale === "fi" ? "Jätä pois budjetista" : "Exclude from budget"}</Label>
                 </div>
-                <p className="settings-help">{locale === "fi" ? "Ei lasketa mihinkään budjettilukuun (päiväbudjetti, kategoriat, kassavirta, tulot). Tilin saldo muuttuu silti." : "Left out of every budget figure (daily budget, categories, cash flow, income). The account balance still changes."}</p>
+                <p className="settings-help">{locale === "fi" ? "Piilotetaan kulutusraporteista (kassavirta, trendit, päivän kulutus, kuukauden menot), jotta kertaosto ei vääristä tilastoja. Kategoria ja tilin saldo huomioivat sen silti, joten budjetti täsmää tileihin." : "Hidden from spending reports (cash flow, trends, today's spending, month expenses) so a one-off does not skew the stats. Its category and the account balance still account for it, so the budget still reconciles with your accounts."}</p>
               </div>
               <div className="insp-actions">
                 <Button onClick={handleEditSave} disabled={editSaving}>
