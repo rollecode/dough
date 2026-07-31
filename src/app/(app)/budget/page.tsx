@@ -557,6 +557,7 @@ export default function BudgetPage() {
 
   const moveMoney = async (fromId: number, toId: number, amount: number) => {
     if (!fromId || !toId || fromId === toId || !(amount > 0)) return;
+    setLoading(true); // refreshing indicator while the move + budget reload are in flight
     try {
       await fetch("/api/budget/move", {
         method: "POST",
@@ -575,6 +576,7 @@ export default function BudgetPage() {
   // Cover an overspent category from ready-to-assign (raise its assigned) or another category (move)
   const coverOverspend = async (cat: BudgetCategory, source: number | "rta", amount: number) => {
     if (!(amount > 0)) return;
+    setLoading(true); // show the refreshing indicator from the click, not just during the reload
     if (source === "rta") {
       await saveBudgeted(cat.id, Math.round((cat.budgeted + amount) * 100) / 100);
     } else {
@@ -586,6 +588,7 @@ export default function BudgetPage() {
   // its overspend). Only offered when RTA covers the whole overage, so it never over-assigns.
   const coverAllFromRta = async () => {
     setCoverAllOpen(false);
+    setLoading(true); // refreshing indicator while every overspent category is topped up
     const overspent = (data?.categories || []).filter((c) => c.available < -eps);
     for (const c of overspent) {
       const amount = Math.round(-c.available * 100) / 100;
@@ -758,6 +761,12 @@ export default function BudgetPage() {
   return (
     <div className="page-stack budget-page">
       <div className="budget-topbar">
+        {loading && data && (
+          <div className="budget-refreshing" role="status" aria-live="polite">
+            <Loader2 className="icon-sm animate-spin" />
+            <span>{locale === "fi" ? "Päivitetään…" : "Updating…"}</span>
+          </div>
+        )}
         <div className="budget-monthnav">
           <button type="button" className="budget-monthnav-arrow" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Previous month">
             <ChevronLeft />

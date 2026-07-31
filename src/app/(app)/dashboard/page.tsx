@@ -5,6 +5,7 @@ import { useEvent } from "@/lib/use-events";
 import { useLocale } from "@/lib/locale-context";
 import { isTransfer } from "@/lib/transaction-utils";
 import { calculateDailyBudget } from "@/lib/daily-budget";
+import { billDueInMonth } from "@/lib/bills";
 import { useYnab } from "@/lib/ynab-context";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,7 +70,7 @@ export default function DashboardPage() {
   const [dashInfoOpen, setDashInfoOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [matchedBillIds, setMatchedBillIds] = useState<Set<number>>(new Set());
-  const [bills, setBills] = useState<{ id: number; name: string; amount: number; due_day: number; is_active: number; is_paid: boolean }[]>([]);
+  const [bills, setBills] = useState<{ id: number; name: string; amount: number; due_day: number; is_active: number; is_paid: boolean; cadence?: string; due_month?: number | null }[]>([]);
   const [investmentMonthly, setInvestmentMonthly] = useState(0);
   const [debtMonthly, setDebtMonthly] = useState(0);
   const [debtItems, setDebtItems] = useState<{ amount: number; dueDay: number; isPriority?: boolean; name?: string }[]>([]);
@@ -125,7 +126,7 @@ export default function DashboardPage() {
       const allBills = [...(billsData.bills || [])];
       if (subsData.subscriptions) {
         for (const sub of subsData.subscriptions) {
-          allBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: sub.is_active, is_paid: sub.is_paid });
+          allBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: sub.is_active, is_paid: sub.is_paid, cadence: "monthly", due_month: null });
         }
       }
       setBills(allBills);
@@ -307,6 +308,10 @@ export default function DashboardPage() {
   // Daily budget via segment-based cash flow simulation
   // Add todaySpentAll back to balance so simulation sees start-of-day balance
   // This makes today's budget "stick" — overspend/underspend carries to future days
+  // A yearly bill is an obligation only in its due month (current for unpaid/priority lists, next
+  // month for allBills, which the window uses to extend past month-end).
+  const curMonth1 = now.getMonth() + 1;
+  const nxtMonth1 = (now.getMonth() + 1) % 12 + 1;
   const budgetParams = {
     balance: availableBalance + todaySpentAll,
     savingGoal: savingRate,
@@ -314,20 +319,20 @@ export default function DashboardPage() {
     daysInMonth,
     extraSavingReserve,
     skipCurrentMonthSaving,
-    unpaidBills: bills.filter((b) => b.is_active && !b.is_paid).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
+    unpaidBills: bills.filter((b) => b.is_active && !b.is_paid && billDueInMonth(b, curMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
     debts: debtItems,
     unreceivedIncomes: incomes
       .filter((i) => i.is_active && resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
       .map((i) => ({ amount: i.amount, expectedDay: i.expected_day })),
     allIncomes: incomes.filter((i) => i.is_active).map((i) => ({ amount: i.amount, expectedDay: i.expected_day })),
-    allBills: bills.filter((b) => b.is_active).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
+    allBills: bills.filter((b) => b.is_active && billDueInMonth(b, nxtMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
     allDebts: debtItems,
     resolveDay,
   };
   // Calculate with and without bills (priority items always included in both modes)
-  const priorityBills = bills.filter((b: any) => b.is_active && !b.is_paid && b.is_priority).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
+  const priorityBills = bills.filter((b: any) => b.is_active && !b.is_paid && b.is_priority && billDueInMonth(b, curMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
   const priorityDebts = debtItems.filter((d: any) => d.isPriority);
-  const allPriorityBills = bills.filter((b: any) => b.is_active && b.is_priority).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
+  const allPriorityBills = bills.filter((b: any) => b.is_active && b.is_priority && billDueInMonth(b, nxtMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
   const budgetWithBills = calculateDailyBudget(budgetParams);
   const budgetWithoutBills = calculateDailyBudget({ ...budgetParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });
 

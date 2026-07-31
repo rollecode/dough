@@ -674,6 +674,13 @@ function initializeDb(db: Database.Database) {
     db.exec("ALTER TABLE subscriptions ADD COLUMN is_priority INTEGER NOT NULL DEFAULT 0");
     db.exec("ALTER TABLE debt_overrides ADD COLUMN is_priority INTEGER NOT NULL DEFAULT 0");
   }
+  // Yearly bills: cadence 'monthly' (default, recurs every due_day) or 'yearly' (recurs once a year
+  // on due_month/due_day). due_month is 1-12, meaningful only when cadence='yearly'.
+  if (!billCols.some((c) => c.name === "cadence")) {
+    console.info("[db] Adding cadence and due_month columns to recurring_bills");
+    db.exec("ALTER TABLE recurring_bills ADD COLUMN cadence TEXT NOT NULL DEFAULT 'monthly'");
+    db.exec("ALTER TABLE recurring_bills ADD COLUMN due_month INTEGER");
+  }
 
   // Create chat_reactions table if missing
   const hasReactions = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_reactions'").get();

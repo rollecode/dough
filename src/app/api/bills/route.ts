@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { eventBus } from "@/lib/event-bus";
+import { billDueInMonth } from "@/lib/bills";
 
 export async function GET() {
   try {
@@ -11,7 +12,7 @@ export async function GET() {
 
     const db = getDb();
     const bills = db
-      .prepare("SELECT id, name, amount, due_day, category, is_active, is_priority FROM recurring_bills ORDER BY due_day ASC")
+      .prepare("SELECT id, name, amount, due_day, category, is_active, is_priority, COALESCE(cadence, 'monthly') AS cadence, due_month FROM recurring_bills ORDER BY due_day ASC")
       .all() as any[];
 
     // Get matches for this month
@@ -45,13 +46,16 @@ export async function GET() {
     const manualMap = new Map(manualStatuses.map((m) => [m.bill_id, m]));
 
     const today = now.getDate();
+    const currentMonth1 = now.getMonth() + 1;
     const enriched = bills.map((b: any) => {
       const manual = manualMap.get(b.id);
       const autoMatched = matchMap.has(b.id);
       const isPaid = manual ? !!manual.is_paid : autoMatched;
       const paidAmount = manual?.paid_amount || matchMap.get(b.id) || null;
-      const isOverdue = !isPaid && b.is_active && b.due_day < today;
-      const isDueSoon = !isPaid && b.is_active && b.due_day >= today && b.due_day <= today + 3;
+      // A yearly bill is only overdue/due-soon inside its due month; the other months it is dormant.
+      const dueThisMonth = billDueInMonth(b, currentMonth1);
+      const isOverdue = !isPaid && b.is_active && dueThisMonth && b.due_day < today;
+      const isDueSoon = !isPaid && b.is_active && dueThisMonth && b.due_day >= today && b.due_day <= today + 3;
       const avg = avgMap.get(b.id);
 
       const amountDiff = paidAmount && paidAmount !== b.amount ? paidAmount - b.amount : null;
@@ -90,10 +94,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Name, amount and due day required" }, { status: 400 });
     }
 
+    const cadence = body.cadence === "yearly" ? "yearly" : "monthly";
+    const dueMonth = cadence === "yearly" ? Math.min(12, Math.max(1, parseInt(String(body.due_month), 10) || 1)) : null;
+
     const db = getDb();
     const result = db
-      .prepare("INSERT INTO recurring_bills (user_id, name, amount, due_day, category) VALUES (?, ?, ?, ?, ?)")
-      .run(user.id, name, parseFloat(String(amount).replace(",", ".")), due_day, category || "");
+      .prepare("INSERT INTO recurring_bills (user_id, name, amount, due_day, category, cadence, due_month) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(user.id, name, parseFloat(String(amount).replace(",", ".")), due_day, category || "", cadence, dueMonth);
 
     console.info("[bills] Created bill:", name, "id:", result.lastInsertRowid);
     eventBus.emit("data:updated", { source: "bill-added" });
@@ -156,7 +163,7 @@ export async function PUT(request: Request) {
 
     // Full edit
     const updates: string[] = [];
-    const values: (string | number)[] = [];
+    const values: (string | number | null)[] = [];
 
     if (body.name !== undefined) { updates.push("name = ?"); values.push(body.name); }
     if (body.amount !== undefined) {
@@ -173,6 +180,15 @@ export async function PUT(request: Request) {
     }
     if (body.due_day !== undefined) { updates.push("due_day = ?"); values.push(body.due_day); }
     if (body.category !== undefined) { updates.push("category = ?"); values.push(body.category); }
+    if (body.cadence !== undefined) {
+      const cadence = body.cadence === "yearly" ? "yearly" : "monthly";
+      updates.push("cadence = ?"); values.push(cadence);
+      // Keep due_month consistent with cadence: set it for yearly, clear it for monthly.
+      updates.push("due_month = ?");
+      values.push(cadence === "yearly" ? Math.min(12, Math.max(1, parseInt(String(body.due_month), 10) || 1)) : null);
+    } else if (body.due_month !== undefined) {
+      updates.push("due_month = ?"); values.push(Math.min(12, Math.max(1, parseInt(String(body.due_month), 10) || 1)));
+    }
 
     if (updates.length > 0) {
       updates.push("updated_at = datetime('now')");

@@ -7,6 +7,7 @@ import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { localDateIso } from "@/lib/date-utils";
 import { eventBus } from "@/lib/event-bus";
 import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
+import { billDueInMonth } from "@/lib/bills";
 
 export async function POST(request: Request) {
   try {
@@ -132,10 +133,12 @@ export async function POST(request: Request) {
 
           // Load recurring bills with paid/overdue status
           const bills = chatDb
-            .prepare("SELECT id, name, amount, due_day, is_priority FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
-            .all() as { id: number; name: string; amount: number; due_day: number; is_priority: number }[];
+            .prepare("SELECT id, name, amount, due_day, is_priority, COALESCE(cadence, 'monthly') AS cadence, due_month FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
+            .all() as { id: number; name: string; amount: number; due_day: number; is_priority: number; cadence: string; due_month: number | null }[];
 
           const chatMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+          const chatCurMonth1 = now.getMonth() + 1;
+          const chatNxtMonth1 = (now.getMonth() + 1) % 12 + 1;
           const chatBillMatches = chatDb
             .prepare("SELECT source_id FROM monthly_matches WHERE source_type = 'bill' AND month = ?")
             .all(chatMonth) as { source_id: number }[];
@@ -147,15 +150,18 @@ export async function POST(request: Request) {
             .all(chatMonth) as { bill_id: number; is_paid: number }[];
           const manualMap = new Map(manualStatuses.map((m) => [m.bill_id, !!m.is_paid]));
 
-          const enrichedBills: { name: string; amount: number; dueDay: number; status: string; type: string; isPriority: boolean }[] = bills.map((b) => {
+          const enrichedBills: { name: string; amount: number; dueDay: number; status: string; type: string; isPriority: boolean; cadence: string; due_month: number | null }[] = bills.map((b) => {
             const isPaid = manualMap.has(b.id) ? manualMap.get(b.id)! : paidBillIds.has(b.id);
+            const dueThis = billDueInMonth(b, chatCurMonth1);
             return {
             name: b.name,
             amount: b.amount,
             dueDay: b.due_day,
-            status: isPaid ? "paid" : b.due_day < now.getDate() ? "overdue" : "upcoming",
+            status: isPaid ? "paid" : (dueThis && b.due_day < now.getDate()) ? "overdue" : "upcoming",
             type: "bill",
             isPriority: !!b.is_priority,
+            cadence: b.cadence,
+            due_month: b.due_month,
           }; });
 
           // Load subscriptions with paid status from payee matching
@@ -176,6 +182,8 @@ export async function POST(request: Request) {
               status: paidSubIds.has(sub.id) ? "paid" : sub.due_day < now.getDate() ? "overdue" : "upcoming",
               type: "subscription",
               isPriority: !!sub.is_priority,
+              cadence: "monthly",
+              due_month: null,
             });
           }
 
@@ -200,7 +208,8 @@ export async function POST(request: Request) {
 
           // Pre-calculate time-sequenced cash flow for AI
           const today = now.getDate();
-          const unpaidBills = enrichedBills.filter((b) => b.status !== "paid");
+          // A yearly bill counts as a current-month obligation only in its due month.
+          const unpaidBills = enrichedBills.filter((b) => b.status !== "paid" && billDueInMonth(b, chatCurMonth1));
           const unpaidBillsTotal = unpaidBills.reduce((s, b) => s + b.amount, 0);
           const debtPaymentsTotal = debts.reduce((s: number, d: any) => s + (d.minimumPayment || 0), 0);
           const investmentContributions = investmentAccounts.reduce((s: number, i: any) => s + (i.monthlyContribution || 0), 0);
@@ -255,7 +264,7 @@ export async function POST(request: Request) {
               .filter((i) => resolveDay(i.expected_day) > today && !matchedIncomeIds.has(i.id))
               .map((i) => ({ amount: i.amount, expectedDay: i.expected_day })),
             allIncomes: incomeWithIds.map((i) => ({ amount: i.amount, expectedDay: i.expected_day })),
-            allBills: enrichedBills.map((b) => ({ amount: b.amount, dueDay: b.dueDay })),
+            allBills: enrichedBills.filter((b) => billDueInMonth(b, chatNxtMonth1)).map((b) => ({ amount: b.amount, dueDay: b.dueDay })),
             allDebts: allDebtItems,
             resolveDay,
           };
@@ -263,7 +272,7 @@ export async function POST(request: Request) {
           // Apply bills setting: auto, always, or never. Priority items always reserved.
           const priorityBills = unpaidBills.filter((b: any) => b.isPriority).map((b: any) => ({ amount: b.amount, dueDay: b.dueDay }));
           const priorityDebts = allDebtItems.filter((_: unknown, i: number) => debts[i]?.isPriority);
-          const allPriorityBills = enrichedBills.filter((b: any) => b.isPriority).map((b: any) => ({ amount: b.amount, dueDay: b.dueDay }));
+          const allPriorityBills = enrichedBills.filter((b: any) => b.isPriority && billDueInMonth(b, chatNxtMonth1)).map((b: any) => ({ amount: b.amount, dueDay: b.dueDay }));
           const budgetWithBills = calculateDailyBudget(budgetParams);
           const budgetWithoutBills = calculateDailyBudget({ ...budgetParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });
           let dailyBudget: number;

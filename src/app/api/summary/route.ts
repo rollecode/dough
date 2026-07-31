@@ -5,6 +5,7 @@ import { getYnabToken, getYnabBudgetId, getHouseholdSetting, getBudgetMode } fro
 import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
 import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
+import { billDueInMonth } from "@/lib/bills";
 import { spawn } from "child_process";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -130,16 +131,21 @@ export async function GET(request: Request) {
       .all() as { name: string; amount: number; expected_day: number; is_active: number }[];
 
     const recurringBills = db
-      .prepare("SELECT id, name, amount, due_day, is_active FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
-      .all() as { id: number; name: string; amount: number; due_day: number; is_active: number }[];
+      .prepare("SELECT id, name, amount, due_day, is_active, COALESCE(cadence, 'monthly') AS cadence, due_month FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
+      .all() as { id: number; name: string; amount: number; due_day: number; is_active: number; cadence: string; due_month: number | null }[];
 
-    // Merge subscriptions into bills for unified calculations
+    // Merge subscriptions into bills for unified calculations. Subscriptions are always monthly.
     const subscriptionRows = db
       .prepare("SELECT id, name, amount, due_day FROM subscriptions WHERE is_active = 1")
       .all() as { id: number; name: string; amount: number; due_day: number }[];
     for (const sub of subscriptionRows) {
-      recurringBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: 1 });
+      recurringBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: 1, cadence: "monthly", due_month: null });
     }
+    // A yearly bill is an obligation only in its due month; the daily budget and the "bills due this
+    // month" totals must skip it the other months. currentMonth1/nextMonth1 gate that (1-12).
+    const currentMonth1 = now.getMonth() + 1;
+    const nextMonth1 = (now.getMonth() + 1) % 12 + 1;
+    const dueThisMonth = recurringBills.filter((b) => billDueInMonth(b, currentMonth1));
 
     const billMatches = db
       .prepare("SELECT source_id FROM monthly_matches WHERE source_type = 'bill' AND month = ?")
@@ -171,9 +177,10 @@ export async function GET(request: Request) {
 
     const totalExpectedMonthlyIncome = Math.max(monthIncomeTotal, incomeSources.reduce((s, i) => s + i.amount, 0));
 
-    // Better projection: separate bills from discretionary spending
-    const totalBillsAmount = recurringBills.reduce((s, b) => s + b.amount, 0);
-    const paidBillsAmount = recurringBills
+    // Better projection: separate bills from discretionary spending. Only bills actually due this
+    // month count toward the month's bill total (a yearly bill is excluded outside its due month).
+    const totalBillsAmount = dueThisMonth.reduce((s, b) => s + b.amount, 0);
+    const paidBillsAmount = dueThisMonth
       .filter((b) => matchedBillIds.has(b.id))
       .reduce((s, b) => s + b.amount, 0);
     const unpaidBillsAmount = totalBillsAmount - paidBillsAmount;
@@ -252,13 +259,15 @@ export async function GET(request: Request) {
       savingGoal,
       today: daysPassed,
       daysInMonth,
-      unpaidBills: recurringBills.filter((b) => !matchedBillIds.has(b.id)).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
+      unpaidBills: dueThisMonth.filter((b) => !matchedBillIds.has(b.id)).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
       debts: allDebtItems,
       unreceivedIncomes: incomeWithIds
         .filter((i) => resolveDay(i.expected_day) > daysPassed && !matchedIncomeIds.has(i.id))
         .map((i) => ({ amount: i.amount, expectedDay: i.expected_day })),
       allIncomes: incomeWithIds.map((i) => ({ amount: i.amount, expectedDay: i.expected_day })),
-      allBills: recurringBills.map((b) => ({ amount: b.amount, dueDay: b.due_day })),
+      // allBills feeds the window's next-month extension, so a yearly bill belongs here only when it
+      // is due next month.
+      allBills: recurringBills.filter((b) => billDueInMonth(b, nextMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
       allDebts: allDebtItems,
       resolveDay,
     };
@@ -311,7 +320,7 @@ Pre-calculated analysis:
 - Daily budget (rolling 14-day window: current balance minus must-pay obligations and savings, no future income counted): ${dailyBudget} euros/day
 - Spending by category: ${categoryBreakdown}
 - Top individual expenses: ${topExpenses}
-- Bills this month: ${recurringBills.length > 0 ? recurringBills.map((b) => {
+- Bills this month: ${dueThisMonth.length > 0 ? dueThisMonth.map((b) => {
       const isPaid = matchedBillIds.has(b.id);
       const isOverdue = !isPaid && resolveDay(b.due_day) < now.getDate();
       return `${b.name}: ${b.amount} euros (due ${dateOfDay(b.due_day)}${isPaid ? " - PAID" : isOverdue ? " - OVERDUE" : " - upcoming"})`;

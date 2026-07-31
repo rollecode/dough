@@ -26,6 +26,8 @@ interface Bill {
   amount: number;
   due_day: number;
   category: string;
+  cadence: string;
+  due_month: number | null;
   is_active: number;
   is_paid: boolean;
   is_manual_paid: boolean;
@@ -44,8 +46,10 @@ export default function BillsPage() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [addCadence, setAddCadence] = useState<"monthly" | "yearly">("monthly");
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Bill | null>(null);
+  const [editCadence, setEditCadence] = useState<"monthly" | "yearly">("monthly");
   const [patternOpen, setPatternOpen] = useState<number | null>(null);
   const [newPattern, setNewPattern] = useState("");
   const [patternMinAmount, setPatternMinAmount] = useState("");
@@ -87,6 +91,8 @@ export default function BillsPage() {
           amount: (fd.get("amount") as string).replace(",", "."),
           due_day: parseInt(fd.get("due_day") as string, 10),
           category: fd.get("category"),
+          cadence: fd.get("cadence") || "monthly",
+          due_month: fd.get("cadence") === "yearly" ? parseInt(fd.get("due_month") as string, 10) : null,
         }),
       });
       setAddOpen(false);
@@ -109,6 +115,8 @@ export default function BillsPage() {
           amount: (fd.get("amount") as string).replace(",", "."),
           due_day: parseInt(fd.get("due_day") as string, 10),
           category: fd.get("category"),
+          cadence: fd.get("cadence") || "monthly",
+          due_month: fd.get("cadence") === "yearly" ? parseInt(fd.get("due_month") as string, 10) : null,
         }),
       });
       setEditOpen(false);
@@ -208,8 +216,11 @@ export default function BillsPage() {
   };
 
   const active = bills.filter((b) => b.is_active);
-  const monthlyTotal = active.reduce((s, b) => s + b.amount, 0);
-  const remainingUnpaid = active.filter((b) => !b.is_paid).reduce((s, b) => s + b.amount, 0);
+  // Yearly bills are not a monthly cost, so keep them out of the monthly total and the remaining
+  // (unpaid) monthly amount; they surface only through the daily budget near their due date.
+  const monthlyActive = active.filter((b) => b.cadence !== "yearly");
+  const monthlyTotal = monthlyActive.reduce((s, b) => s + b.amount, 0);
+  const remainingUnpaid = monthlyActive.filter((b) => !b.is_paid).reduce((s, b) => s + b.amount, 0);
   const overdueCount = active.filter((b) => b.is_overdue).length;
   const paidCount = active.filter((b) => b.is_paid).length;
 
@@ -224,7 +235,7 @@ export default function BillsPage() {
           <h1 className="page-heading">{t.bills.title}</h1>
           <p className="page-subtitle">{t.bills.subtitle}</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (o) setAddCadence("monthly"); }}>
           <DialogTrigger render={<Button size="sm" />}>
             <Plus className="icon-sm" />
             {t.bills.addBill}
@@ -245,6 +256,25 @@ export default function BillsPage() {
                   <Label>{t.bills.dueDay}</Label>
                   <Input name="due_day" type="number" min="1" max="31" placeholder="1" required />
                 </div>
+              </div>
+              <div className="form-grid-2">
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Toistuvuus" : "Recurrence"}</Label>
+                  <select className="input" name="cadence" value={addCadence} onChange={(e) => setAddCadence(e.target.value as "monthly" | "yearly")}>
+                    <option value="monthly">{locale === "fi" ? "Kuukausittain" : "Monthly"}</option>
+                    <option value="yearly">{locale === "fi" ? "Vuosittain" : "Yearly"}</option>
+                  </select>
+                </div>
+                {addCadence === "yearly" && (
+                  <div className="form-field">
+                    <Label>{locale === "fi" ? "Erääntymiskuukausi" : "Due month"}</Label>
+                    <select className="input" name="due_month" defaultValue={String(new Date().getMonth() + 1)}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                        <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(locale === "fi" ? "fi-FI" : "en-US", { month: "long" })}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="form-field">
                 <Label>{t.bills.category}</Label>
@@ -286,7 +316,7 @@ export default function BillsPage() {
             <div key={bill.id} className="list-item list-item-col">
               <div
                 className="list-item-main"
-                onClick={() => { setEditTarget(bill); setEditOpen(true); }}
+                onClick={() => { setEditTarget(bill); setEditCadence(bill.cadence === "yearly" ? "yearly" : "monthly"); setEditOpen(true); }}
               >
                 <div className="list-item-body">
                   <div className="list-item-name-row">
@@ -299,7 +329,9 @@ export default function BillsPage() {
                     </button>
                   </div>
                   <p className="list-item-meta">
-                    {bill.category ? `${bill.category} · ` : ""}{locale === "fi" ? "Erääntyy" : t.bills.dueOn} {resolveDayThisMonth(bill.due_day)}. {t.bills.dayOfMonth}
+                    {bill.category ? `${bill.category} · ` : ""}{locale === "fi" ? "Erääntyy" : t.bills.dueOn} {bill.cadence === "yearly" && bill.due_month
+                      ? `${bill.due_day}.${bill.due_month}. ${locale === "fi" ? "vuosittain" : "yearly"}`
+                      : `${resolveDayThisMonth(bill.due_day)}. ${t.bills.dayOfMonth}`}
                     {bill.patterns.length > 0 && (
                       <span className="list-item-patterns"> – {bill.patterns.map((p) => p.payee_pattern).join(", ")}</span>
                     )}
@@ -357,6 +389,25 @@ export default function BillsPage() {
                   <Label>{t.bills.dueDay}</Label>
                   <Input name="due_day" type="number" min="1" max="31" defaultValue={editTarget.due_day} required />
                 </div>
+              </div>
+              <div className="form-grid-2">
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "Toistuvuus" : "Recurrence"}</Label>
+                  <select className="input" name="cadence" value={editCadence} onChange={(e) => setEditCadence(e.target.value as "monthly" | "yearly")}>
+                    <option value="monthly">{locale === "fi" ? "Kuukausittain" : "Monthly"}</option>
+                    <option value="yearly">{locale === "fi" ? "Vuosittain" : "Yearly"}</option>
+                  </select>
+                </div>
+                {editCadence === "yearly" && (
+                  <div className="form-field">
+                    <Label>{locale === "fi" ? "Erääntymiskuukausi" : "Due month"}</Label>
+                    <select className="input" name="due_month" defaultValue={String(editTarget.due_month || new Date().getMonth() + 1)}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                        <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(locale === "fi" ? "fi-FI" : "en-US", { month: "long" })}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="form-field">
                 <Label>{t.bills.category}</Label>

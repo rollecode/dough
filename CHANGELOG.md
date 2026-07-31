@@ -1,3 +1,8 @@
+### 3.16.0: 2026-07-23
+
+* Add yearly bills: a recurring bill can now recur once a year on a chosen month and day instead of only monthly. A yearly bill reserves budget only in and near its due month and stays out of the monthly bill total the rest of the year
+* Show a refreshing indicator while budgeting: covering an overspend (from Ready to Assign or another category) and moving money now show an updating pill instead of looking frozen during the save and reload
+
 ### 3.15.2: 2026-07-11
 
 * Fix the budget claiming more money to allocate than the accounts actually hold once a transaction was excluded: exclusion pulled the cost out of both the category and Ready to Assign, so money that had really left the account was absorbed nowhere. `budget_excluded` now only hides a transaction from spending reports (cash flow, trends, heatmap, burn rate, today's spent, month expenses); the category it is filed under still absorbs the cost and Ready to Assign stays untouched, so the accounts and the budget reconcile again
