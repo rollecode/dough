@@ -1,4 +1,4 @@
-### 3.16.0: 2026-07-23
+### 3.16.0: 2026-07-31
 
 * Add yearly bills: a recurring bill can now recur once a year on a chosen month and day instead of only monthly. A yearly bill reserves budget only in and near its due month and stays out of the monthly bill total the rest of the year
 * Show a refreshing indicator while budgeting: covering an overspend (from Ready to Assign or another category) and moving money now show an updating pill instead of looking frozen during the save and reload
