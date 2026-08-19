@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
-import { eventBus } from "@/lib/event-bus";
 import { localMonthCategories } from "@/lib/budget-math";
+import { updateDebtOverride, reorderDebts } from "@/lib/debts-write";
 
 // Reconstruct a debt's balance over the last 12 months from its transactions and current balance.
 // balance(month-end) = current - sum(transactions booked after that month-end). Returned as a
@@ -155,46 +155,10 @@ export async function PUT(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const body = await request.json();
-    const { ynab_account_id, interest_rate, minimum_payment, due_day, notes, original_amount } = body;
-
-    if (!ynab_account_id) return NextResponse.json({ error: "Account ID required" }, { status: 400 });
-
-    // Toggle priority only
-    if (body.is_priority !== undefined && !due_day) {
-      const db2 = getDb();
-      db2.prepare("UPDATE debt_overrides SET is_priority = ?, updated_at = datetime('now') WHERE ynab_account_id = ?")
-        .run(body.is_priority ? 1 : 0, ynab_account_id);
-      console.info("[debts] Toggled priority for", ynab_account_id, ":", body.is_priority);
-      eventBus.emit("data:updated", { source: "debt-priority-changed" });
-      return NextResponse.json({ success: true });
-    }
-
-    if (due_day !== undefined && due_day !== 0 && (due_day < 1 || due_day > 31)) {
-      return NextResponse.json({ error: "Due day must be 1-31" }, { status: 400 });
-    }
-
-    const db = getDb();
-    db.prepare(`
-      INSERT INTO debt_overrides (ynab_account_id, interest_rate, minimum_payment, due_day, notes)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(ynab_account_id) DO UPDATE SET
-        interest_rate = excluded.interest_rate,
-        minimum_payment = excluded.minimum_payment,
-        due_day = excluded.due_day,
-        notes = excluded.notes,
-        updated_at = datetime('now')
-    `).run(ynab_account_id, interest_rate ?? 0, minimum_payment ?? 0, due_day ?? 0, notes ?? "");
-
-    // Only touch the starting balance when explicitly provided, so saving other fields never wipes it.
-    if (original_amount !== undefined) {
-      db.prepare("UPDATE debt_overrides SET original_amount = ?, updated_at = datetime('now') WHERE ynab_account_id = ?")
-        .run(Math.abs(original_amount ?? 0), ynab_account_id);
-    }
-
-    console.info("[debts] Override saved for", ynab_account_id);
-    eventBus.emit("data:updated", { source: "debt-updated" });
+    const body = await request.json().catch(() => ({}));
+    if (!body.ynab_account_id) return NextResponse.json({ error: "Account ID required" }, { status: 400 });
+    const result = updateDebtOverride(body);
+    if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[debts] PUT error:", error);
@@ -206,24 +170,9 @@ export async function PATCH(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const body = await request.json();
-    const { order } = body;
-    if (!Array.isArray(order)) return NextResponse.json({ error: "order array required" }, { status: 400 });
-
-    const db = getDb();
-    const stmt = db.prepare(`
-      INSERT INTO debt_overrides (ynab_account_id, sort_order) VALUES (?, ?)
-      ON CONFLICT(ynab_account_id) DO UPDATE SET sort_order = excluded.sort_order, updated_at = datetime('now')
-    `);
-    const batch = db.transaction(() => {
-      for (let i = 0; i < order.length; i++) {
-        stmt.run(order[i], i);
-      }
-    });
-    batch();
-
-    console.info("[debts] Saved order for", order.length, "debts");
+    const body = await request.json().catch(() => ({}));
+    if (!Array.isArray(body.order)) return NextResponse.json({ error: "order array required" }, { status: 400 });
+    reorderDebts(body.order);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[debts] PATCH error:", error);

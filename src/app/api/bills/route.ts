@@ -2,8 +2,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { eventBus } from "@/lib/event-bus";
 import { billDueInMonth } from "@/lib/bills";
+import { createBill, updateBill, deleteBill } from "@/lib/bills-write";
 
 export async function GET() {
   try {
@@ -86,25 +86,10 @@ export async function POST(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const body = await request.json();
-    const { name, amount, due_day, category } = body;
-
-    if (!name || !amount || !due_day) {
-      return NextResponse.json({ error: "Name, amount and due day required" }, { status: 400 });
-    }
-
-    const cadence = body.cadence === "yearly" ? "yearly" : "monthly";
-    const dueMonth = cadence === "yearly" ? Math.min(12, Math.max(1, parseInt(String(body.due_month), 10) || 1)) : null;
-
-    const db = getDb();
-    const result = db
-      .prepare("INSERT INTO recurring_bills (user_id, name, amount, due_day, category, cadence, due_month) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(user.id, name, parseFloat(String(amount).replace(",", ".")), due_day, category || "", cadence, dueMonth);
-
-    console.info("[bills] Created bill:", name, "id:", result.lastInsertRowid);
-    eventBus.emit("data:updated", { source: "bill-added" });
-    return NextResponse.json({ id: result.lastInsertRowid });
+    const body = await request.json().catch(() => ({}));
+    const result = createBill(user.id, body);
+    if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json({ id: result.id });
   } catch (error) {
     console.error("[bills] POST error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -115,89 +100,10 @@ export async function PUT(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const body = await request.json();
-    const { id } = body;
-
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-
-    const db = getDb();
-
-    // Manual paid/unpaid toggle
-    if (body.mark_paid !== undefined) {
-      const month = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-      if (body.mark_paid) {
-        db.prepare(`
-          INSERT INTO bill_manual_status (bill_id, month, is_paid, paid_amount) VALUES (?, ?, 1, ?)
-          ON CONFLICT(bill_id, month) DO UPDATE SET is_paid = 1, paid_amount = excluded.paid_amount
-        `).run(id, month, body.paid_amount || null);
-        console.info("[bills] Manually marked bill", id, "as paid");
-      } else {
-        db.prepare(`
-          INSERT INTO bill_manual_status (bill_id, month, is_paid, paid_amount) VALUES (?, ?, 0, NULL)
-          ON CONFLICT(bill_id, month) DO UPDATE SET is_paid = 0, paid_amount = NULL
-        `).run(id, month);
-        console.info("[bills] Manually marked bill", id, "as unpaid");
-      }
-      eventBus.emit("data:updated", { source: "bill-status-changed" });
-      return NextResponse.json({ success: true });
-    }
-
-    // Toggle priority
-    if (body.is_priority !== undefined && Object.keys(body).length === 2) {
-      db.prepare("UPDATE recurring_bills SET is_priority = ?, updated_at = datetime('now') WHERE id = ?")
-        .run(body.is_priority ? 1 : 0, id);
-      console.info("[bills] Toggled bill", id, "priority:", body.is_priority);
-      eventBus.emit("data:updated", { source: "bill-priority-changed" });
-      return NextResponse.json({ success: true });
-    }
-
-    // Toggle active
-    if (body.is_active !== undefined && Object.keys(body).length === 2) {
-      db.prepare("UPDATE recurring_bills SET is_active = ?, updated_at = datetime('now') WHERE id = ?")
-        .run(body.is_active ? 1 : 0, id);
-      console.info("[bills] Toggled bill", id, "active:", body.is_active);
-      eventBus.emit("data:updated", { source: "bill-toggled" });
-      return NextResponse.json({ success: true });
-    }
-
-    // Full edit
-    const updates: string[] = [];
-    const values: (string | number | null)[] = [];
-
-    if (body.name !== undefined) { updates.push("name = ?"); values.push(body.name); }
-    if (body.amount !== undefined) {
-      const newAmount = parseFloat(String(body.amount).replace(",", "."));
-      updates.push("amount = ?");
-      values.push(newAmount);
-
-      // Record amount history
-      const month = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-      db.prepare(`
-        INSERT INTO bill_amount_history (bill_id, amount, month) VALUES (?, ?, ?)
-        ON CONFLICT(bill_id, month) DO UPDATE SET amount = excluded.amount
-      `).run(id, newAmount, month);
-    }
-    if (body.due_day !== undefined) { updates.push("due_day = ?"); values.push(body.due_day); }
-    if (body.category !== undefined) { updates.push("category = ?"); values.push(body.category); }
-    if (body.cadence !== undefined) {
-      const cadence = body.cadence === "yearly" ? "yearly" : "monthly";
-      updates.push("cadence = ?"); values.push(cadence);
-      // Keep due_month consistent with cadence: set it for yearly, clear it for monthly.
-      updates.push("due_month = ?");
-      values.push(cadence === "yearly" ? Math.min(12, Math.max(1, parseInt(String(body.due_month), 10) || 1)) : null);
-    } else if (body.due_month !== undefined) {
-      updates.push("due_month = ?"); values.push(Math.min(12, Math.max(1, parseInt(String(body.due_month), 10) || 1)));
-    }
-
-    if (updates.length > 0) {
-      updates.push("updated_at = datetime('now')");
-      values.push(id);
-      db.prepare(`UPDATE recurring_bills SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-      console.info("[bills] Updated bill", id);
-      eventBus.emit("data:updated", { source: "bill-updated" });
-    }
-
+    const body = await request.json().catch(() => ({}));
+    if (!body.id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    const result = updateBill(body);
+    if (!result.found) return NextResponse.json({ error: "Bill not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[bills] PUT error:", error);
@@ -209,15 +115,9 @@ export async function DELETE(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const { id } = await request.json();
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-
-    const db = getDb();
-    db.prepare("DELETE FROM recurring_bills WHERE id = ?").run(id);
-
-    console.info("[bills] Deleted bill", id);
-    eventBus.emit("data:updated", { source: "bill-deleted" });
+    const body = await request.json().catch(() => ({}));
+    if (!body.id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    deleteBill(body.id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[bills] DELETE error:", error);

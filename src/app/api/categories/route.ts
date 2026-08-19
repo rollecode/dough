@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { eventBus } from "@/lib/event-bus";
+import { createCategory, updateCategory, deleteCategory, reorderCategories } from "@/lib/categories-write";
 
 export async function GET() {
   try {
@@ -25,25 +25,10 @@ export async function POST(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const body = await request.json();
-    const name = (body.name || "").trim();
-    if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
-
-    const db = getDb();
-    const exists = db.prepare("SELECT id FROM categories WHERE name = ?").get(name) as { id: number } | undefined;
-    if (exists) return NextResponse.json({ error: "Category name already exists" }, { status: 409 });
-
-    const groupName = (body.group_name || "").trim();
-    const color = (body.color || "").trim();
-    const maxOrder = (db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM categories").get() as { m: number }).m;
-    const result = db
-      .prepare("INSERT INTO categories (name, group_name, sort_order, color) VALUES (?, ?, ?, ?)")
-      .run(name, groupName, maxOrder + 1, color);
-
-    console.info("[categories] Created", name, "id:", result.lastInsertRowid);
-    eventBus.emit("data:updated", { source: "categories-added" });
-    return NextResponse.json({ id: result.lastInsertRowid });
+    const body = await request.json().catch(() => ({}));
+    const result = createCategory(body);
+    if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.code || 400 });
+    return NextResponse.json({ id: result.id });
   } catch (error) {
     console.error("[categories] POST error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -54,63 +39,11 @@ export async function PUT(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const body = await request.json();
-    const id = body.id;
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-
-    const db = getDb();
-    const updates: string[] = [];
-    const values: (string | number | null)[] = [];
-    let renameFrom = "";
-    let renameTo = "";
-    if (body.name !== undefined) {
-      const name = String(body.name).trim();
-      if (!name) return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 });
-      const dup = db.prepare("SELECT id FROM categories WHERE name = ? AND id != ?").get(name, id) as { id: number } | undefined;
-      if (dup) return NextResponse.json({ error: "Another category already has that name" }, { status: 409 });
-      const old = db.prepare("SELECT name FROM categories WHERE id = ?").get(id) as { name: string } | undefined;
-      if (old && old.name !== name) { renameFrom = old.name; renameTo = name; }
-      updates.push("name = ?"); values.push(name);
-    }
-    if (body.group_name !== undefined) { updates.push("group_name = ?"); values.push(String(body.group_name).trim()); }
-    if (body.description !== undefined) { updates.push("description = ?"); values.push(String(body.description)); }
-    if (body.color !== undefined) { updates.push("color = ?"); values.push(String(body.color).trim()); }
-    if (body.is_active !== undefined) { updates.push("is_active = ?"); values.push(body.is_active ? 1 : 0); }
-    if (body.sort_order !== undefined) { updates.push("sort_order = ?"); values.push(parseInt(String(body.sort_order), 10) || 0); }
-    // Link/unlink to a subscription, bill, debt, savings goal or investment - mutually exclusive, so
-    // setting one clears the others. null = unlink. History in monthly_category_budgets and
-    // transactions is untouched, so unlinking never disturbs past budget data.
-    if (body.subscription_id !== undefined || body.bill_id !== undefined || body.debt_account_id !== undefined || body.savings_goal_id !== undefined || body.investment_account_id !== undefined) {
-      const sid = body.subscription_id != null ? (parseInt(String(body.subscription_id), 10) || null) : null;
-      const bid = body.bill_id != null ? (parseInt(String(body.bill_id), 10) || null) : null;
-      const did = body.debt_account_id != null ? String(body.debt_account_id) : null;
-      const gid = body.savings_goal_id != null ? (parseInt(String(body.savings_goal_id), 10) || null) : null;
-      const iid = body.investment_account_id != null ? String(body.investment_account_id) : null;
-      updates.push("subscription_id = ?"); values.push(sid);
-      updates.push("bill_id = ?"); values.push(bid);
-      updates.push("debt_account_id = ?"); values.push(did);
-      updates.push("savings_goal_id = ?"); values.push(gid);
-      updates.push("investment_account_id = ?"); values.push(iid);
-    }
-
-    if (updates.length === 0) return NextResponse.json({ success: true });
-
-    updates.push("updated_at = datetime('now')");
-    values.push(id);
-    // Transactions reference the category by name, so a rename must rewrite their history too,
-    // otherwise the renamed category loses all its past activity and carryover.
-    const apply = db.transaction(() => {
-      db.prepare(`UPDATE categories SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-      if (renameFrom && renameTo) {
-        const res = db.prepare("UPDATE transactions SET category = ? WHERE category = ?").run(renameTo, renameFrom);
-        console.info("[categories] Renamed", renameFrom, "->", renameTo, "rewrote", res.changes, "transactions");
-      }
-    });
-    apply();
-
-    console.info("[categories] Updated id", id);
-    eventBus.emit("data:updated", { source: "categories-updated" });
+    const body = await request.json().catch(() => ({}));
+    if (!body.id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    const result = updateCategory(body);
+    if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.code || 400 });
+    if (!result.found) return NextResponse.json({ error: "Category not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[categories] PUT error:", error);
@@ -122,35 +55,9 @@ export async function PATCH(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const body = await request.json();
-    const db = getDb();
-
-    // New shape: items carry both order (by index) and group membership so a drag can
-    // reorder and move a category to another group in one call. Legacy shape: order (ids only).
-    if (Array.isArray(body.items)) {
-      const items = body.items as { id: number; group_name: string }[];
-      const stmt = db.prepare("UPDATE categories SET sort_order = ?, group_name = ?, updated_at = datetime('now') WHERE id = ?");
-      const tx = db.transaction(() => {
-        items.forEach((it, idx) => stmt.run(idx, String(it.group_name ?? "").trim(), Number(it.id)));
-      });
-      tx();
-      console.info("[categories] Reordered and regrouped", items.length, "categories");
-      eventBus.emit("data:updated", { source: "categories-reordered" });
-      return NextResponse.json({ success: true });
-    }
-
-    const order: number[] = body.order;
-    if (!Array.isArray(order)) return NextResponse.json({ error: "items or order array required" }, { status: 400 });
-
-    const stmt = db.prepare("UPDATE categories SET sort_order = ?, updated_at = datetime('now') WHERE id = ?");
-    const tx = db.transaction(() => {
-      order.forEach((id, idx) => stmt.run(idx, id));
-    });
-    tx();
-
-    console.info("[categories] Reordered", order.length, "categories");
-    eventBus.emit("data:updated", { source: "categories-reordered" });
+    const body = await request.json().catch(() => ({}));
+    const result = reorderCategories(body);
+    if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.code || 400 });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[categories] PATCH error:", error);
@@ -162,53 +69,12 @@ export async function DELETE(request: Request) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const { id, reassign_to } = await request.json();
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-
-    const db = getDb();
-    const cat = db.prepare("SELECT name FROM categories WHERE id = ?").get(id) as { name: string } | undefined;
-    if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 404 });
-
-    // A category with transactions has them moved (retroactively, every one) to the chosen target
-    // category first, mirroring how a rename rewrites transaction history; then it is removed for
-    // real. A category with no transactions is deleted outright. Either way targets, snoozes,
-    // monthly budgets and opening balances go with it (also covered by ON DELETE CASCADE).
-    const txCount = (db.prepare("SELECT COUNT(*) AS c FROM transactions WHERE category = ?").get(cat.name) as { c: number }).c;
-
-    let targetName: string | null = null;
-    if (txCount > 0) {
-      if (reassign_to == null) return NextResponse.json({ error: "A category with transactions needs a reassign target" }, { status: 400 });
-      if (Number(reassign_to) === Number(id)) return NextResponse.json({ error: "Cannot reassign a category to itself" }, { status: 400 });
-      const target = db.prepare("SELECT name FROM categories WHERE id = ?").get(reassign_to) as { name: string } | undefined;
-      if (!target) return NextResponse.json({ error: "Reassign target not found" }, { status: 404 });
-      targetName = target.name;
-    }
-
-    const run = db.transaction(() => {
-      if (targetName) {
-        const res = db.prepare("UPDATE transactions SET category = ? WHERE category = ?").run(targetName, cat.name);
-        console.info("[categories] Reassigned", res.changes, "transactions from", cat.name, "to", targetName);
-        // Merge this category's monthly budgets into the target so it inherits the budget along with
-        // the spending (otherwise the target would look overspent in months this one had funded).
-        const merged = db.prepare(
-          `INSERT INTO monthly_category_budgets (month, category_id, budgeted)
-           SELECT month, ?, budgeted FROM monthly_category_budgets WHERE category_id = ?
-           ON CONFLICT(month, category_id) DO UPDATE SET budgeted = budgeted + excluded.budgeted, updated_at = datetime('now')`
-        ).run(reassign_to, id);
-        console.info("[categories] Merged", merged.changes, "monthly budgets into target", targetName);
-      }
-      db.prepare("DELETE FROM category_targets WHERE category_id = ?").run(id);
-      db.prepare("DELETE FROM category_snoozes WHERE category_id = ?").run(id);
-      db.prepare("DELETE FROM category_opening_balances WHERE category_id = ?").run(id);
-      db.prepare("DELETE FROM monthly_category_budgets WHERE category_id = ?").run(id);
-      db.prepare("DELETE FROM categories WHERE id = ?").run(id);
-    });
-    run();
-
-    console.info("[categories] Deleted id", id, cat.name, "transactions reassigned:", txCount);
-    eventBus.emit("data:updated", { source: "categories-deleted" });
-    return NextResponse.json({ success: true, deleted: true, reassigned: txCount });
+    const body = await request.json().catch(() => ({}));
+    if (!body.id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    const result = deleteCategory(body);
+    if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.code || 400 });
+    if (!result.found) return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    return NextResponse.json({ success: true, deleted: true, reassigned: result.reassigned });
   } catch (error) {
     console.error("[categories] DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

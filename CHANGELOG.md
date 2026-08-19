@@ -1,3 +1,8 @@
+### 3.17.0: 2026-08-19
+
+* Add key-authed `/api/v1` write endpoints covering every entity the app can edit: bills, subscriptions, savings goals, accounts, categories (and their targets), debts and investments create/update/delete, plus budget move and snooze/unsnooze. Each mirrors its session route through a shared write lib so both paths stay one source of truth
+* Add `/api/v1/debts` and `/api/v1/investments` read endpoints (accounts joined with their overrides) so an API client can see current values before editing
+
 ### 3.16.0: 2026-07-31
 
 * Add yearly bills: a recurring bill can now recur once a year on a chosen month and day instead of only monthly. A yearly bill reserves budget only in and near its due month and stays out of the monthly bill total the rest of the year
