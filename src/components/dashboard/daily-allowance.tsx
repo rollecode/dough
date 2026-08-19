@@ -77,6 +77,7 @@ export function DailyAllowance({
   const { t, locale, fmt, mask } = useLocale();
   const [infoOpen, setInfoOpen] = useState(false);
   const [budgetInfoOpen, setBudgetInfoOpen] = useState(false);
+  const [billsInfoOpen, setBillsInfoOpen] = useState(false);
   const effectiveBudget = todaySpentAll > 0 ? Math.max(0, todayRemaining) : dailyBudget;
   const overspent = todayRemaining < 0;
   const status =
@@ -278,7 +279,19 @@ export function DailyAllowance({
             <ArrowUp />
           </div>
           <div>
-            <p className="metric-card-label">{t.dashboard.billsDue}</p>
+            <p className="metric-card-label">
+              {t.dashboard.billsDue}
+              <span className={`metric-info-wrap ${billsInfoOpen ? "is-open" : ""}`}>
+                <button type="button" className="metric-info-trigger" onClick={() => setBillsInfoOpen((v) => !v)}>
+                  <Info />
+                </button>
+                <span className="metric-info-popup">
+                  {locale === "fi"
+                    ? "Sisältää erääntyvät laskut, tilaukset ja velat: tämän kuun maksamattomat sekä pian erääntyvät. Laskut-sivu laskee vain toistuvat laskut, joten tämä summa voi olla suurempi."
+                    : "Includes bills, subscriptions and debts due: this month's unpaid plus upcoming ones. The Bills page counts only recurring bills, so this total can be higher."}
+                </span>
+              </span>
+            </p>
             <p className="metric-card-value"><F v={upcomingBills} s={` ${currency}`} /></p>
             {billCount > 0 && <p className="metric-card-note">{mask(billCount)} {locale === "fi" ? "laskua" : "bills"}</p>}
           </div>

@@ -1,3 +1,9 @@
+### 3.17.1: 2026-08-19
+
+* Rename the dashboard "Erääntyviä laskuja" tile to "Erääntyviä maksuja": it aggregates bills, subscriptions and debts due, not just bills, and add an info-icon tooltip explaining that (the Laskut page counts only recurring bills, so its unpaid total is smaller)
+* Gate the dashboard's due-payments and upcoming-obligations totals by a yearly bill's due month, so a yearly bill no longer inflates the figure in months when it is not due
+* Info icons next to labels no longer carry a redundant left margin on top of the flex gap; the label-to-icon gap is a consistent 0.4rem
+
 ### 3.17.0: 2026-08-19
 
 * Add key-authed `/api/v1` write endpoints covering every entity the app can edit: bills, subscriptions, savings goals, accounts, categories (and their targets), debts and investments create/update/delete, plus budget move and snooze/unsnooze. Each mirrors its session route through a shared write lib so both paths stay one source of truth

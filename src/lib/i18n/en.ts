@@ -55,7 +55,7 @@ export const en = {
     dailyBudget: "Daily budget",
     perDay: "/ day",
     available: "Available",
-    billsDue: "Bills due",
+    billsDue: "Payments due",
     nextIncome: "Next income",
     cashFlowForecast: "Cash flow forecast",
     endOfMonthEstimate: "End of month estimate",

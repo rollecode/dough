@@ -55,7 +55,7 @@ export const fi = {
     dailyBudget: "Päiväbudjetti",
     perDay: "/ pv",
     available: "Käytettävissä",
-    billsDue: "Erääntyviä laskuja",
+    billsDue: "Erääntyviä maksuja",
     nextIncome: "Seuraava tulo",
     cashFlowForecast: "Kassavirtaennuste",
     endOfMonthEstimate: "Kuun lopun arvio",

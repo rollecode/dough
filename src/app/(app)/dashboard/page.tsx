@@ -640,20 +640,21 @@ export default function DashboardPage() {
         budgetWithBills={budgetWithBills.dailyBudget}
         thresholds={thresholds}
         upcomingBills={(() => {
-          const thisMonth = bills.filter((b) => b.is_active && !b.is_paid).reduce((s, b) => s + b.amount, 0);
+          // A yearly bill counts only in its due month, matching the Laskut page and daily budget.
+          const thisMonth = bills.filter((b) => b.is_active && !b.is_paid && billDueInMonth(b, curMonth1)).reduce((s, b) => s + b.amount, 0);
           if (thisMonth > 0) return thisMonth;
           // All paid this month — show next month's bills before next income
           const nextIncDay = incomes.filter((i) => i.is_active).map((i) => resolveDay(i.expected_day)).sort((a, b) => a - b)[0] || 31;
-          return bills.filter((b) => b.is_active && b.due_day <= nextIncDay).reduce((s, b) => s + b.amount, 0);
+          return bills.filter((b) => b.is_active && b.due_day <= nextIncDay && billDueInMonth(b, nxtMonth1)).reduce((s, b) => s + b.amount, 0);
         })()}
         upcomingObligations={(() => {
           const items: { name: string; amount: number; dueDay: number; absDay: number }[] = [];
-          // This month's unpaid bills
-          for (const b of bills.filter((b) => b.is_active && !b.is_paid)) {
+          // This month's unpaid bills (yearly bills only in their due month)
+          for (const b of bills.filter((b) => b.is_active && !b.is_paid && billDueInMonth(b, curMonth1))) {
             if (b.due_day > today) items.push({ name: b.name, amount: b.amount, dueDay: b.due_day, absDay: b.due_day });
           }
-          // Next month's bills within 14 days
-          for (const b of bills.filter((b) => b.is_active)) {
+          // Next month's bills within 14 days (yearly bills only if due next month)
+          for (const b of bills.filter((b) => b.is_active && billDueInMonth(b, nxtMonth1))) {
             const absDay = daysInMonth + b.due_day;
             if (absDay - today <= 14 && absDay > daysInMonth) items.push({ name: b.name, amount: b.amount, dueDay: b.due_day, absDay });
           }
