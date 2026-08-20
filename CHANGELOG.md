@@ -1,3 +1,7 @@
+### 3.18.0: 2026-08-20
+
+* Add `/api/v1/income`: list income sources with this month's received/upcoming status (so future incomes are listable), plus create/update/delete, mirroring the internal route through a shared income write lib
+
 ### 3.17.1: 2026-08-19
 
 * Rename the dashboard "Erääntyviä laskuja" tile to "Erääntyviä maksuja": it aggregates bills, subscriptions and debts due, not just bills, and add an info-icon tooltip explaining that (the Laskut page counts only recurring bills, so its unpaid total is smaller)
