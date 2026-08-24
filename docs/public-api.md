@@ -52,14 +52,15 @@ sqlite3 data/dough.db "UPDATE api_keys SET revoked_at = datetime('now') WHERE na
 All responses are JSON. Amounts are in euros. `month` params are `YYYY-MM` and default to the
 current month in the server's Helsinki timezone.
 
-- `GET /api/v1/summary` — total balance, and this month's income, budgeted, activity and Ready to
-  Assign. Accepts `month`.
+- `GET /api/v1/summary` — total balance, and the month's income, budgeted, activity and Ready to
+  Assign. Accepts `month`; every month figure is computed for that month.
 - `GET /api/v1/accounts` — every account with its balance. `include_closed=1` also returns closed
-  accounts.
+  accounts. `budget_excluded` marks the accounts left out of the app's spendable-balance figure.
 - `GET /api/v1/transactions` — transactions newest first. Optional `month`, `account_id`,
   `category`, `q` (search payee/memo), `limit` (1..500, default 50).
 - `GET /api/v1/budget` — the month's income, total budgeted, Ready to Assign, age of money and every
-  active category's budgeted / activity / available. Accepts `month`.
+  active category's budgeted / activity / available. Accepts `month`. `budget_excluded` marks a
+  category whose transactions are left out of the spending reports.
 - `GET /api/v1/net-worth` — current net worth by kind (checking, savings, investments, debts) plus
   the saved snapshot history.
 - `GET /api/v1/bills` — recurring bills with amount and due day.

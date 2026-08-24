@@ -1,24 +1,32 @@
 import { apiRoute, resolveMonth } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
-import { buildLocalFinancialData } from "@/lib/local-financial-data";
-import { monthBudgetNumbers } from "@/lib/budget-math";
+import { monthBudgetNumbers, localMonthCategories } from "@/lib/budget-math";
 
-// GET /api/v1/summary - a compact financial snapshot: total balance, this month's income, spending,
-// budgeted and Ready to Assign. The one-call overview an assistant reaches for first.
+// GET /api/v1/summary - a compact financial snapshot: total balance, the month's income, spending,
+// budgeted and Ready to Assign. The one-call overview an assistant reaches for first. Every month
+// figure is computed for the requested month, so asking for a past month returns that month.
 export const GET = apiRoute("read", (request) => {
   const db = getDb();
-  const data = buildLocalFinancialData(db);
   const month = resolveMonth(request);
-  const { income, readyToAssign } = monthBudgetNumbers(db, month, data.monthBudget.budgeted);
+
+  const accounts = db
+    .prepare("SELECT COALESCE(SUM(balance), 0) AS total, COUNT(*) AS n FROM ynab_accounts WHERE closed = 0")
+    .get() as { total: number; n: number };
+
+  const categories = localMonthCategories(db, month);
+  const budgeted = Math.round(categories.reduce((s, c) => s + c.budgeted, 0) * 100) / 100;
+  const activity = Math.round(categories.reduce((s, c) => s + c.activity, 0) * 100) / 100;
+  const { income, readyToAssign } = monthBudgetNumbers(db, month, budgeted);
+
   return {
     month,
     currency: "EUR",
-    total_balance: data.summary.totalBalance,
-    account_count: data.summary.accounts.length,
+    total_balance: Math.round(accounts.total * 100) / 100,
+    account_count: accounts.n,
     income,
-    budgeted: data.monthBudget.budgeted,
-    activity: data.monthBudget.activity,
+    budgeted,
+    activity,
     ready_to_assign: readyToAssign,
-    synced_at: data.syncedAt,
+    synced_at: new Date().toISOString(),
   };
 });
