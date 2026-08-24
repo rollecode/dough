@@ -34,6 +34,7 @@ export interface CategoryUpdate {
   description?: string;
   color?: string;
   is_active?: boolean;
+  budget_excluded?: boolean;
   sort_order?: number;
   subscription_id?: number | string | null;
   bill_id?: number | string | null;
@@ -64,6 +65,7 @@ export function updateCategory(p: CategoryUpdate): { found: boolean } | { error:
   if (p.description !== undefined) { updates.push("description = ?"); values.push(String(p.description)); }
   if (p.color !== undefined) { updates.push("color = ?"); values.push(String(p.color).trim()); }
   if (p.is_active !== undefined) { updates.push("is_active = ?"); values.push(p.is_active ? 1 : 0); }
+  if (p.budget_excluded !== undefined) { updates.push("budget_excluded = ?"); values.push(p.budget_excluded ? 1 : 0); }
   if (p.sort_order !== undefined) { updates.push("sort_order = ?"); values.push(parseInt(String(p.sort_order), 10) || 0); }
   if (p.subscription_id !== undefined || p.bill_id !== undefined || p.debt_account_id !== undefined || p.savings_goal_id !== undefined || p.investment_account_id !== undefined) {
     const sid = p.subscription_id != null ? (parseInt(String(p.subscription_id), 10) || null) : null;

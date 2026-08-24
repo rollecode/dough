@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2, Link2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Loader2, Plus, GripVertical, EyeOff, Eye, ArrowRightLeft, Moon, Trash2, Link2, PieChart } from "lucide-react";
 import { F } from "@/components/ui/f";
 import { getBrandConfig, BrandIcon } from "@/lib/brands";
 import {
@@ -40,6 +40,7 @@ interface BudgetCategory {
   group_name: string;
   description: string;
   is_active: number;
+  budget_excluded: number;
   snoozed: number;
   budgeted: number;
   activity: number;
@@ -649,6 +650,22 @@ export default function BudgetPage() {
       load(month);
     } catch (err) {
       console.error("[budget] Toggle error:", err);
+    }
+  };
+
+  // Money that belongs to someone else but runs through the household accounts: excluded, the
+  // category's transactions stop counting in the spending reports, wherever they were paid from.
+  // The budget itself still absorbs them, so the accounts keep reconciling.
+  const toggleBudgetExcluded = async (c: BudgetCategory) => {
+    try {
+      await fetch("/api/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: c.id, budget_excluded: !c.budget_excluded }),
+      });
+      load(month);
+    } catch (err) {
+      console.error("[budget] Exclude toggle error:", err);
     }
   };
 
@@ -1376,6 +1393,9 @@ export default function BudgetPage() {
                     <Button type="button" variant="ghost" size="sm" className="insp-hide" onClick={() => toggleActive(c)}>
                       {c.is_active ? <><EyeOff className="icon-sm" />{locale === "fi" ? "Piilota kategoria" : "Hide category"}</> : <><Eye className="icon-sm" />{locale === "fi" ? "Näytä kategoria" : "Unhide category"}</>}
                     </Button>
+                    <Button type="button" variant="ghost" size="sm" className="insp-hide" onClick={() => toggleBudgetExcluded(c)}>
+                      <PieChart className="icon-sm" />{c.budget_excluded ? (locale === "fi" ? "Laske mukaan raportteihin" : "Count in reports") : (locale === "fi" ? "Jätä pois raporteista" : "Leave out of reports")}
+                    </Button>
                     {deleteOpen ? (
                       <div className="insp-delete">
                         {c.tx_count > 0 ? (
@@ -1565,6 +1585,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
         <span className="budget-row-nameline">
           <span className="budget-row-name">{cat.linked_type ? cat.linked_name : cat.name}</span>
           {!cat.is_active && <span className="account-badge is-muted">{locale === "fi" ? "Piilotettu" : "Hidden"}</span>}
+          {!!cat.budget_excluded && <span className="account-badge is-muted">{locale === "fi" ? "Ei raporteissa" : "Not in reports"}</span>}
           {cat.linked_type === "subscription" && (() => {
             const b = getBrandConfig(cat.subscription_name);
             return <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>;

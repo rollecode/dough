@@ -12,6 +12,7 @@ interface CategoryRow {
   description: string;
   sort_order: number;
   is_active: number;
+  budget_excluded: number;
   subscription_id: number | null;
   bill_id: number | null;
   debt_account_id: string | null;
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
 
     const db = getDb();
     const cats = db
-      .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active, subscription_id, bill_id, debt_account_id, savings_goal_id, investment_account_id FROM categories ORDER BY group_name, sort_order, name")
+      .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active, budget_excluded, subscription_id, bill_id, debt_account_id, savings_goal_id, investment_account_id FROM categories ORDER BY group_name, sort_order, name")
       .all() as CategoryRow[];
 
     // Apply saved group ordering (stable sort keeps within-group sort_order from the query)
@@ -114,6 +115,7 @@ export async function GET(request: Request) {
         group_name: c.group_name,
         description: c.description || "",
         is_active: c.is_active,
+        budget_excluded: c.budget_excluded,
         snoozed: t.snoozed ? 1 : 0,
         budgeted: Math.round(b * 100) / 100,
         activity: Math.round(a * 100) / 100,

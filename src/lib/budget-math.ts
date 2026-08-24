@@ -23,7 +23,15 @@ function ym(monthYM: string, offset: number): string {
 // category it is filed under still absorbs it and Ready to Assign is untouched. Excluding it from
 // category activity as well would leave the cost absorbed nowhere, and the budget would claim money
 // the accounts do not hold. Applied only to the reporting queries, never to activity/available/RTA.
-export const NOT_BUDGET_EXCLUDED = "COALESCE(budget_excluded, 0) = 0";
+// A whole category can be excluded the same way, for money that belongs to someone else but flows
+// through the household accounts: a household member's own earnings and the spending they fund. Every
+// row filed under it drops out of the reports, wherever it was paid from, which an account-level
+// exclusion cannot do. The budget still absorbs it, for the same reason a single excluded row does.
+// COALESCE on the category too: a NULL category in a bare NOT IN yields NULL, which would silently
+// drop the row from every report instead of keeping it.
+export const NOT_BUDGET_EXCLUDED =
+  "COALESCE(budget_excluded, 0) = 0 " +
+  "AND COALESCE(category, '') NOT IN (SELECT name FROM categories WHERE budget_excluded = 1)";
 
 export const CATEGORY_ACTIVITY_PREDICATE =
   "(payee NOT LIKE 'Transfer%' OR EXISTS (SELECT 1 FROM ynab_accounts a WHERE a.name = SUBSTR(payee, 12) AND a.on_budget = 0))";

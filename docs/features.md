@@ -78,6 +78,7 @@
 - Auto-assign (Quick Budget): fund to targets, copy last month's assigned, or copy last month's spending
 - Inline assigned editor with a calculator popover
 - Category inspector (right sheet): inline-editable name, group and description, available breakdown, target editing, snooze, hide and delete
+- A category can be left out of the spending reports, for money that belongs to someone else but runs through the household accounts (a household member's own earnings and their spending). Its transactions stop counting in cash flow, trends, the heatmap and burn rate wherever they were paid from, while the budget still absorbs them so the accounts keep reconciling
 - Link a category to a subscription, bill, debt, savings goal or investment (mutually exclusive); the linked item supplies the category's target. A savings-goal link sets a by-date target and its saved progress reflects the category's current available balance (what is assigned minus what is spent), so assigning in Budget reflects in the goal (no balance mutation); debt and investment links are target/display-only
 - Hidden categories with spending or assignments still appear (with a Hidden badge) and surface in the Overspent filter
 - An overspent category always appears in its group and the Overspent filter even when snoozed or hidden, so the overspend can be seen and covered

@@ -532,6 +532,12 @@ function initializeDb(db: Database.Database) {
     console.info("[db] Adding investment_account_id column to categories");
     db.exec("ALTER TABLE categories ADD COLUMN investment_account_id TEXT");
   }
+  // Money that belongs to someone else but flows through the household accounts (a household
+  // member's own earnings and their spending). Excluded, its rows drop out of spending reports.
+  if (categoryCols.length > 0 && !categoryCols.some((c) => c.name === "budget_excluded")) {
+    console.info("[db] Adding budget_excluded column to categories");
+    db.exec("ALTER TABLE categories ADD COLUMN budget_excluded INTEGER NOT NULL DEFAULT 0");
+  }
 
   // Add session_version to users (bumping it invalidates all existing session tokens)
   const sessionVerCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];

@@ -10,8 +10,8 @@ export const GET = apiRoute("read", (request) => {
   const month = resolveMonth(request);
 
   const cats = db
-    .prepare("SELECT id, name, group_name FROM categories WHERE is_active = 1 ORDER BY group_name, name")
-    .all() as { id: number; name: string; group_name: string | null }[];
+    .prepare("SELECT id, name, group_name, budget_excluded FROM categories WHERE is_active = 1 ORDER BY group_name, name")
+    .all() as { id: number; name: string; group_name: string | null; budget_excluded: number }[];
   const budgetedRows = db
     .prepare("SELECT category_id, budgeted FROM monthly_category_budgets WHERE month = ?")
     .all(month) as { category_id: number; budgeted: number }[];
@@ -35,6 +35,7 @@ export const GET = apiRoute("read", (request) => {
       budgeted,
       activity,
       available: availableForCategory(db, c.id, c.name, month),
+      budget_excluded: !!c.budget_excluded,
     };
   });
 

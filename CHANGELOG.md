@@ -1,3 +1,11 @@
+### 3.19.0: 2026-08-24
+
+* Leave a whole category out of the spending reports, for money that belongs to someone else but runs through the household accounts; its transactions drop out wherever they were paid from, while the budget still absorbs them
+* Category inspector gets the toggle and the budget list shows a badge for an excluded category
+* `/api/v1/accounts` returns `budget_excluded` per account, so a key-authed client sees the same excluded accounts the app does
+* `/api/v1/budget` returns `budget_excluded` per category and `/api/v1/categories/update` accepts it
+* Fix `/api/v1/summary` reporting the current month's `budgeted` and `activity` for a past month
+
 ### 3.18.0: 2026-08-20
 
 * Add `/api/v1/income`: list income sources with this month's received/upcoming status (so future incomes are listable), plus create/update/delete, mirroring the internal route through a shared income write lib
