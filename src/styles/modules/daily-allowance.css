@@ -218,6 +218,18 @@
   display: inline-flex;
 }
 
+/* In a page heading the icon has no flex gap to lean on and the tiny label size looks lost,
+   so space it out and scale it up to the larger heading. */
+.page-heading .metric-info-wrap {
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.page-heading .metric-info-trigger svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .metric-info-popup {
   position: absolute;
   top: calc(100% + 0.5rem);

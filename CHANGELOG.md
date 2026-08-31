@@ -1,3 +1,7 @@
+### 3.19.1: 2026-08-31
+
+* Space the info icon out from the dashboard "Yhteenveto" heading and scale it up to match the heading size
+
 ### 3.19.0: 2026-08-24
 
 * Leave a whole category out of the spending reports, for money that belongs to someone else but runs through the household accounts; its transactions drop out wherever they were paid from, while the budget still absorbs them
