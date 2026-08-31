@@ -1,3 +1,7 @@
+### 3.19.2: 2026-09-01
+
+* Leave budget-excluded accounts out of the Ready to Assign reconciliation, so their balances no longer inflate the assignable total
+
 ### 3.19.1: 2026-08-31
 
 * Space the info icon out from the dashboard "Yhteenveto" heading and scale it up to match the heading size

@@ -180,6 +180,26 @@ export function firstLocalMonth(db: ReturnType<typeof getDb>): string | null {
 // (adjusted for any local assignment edits). For months after the last synced month we anchor
 // on YNAB's last figure and extend the carry-forward month by month so rolling into next month
 // stays seamless. With no YNAB at all we use a per-month model with recurring income as a floor.
+// Accounts the household has marked "budget excluded": their balance is money that runs through the
+// household's accounts but is not household-assignable (a member's own account, a pass-through wallet).
+// The golden-equation reconciliation must leave them out of the on-budget total, the same way the
+// app's spendable-balance figure and the spending reports already do; otherwise their balance inflates
+// Ready to Assign. Stored as a JSON array of account ids in household_settings.budget_excluded_accounts.
+function budgetExcludedAccountIds(db: ReturnType<typeof getDb>): string[] {
+  const row = db
+    .prepare("SELECT value FROM household_settings WHERE key = 'budget_excluded_accounts'")
+    .get() as { value: string } | undefined;
+  if (!row?.value) {
+    return [];
+  }
+  try {
+    const arr = JSON.parse(row.value);
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export function monthBudgetNumbers(
   db: ReturnType<typeof getDb>,
   month: string,
@@ -243,7 +263,11 @@ export function monthBudgetNumbers(
   // in any category. Reconciling against balances surfaces that money as assignable. Past and future
   // months keep the carry-forward, since account balances are only meaningful for "now".
   if (inLocalEra && month === localDateIso().slice(0, 7)) {
-    const onBudget = (db.prepare("SELECT COALESCE(SUM(balance), 0) AS v FROM ynab_accounts WHERE on_budget = 1 AND closed = 0").get() as { v: number }).v || 0;
+    const excludedIds = budgetExcludedAccountIds(db);
+    const notExcluded = excludedIds.length ? ` AND id NOT IN (${excludedIds.map(() => "?").join(",")})` : "";
+    const onBudget = (db
+      .prepare("SELECT COALESCE(SUM(balance), 0) AS v FROM ynab_accounts WHERE on_budget = 1 AND closed = 0" + notExcluded)
+      .get(...excludedIds) as { v: number }).v || 0;
     readyToAssign = round(onBudget - sumCategoryAvailable(db, month) - futureCommitted);
   }
 
