@@ -133,13 +133,13 @@
 
 .cat-picker-empty {
   list-style: none;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   padding: 0.375rem;
 }
 
 .cat-picker-group {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -183,7 +183,7 @@
 
 .cat-picker-amt {
   flex-shrink: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   color: var(--muted-foreground);
 }
@@ -235,7 +235,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--primary);
 }
@@ -382,7 +382,7 @@
 
 .list-group-header {
   padding: 0.75rem 1rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   text-transform: none;
   letter-spacing: 0;
@@ -546,7 +546,7 @@
 
 .tx-balance-value {
   font-size: 1.375rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--foreground);
 }
@@ -648,7 +648,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.3rem 0.7rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   border-radius: 999px;
   color: var(--foreground);
   background: color-mix(in srgb, var(--background) 60%, transparent);
@@ -718,7 +718,7 @@
   border-radius: 9999px;
   background: color-mix(in srgb, var(--muted) 50%, transparent);
   color: var(--muted-foreground);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   cursor: pointer;
   transition: opacity 150ms, background-color 150ms, color 150ms;
 }
@@ -804,12 +804,12 @@
 }
 
 .budget-aom-chart-range {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .budget-aom-stat {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--chart-3, #f59e0b);
   font-variant-numeric: tabular-nums;
 }
@@ -841,13 +841,13 @@
 
 .budget-ready-value {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .budget-ready-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1;
   margin: 7px 0 0 0;
@@ -971,7 +971,7 @@
 /* Header row inside an assign/cover menu (e.g. "Kata budjetin ylitys") */
 .budget-assign-menu-title {
   padding: 0.375rem 0.625rem 0.4375rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted-foreground);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
@@ -992,7 +992,7 @@
   gap: 1rem;
   padding: 0.25rem 0.625rem 0.4375rem;
   margin-bottom: 0.125rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
@@ -1047,7 +1047,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--foreground);
   padding: 0.25rem 0.375rem 0.5rem;
@@ -1107,7 +1107,7 @@
 }
 
 .budget-cover-empty {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   padding: 0.375rem;
 }
@@ -1150,7 +1150,7 @@
 }
 
 .budget-act-title {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--foreground);
   padding: 0.25rem 0.375rem 0.5rem;
@@ -1234,7 +1234,7 @@
 }
 
 .budget-act-empty {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   padding: 0.5rem 0.375rem;
 }
@@ -1260,8 +1260,8 @@
   .budget-ready-box { padding: 0.375rem 0.375rem 0.375rem 0.5rem; gap: 0.375rem; border-radius: 0.625rem; }
   .budget-aom-box { padding: 0.375rem 0.5rem; border-radius: 0.625rem; }
   .budget-center .budget-ready-value { font-size: 1rem; }
-  .budget-center .budget-ready-label { font-size: 0.75rem; margin-top: 0.125rem; }
-  .budget-assign-trigger { padding: 0.4rem 0.4rem; font-size: 0.75rem; }
+  .budget-center .budget-ready-label { font-size: 0.8125rem; margin-top: 0.125rem; }
+  .budget-assign-trigger { padding: 0.4rem 0.4rem; font-size: 0.8125rem; }
   .budget-monthnav-label {
     width: auto;
     min-width: 0;
@@ -1483,7 +1483,7 @@
 
 .budget-group-header .budget-num {
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .budget-row {
@@ -1519,7 +1519,7 @@
   min-height: 16px;
   border-radius: 0.25rem;
   align-self: center;
-  font-size: 0.6rem;
+  font-size: 0.8125rem;
 }
 
 .budget-row-brand svg {
@@ -1568,7 +1568,7 @@
 .budget-row-desc {
   flex: 1;
   min-width: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   opacity: 0.7;
   overflow: hidden;
@@ -1588,7 +1588,7 @@
   display: flex;
   align-items: center;
   gap: 0.4375rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .budget-target-progress {
@@ -1780,10 +1780,10 @@
    has no operator keys for typing expressions. This block must stay AFTER the base rules of
    every selector it overrides (equal specificity: source order decides). */
 @media (max-width: 540px) {
-  .budget-table-header { font-size: 0.6875rem; }
+  .budget-table-header { font-size: 0.8125rem; }
   .budget-num { font-size: 0.8125rem; }
   .budget-budgeted-input { padding: 0 0.25rem; }
-  .budget-pill { min-width: 0; padding: 0.1875rem 0.375rem; font-size: 0.75rem; }
+  .budget-pill { min-width: 0; padding: 0.1875rem 0.375rem; font-size: 0.8125rem; }
   /* The in-input calculator icon is redundant on phones (the sheet opens on focus) and would
      eat the narrow column, as would the focused-state padding reserved for it. */
   .button-calculator { display: none; }
@@ -1906,7 +1906,7 @@
 
 .budget-toast::before {
   content: "✓";
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .insp-body {
@@ -1942,13 +1942,13 @@
 
 .insp-available-value {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .insp-available-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1;
   margin: 7px 0 0 0;
@@ -2054,7 +2054,7 @@
 }
 
 .insp-target-date-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
@@ -2197,7 +2197,7 @@
 
 .budget-hidden-group {
   color: var(--muted-foreground);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .list-item {
@@ -2297,7 +2297,7 @@
 .input.match-pattern-input-sm {
   height: 1.5rem;
   width: 4rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   padding: 0 0.375rem;
 }
 
@@ -2306,7 +2306,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   border-radius: 0.25rem;
   background: color-mix(in srgb, var(--primary) 10%, transparent);
   color: var(--primary);
@@ -2346,7 +2346,7 @@
 }
 
 .badge-toggle-muted {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   border: 1px solid var(--border);
   border-radius: 9999px;
@@ -2524,7 +2524,7 @@
 /* Small helper under a form field (e.g. the derived saved amount explanation) */
 .form-field-note {
   margin-top: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.35;
   color: var(--muted-foreground);
 }
@@ -2705,14 +2705,14 @@
 }
 
 .debt-progress-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .edit-item-meta {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   color: var(--muted-foreground);
 }
@@ -2768,7 +2768,7 @@
 
 .chart-range-btn {
   padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--muted-foreground);
@@ -2821,7 +2821,7 @@
 }
 
 .list-edit-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   margin-bottom: 0.25rem;
   display: block;
@@ -2850,7 +2850,7 @@
 }
 
 .payoff-extra-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   color: var(--muted-foreground);
 }
@@ -2923,7 +2923,7 @@
   border-radius: 9999px;
   background: color-mix(in srgb, var(--primary) 20%, transparent);
   color: var(--primary);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -2978,7 +2978,7 @@
 }
 
 .account-badge {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   padding: 0.0625rem 0.4375rem;
   border-radius: 9999px;
@@ -3054,7 +3054,7 @@
 }
 
 .settings-help {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   color: var(--muted-foreground);
 }
@@ -3092,7 +3092,7 @@
 
 .input.settings-account-note {
   height: 1.75rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   padding: 0 0.5rem;
   margin-left: 1.625rem;
   min-width: 0;
@@ -3135,7 +3135,7 @@
 }
 
 .settings-account-balance {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
@@ -3173,7 +3173,7 @@
 .synci-test-result {
   font-size: 0.875rem;
   line-height: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-top: 0.5rem;
 }
 
@@ -3186,13 +3186,13 @@
 }
 
 .settings-saved {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   color: var(--positive);
 }
 
 .settings-sync-time {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   color: var(--muted-foreground);
 }
@@ -3228,7 +3228,7 @@
 .metric-card-value-3xl {
   font-size: 1.75rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.04em;
   color: var(--foreground);
   margin-top: 0.25rem;
@@ -3295,7 +3295,7 @@
 }
 
 .sync-time {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
@@ -3332,7 +3332,7 @@
   bottom: calc(100% + 0.375rem);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1;
@@ -3509,7 +3509,7 @@
   margin-left: 0.5rem;
   padding: 0.0625rem 0.375rem;
   border-radius: 9999px;
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   background: color-mix(in srgb, var(--negative) 18%, transparent);
   color: var(--negative);
@@ -3526,7 +3526,7 @@
 }
 
 .batch-item-meta {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
@@ -3540,7 +3540,7 @@
 
 .batch-account-select {
   height: 1.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   padding: 0 0.25rem;
   border-radius: 0.25rem;
   border: 1px solid var(--input);

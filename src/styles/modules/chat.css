@@ -62,7 +62,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--muted-foreground);
   background: none;
@@ -167,7 +167,7 @@
   display: inline-block;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   background: rgba(248, 113, 113, 0.15);
   color: #f87171;
@@ -262,7 +262,7 @@
 }
 
 .chat-message-text strong {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--foreground);
 }
 
@@ -328,7 +328,7 @@
 }
 
 .chat-typing-indicator {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   font-style: italic;
   padding-left: 2.75rem;
@@ -618,7 +618,7 @@
 }
 
 .chat-reaction-badge span {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: #fff;
 }
 

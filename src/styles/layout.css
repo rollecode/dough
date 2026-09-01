@@ -234,8 +234,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.8125rem;
+  font-weight: 600;
   border-radius: 9999px;
   background-color: var(--primary);
   color: var(--primary-foreground);
@@ -346,7 +346,7 @@
 .page-heading {
   font-size: 1.5rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.04em;
   color: var(--foreground);
   margin-left: 2px;
@@ -370,7 +370,7 @@
   max-width: 80rem;
   margin-inline: auto;
   padding: 1.5rem 0.75rem 2rem;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;

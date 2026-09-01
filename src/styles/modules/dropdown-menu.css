@@ -43,7 +43,7 @@
 /* Label */
 .dropdown-menu-label {
   padding: 0.25rem 0.375rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   font-weight: 500;
   color: var(--muted-foreground);
@@ -250,7 +250,7 @@
 /* Shortcut */
 .dropdown-menu-shortcut {
   margin-left: auto;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   letter-spacing: 0.1em;
   color: var(--muted-foreground);

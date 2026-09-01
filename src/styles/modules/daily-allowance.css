@@ -61,7 +61,7 @@
   text-transform: none;
   letter-spacing: 0;
   font-weight: 500;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .daily-allowance-hero-amount {
@@ -74,7 +74,7 @@
 .daily-allowance-hero-value {
   font-size: 3rem;
   line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
@@ -173,7 +173,7 @@
 }
 
 .metric-card-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   font-weight: 500;
   color: var(--muted-foreground);
@@ -234,7 +234,7 @@
   position: absolute;
   top: calc(100% + 0.5rem);
   left: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 400;
   line-height: 1.4;
   letter-spacing: 0;
@@ -280,7 +280,7 @@
 .metric-card-value {
   font-size: 2rem;
   line-height: 2.25rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.03em;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
@@ -295,7 +295,7 @@
 }
 
 .metric-card-note {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   color: var(--muted-foreground);
 }
@@ -334,7 +334,7 @@
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   padding: 0.25rem 0.625rem;
   border-radius: 0.375rem;

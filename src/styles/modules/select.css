@@ -121,7 +121,7 @@
 /* Select label */
 .select-label {
   padding: 0.25rem 0.375rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1rem;
   color: var(--muted-foreground);
 }

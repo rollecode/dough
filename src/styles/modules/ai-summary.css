@@ -81,7 +81,7 @@
 }
 
 .ai-summary-age {
-  font-size: 0.7rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
@@ -144,7 +144,7 @@
 }
 
 .ai-summary-text strong {
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 

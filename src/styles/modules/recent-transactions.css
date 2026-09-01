@@ -25,7 +25,7 @@
 }
 
 .recent-transactions-title {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--muted-foreground);
   text-transform: none;
@@ -33,7 +33,7 @@
 }
 
 .recent-transactions-link {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--primary);
   transition: color 150ms;
@@ -102,7 +102,7 @@
 }
 
 .recent-transactions-category {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
@@ -125,6 +125,6 @@
 }
 
 .recent-transactions-date {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }

@@ -32,6 +32,6 @@
 
 .personal-greeting-exceeded {
   color: var(--negative);
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }

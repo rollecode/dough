@@ -35,7 +35,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--chart-3);
   background: color-mix(in srgb, var(--chart-3) 12%, transparent);

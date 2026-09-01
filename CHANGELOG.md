@@ -1,3 +1,8 @@
+### 3.20.0: 2026-09-01
+
+* Switch the interface font to Inter, wired through its font variable so it actually applies (the old Geist reference never resolved and fell back to the system font)
+* Cap font weights at 600 and raise the minimum text size to 13px
+
 ### 3.19.2: 2026-09-01
 
 * Leave budget-excluded accounts out of the Ready to Assign reconciliation, so their balances no longer inflate the assignable total

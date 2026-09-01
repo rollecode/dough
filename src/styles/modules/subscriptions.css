@@ -45,7 +45,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.875rem;
   color: #fff;
   flex-shrink: 0;
@@ -81,7 +81,7 @@
 }
 
 .subscription-card-meta {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
