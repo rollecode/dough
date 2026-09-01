@@ -45,6 +45,7 @@ export const BRANDS: Record<string, { color: string; logo: string; svg?: string;
   trakt: { color: "#A44DBB", logo: "T", img: "trakt.png" },
   mementomori: { color: "#B23A48", logo: "M", img: "mementomori.png" },
   hostingby: { color: "#2B3A55", logo: "H", img: "hostingby.png" },
+  outsider: { color: "#E5308A", logo: "O", img: "outsider.png" },
 };
 
 export function getBrandConfig(name: string): { color: string; logo: string; svg?: string; img?: string; known: boolean } {
