@@ -1,20 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Google_Sans, Zalando_Sans_Expanded } from "next/font/google";
+import { Google_Sans, Syne } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "@/styles/index.css";
 
 const googleSans = Google_Sans({
   variable: "--font-google-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
 // Logo wordmark only.
-const zalandoExpanded = Zalando_Sans_Expanded({
-  variable: "--font-zalando-expanded",
+const syne = Syne({
+  variable: "--font-syne",
   subsets: ["latin"],
-  weight: ["600"],
+  weight: ["700"],
   display: "swap",
 });
 
@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${googleSans.variable} ${zalandoExpanded.variable}`}>
+      <body className={`${googleSans.variable} ${syne.variable}`}>
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

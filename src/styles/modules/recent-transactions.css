@@ -114,6 +114,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .recent-transactions-amount-value[data-type="expense"] {

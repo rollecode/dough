@@ -35,4 +35,5 @@
   line-height: 1.25rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }

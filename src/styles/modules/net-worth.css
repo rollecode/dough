@@ -29,6 +29,7 @@
   letter-spacing: -0.04em;
   color: var(--negative);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   padding: 0.25rem 0;
 }
 
@@ -129,6 +130,7 @@
   letter-spacing: -0.02em;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 @media (min-width: 768px) {
@@ -182,6 +184,7 @@
   color: var(--positive);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .net-worth-list-amount.net-worth-list-amount-debt {

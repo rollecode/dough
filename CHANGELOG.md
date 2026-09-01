@@ -1,8 +1,10 @@
 ### 3.20.0: 2026-09-01
 
 * Switch the interface font to Google Sans, wired through its font variable so it actually applies (the old Geist reference never resolved and fell back to the system font)
-* Set the Dough wordmark to Zalando Sans Expanded
-* Cap font weights at 600 and raise the minimum text size to 13px, keeping the spending-heatmap axis labels small so the calendar grid still fits
+* Set the Dough wordmark to Syne bold
+* Cap interface weights at 600, render numbers at 700, and raise the minimum text size to 13px, keeping the spending-heatmap axis labels small so the calendar grid still fits
+* Drop the 0.125rem top margin that misaligned list, metric and trend icons
+* Let the dashboard show overflowing popovers instead of clipping them
 
 ### 3.19.2: 2026-09-01
 

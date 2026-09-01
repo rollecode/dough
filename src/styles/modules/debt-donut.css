@@ -70,6 +70,7 @@
   letter-spacing: -0.02em;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .debt-donut-sub {
@@ -129,6 +130,7 @@
   white-space: nowrap;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .debt-donut-legend-bar {

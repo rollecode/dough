@@ -95,6 +95,7 @@
   font-weight: 600;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
 }
 

@@ -77,6 +77,7 @@
   font-weight: 600;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 @media (min-width: 768px) {
@@ -153,7 +154,6 @@
   justify-content: center;
   border-radius: 0;
   background: none;
-  margin-top: 0.125rem;
 }
 
 .metric-card-icon svg {
@@ -284,6 +284,7 @@
   letter-spacing: -0.03em;
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
 }
 

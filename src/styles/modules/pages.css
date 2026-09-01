@@ -10,11 +10,10 @@
   min-width: 0;
 }
 
-/* Contain any stray horizontal overflow on the dashboard (charts, wide number cards) without a
-   scrollbar. overflow-x: clip clips without creating a scroll container, so it does not break the
-   budget page's sticky topbar (which uses position: sticky against the body scroller). */
+/* Let the dashboard show overflowing UI (popovers, tooltips) instead of clipping it; the body-level
+   page scroller still guards against a horizontal scrollbar. */
 .dashboard-page {
-  overflow-x: clip;
+  overflow-x: visible;
 }
 
 /* Page header with title and action */
@@ -185,6 +184,7 @@
   flex-shrink: 0;
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   color: var(--muted-foreground);
 }
 
@@ -301,6 +301,7 @@
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
   color: var(--foreground);
 }
@@ -496,6 +497,7 @@
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
   color: var(--foreground);
 }
@@ -548,6 +550,7 @@
   font-size: 1.375rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   color: var(--foreground);
 }
 
@@ -812,6 +815,7 @@
   font-weight: 600;
   color: var(--chart-3, #f59e0b);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .budget-ready-box.is-positive {
@@ -844,6 +848,7 @@
   font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .budget-ready-label {
@@ -981,6 +986,7 @@
 .budget-autoassign-amt {
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 /* Info row in the assign menu (total still needed to fund this month's targets); sits under
@@ -1098,12 +1104,14 @@
 .budget-cover-src {
   color: var(--positive);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
 .budget-cover-amt {
   color: var(--negative);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .budget-cover-empty {
@@ -1125,6 +1133,7 @@
   cursor: pointer;
   padding: 0;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   transition: color 150ms;
 }
 
@@ -1221,6 +1230,7 @@
   font-size: 13px;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1230,6 +1240,7 @@
   font-size: 0.8125rem;
   color: var(--negative);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
@@ -1330,6 +1341,7 @@
   text-align: right;
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .text-muted {
@@ -1700,6 +1712,7 @@
 .budget-calc-display {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   font-size: 1rem;
   padding: 0.25rem 0.5rem 0.5rem;
   color: var(--foreground);
@@ -1752,6 +1765,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1945,6 +1959,7 @@
   font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .insp-available-label {
@@ -1984,6 +1999,7 @@
 .insp-line-value {
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .insp-assign-input {
@@ -2024,6 +2040,7 @@
   font-size: 0.8125rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .insp-target-edit {
@@ -2172,6 +2189,7 @@
 .budget-hidden-count {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .budget-hidden-row {
@@ -2407,7 +2425,6 @@
   background: none;
   border-radius: 0;
   flex-shrink: 0;
-  margin-top: 0.125rem;
 }
 
 .list-item-icon svg,
@@ -2457,7 +2474,6 @@
   align-items: center;
   transition: color 150ms, opacity 150ms;
   flex-shrink: 0;
-  margin-top: 0.125rem;
 }
 
 .priority-toggle svg {
@@ -2572,6 +2588,7 @@
   line-height: 1.25rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
   color: var(--foreground);
 }
@@ -2800,6 +2817,7 @@
   line-height: 1.25rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
   color: var(--foreground);
 }
@@ -2926,6 +2944,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 /* Accounts page */
@@ -3138,6 +3157,7 @@
   font-size: 0.8125rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .settings-help-mb {
@@ -3233,6 +3253,7 @@
   color: var(--foreground);
   margin-top: 0.25rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -3348,6 +3369,7 @@
   visibility: hidden;
   transition: opacity 150ms, visibility 150ms;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .amt-tip::before {
@@ -3529,6 +3551,7 @@
   font-size: 0.8125rem;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .batch-item-actions {
@@ -3671,6 +3694,7 @@
 .tx-split-remaining {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .tx-split-remaining.is-ok {
