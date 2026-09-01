@@ -139,9 +139,12 @@ export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy }: Sideb
       <div className="l-sidebar-logo">
         <Link href="/dashboard" onClick={handleNavClick} className="l-sidebar-logo-link">
           {collapsed ? (
-            <img src="/favicon.png" alt="Dough" className="l-sidebar-logo-icon" />
+            <span className="l-sidebar-logo-mark" role="img" aria-label="Dough" />
           ) : (
-            <span className="l-sidebar-logo-text">Dough</span>
+            <>
+              <span className="l-sidebar-logo-mark" role="img" aria-label="Dough" />
+              <span className="l-sidebar-logo-text">Dough</span>
+            </>
           )}
         </Link>
         <button
