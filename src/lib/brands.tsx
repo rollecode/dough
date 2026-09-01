@@ -2,7 +2,7 @@
 // so both surfaces render the same logo treatment. Auto-detected from the name.
 
 // Known brand configs
-export const BRANDS: Record<string, { color: string; logo: string; svg?: string }> = {
+export const BRANDS: Record<string, { color: string; logo: string; svg?: string; img?: string }> = {
   netflix: { color: "#E50914", logo: "N", svg: "netflix" },
   spotify: { color: "#1DB954", logo: "S", svg: "spotify" },
   disney: { color: "#113CCF", logo: "D+" },
@@ -23,7 +23,7 @@ export const BRANDS: Record<string, { color: string; logo: string; svg?: string 
   dropbox: { color: "#0061FF", logo: "D" },
   "1password": { color: "#0572EC", logo: "1P" },
   nordvpn: { color: "#4687FF", logo: "N" },
-  claude: { color: "#cc785c", logo: "A", svg: "anthropic" },
+  claude: { color: "#cc785c", logo: "A", img: "claude.png" },
   anthropic: { color: "#cc785c", logo: "A", svg: "anthropic" },
   icloud: { color: "#3693F3", logo: "", svg: "icloud" },
   "apple icloud": { color: "#3693F3", logo: "", svg: "icloud" },
@@ -37,19 +37,17 @@ export const BRANDS: Record<string, { color: string; logo: string; svg?: string 
   "no-ip": { color: "#8fbe00", logo: "N", svg: "noip" },
   bookbeat: { color: "#CD96FF", logo: "B", svg: "bookbeat" },
   runna: { color: "#1E8C74", logo: "R", svg: "runna" },
-  torbox: { color: "#EC4899", logo: "T" },
-  cronometer: { color: "#F97316", logo: "C" },
-  "insight timer": { color: "#16A9C7", logo: "I" },
-  patreon: { color: "#FF424D", logo: "P" },
-  rungap: { color: "#E8552D", logo: "R" },
-  "pixel union": { color: "#5B57D1", logo: "P" },
-  trakt: { color: "#ED1C24", logo: "T" },
-  hostingby: { color: "#2563EB", logo: "H" },
-  mementomori: { color: "#6364FF", logo: "M" },
-  outsider: { color: "#D7263D", logo: "O" },
+  torbox: { color: "#17A34A", logo: "T", img: "torbox.png" },
+  cronometer: { color: "#F26B21", logo: "C", img: "cronometer.png" },
+  "insight timer": { color: "#17A2B8", logo: "I", img: "insighttimer.png" },
+  patreon: { color: "#FF424D", logo: "P", img: "patreon.png" },
+  rungap: { color: "#DB4437", logo: "R", img: "rungap.png" },
+  trakt: { color: "#A44DBB", logo: "T", img: "trakt.png" },
+  mementomori: { color: "#B23A48", logo: "M", img: "mementomori.png" },
+  hostingby: { color: "#2B3A55", logo: "H", img: "hostingby.png" },
 };
 
-export function getBrandConfig(name: string): { color: string; logo: string; svg?: string; known: boolean } {
+export function getBrandConfig(name: string): { color: string; logo: string; svg?: string; img?: string; known: boolean } {
   const lower = name.toLowerCase();
   for (const [key, config] of Object.entries(BRANDS)) {
     if (lower.includes(key)) return { ...config, known: true };
@@ -62,7 +60,10 @@ export function isKnownBrand(name: string): boolean {
   return getBrandConfig(name).known;
 }
 
-export function BrandIcon({ svg, logo }: { svg?: string; logo: string }) {
+export function BrandIcon({ svg, logo, img }: { svg?: string; logo?: string; img?: string }) {
+  if (img) {
+    return <img className="brand-img" src={`/brands/${img}`} alt="" />;
+  }
   if (svg === "netflix") {
     return (
       <svg viewBox="0 0 24 24" width="20" height="20" fill="#fff">

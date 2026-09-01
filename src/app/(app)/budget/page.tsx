@@ -1214,7 +1214,7 @@ export default function BudgetPage() {
                       <div className="insp-linked">
                         {linkBrand && (
                           <span className="subscription-brand-icon insp-linked-icon" style={{ backgroundColor: linkBrand.color }}>
-                            <BrandIcon svg={linkBrand.svg} logo={linkBrand.logo} />
+                            <BrandIcon svg={linkBrand.svg} img={linkBrand.img} logo={linkBrand.logo} />
                           </span>
                         )}
                         <span className="insp-linked-name">{c.linked_name}</span>
@@ -1588,7 +1588,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
           {!!cat.budget_excluded && <span className="account-badge is-muted">{locale === "fi" ? "Ei raporteissa" : "Not in reports"}</span>}
           {cat.linked_type === "subscription" && (() => {
             const b = getBrandConfig(cat.subscription_name);
-            return <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} logo={b.logo} /></span>;
+            return <span className="subscription-brand-icon budget-row-brand" style={{ backgroundColor: b.color }}><BrandIcon svg={b.svg} img={b.img} logo={b.logo} /></span>;
           })()}
           {cat.linked_type && <Link2 className="budget-row-linkicon" aria-hidden="true" />}
           {cat.description && <span className="budget-row-desc">{cat.description}</span>}

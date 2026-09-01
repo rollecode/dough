@@ -248,7 +248,7 @@ export default function SubscriptionsPage() {
             >
               <div className="subscription-card-header">
                 <div className="subscription-brand-icon" style={{ backgroundColor: sub.brand_color }}>
-                  <BrandIcon svg={getBrandConfig(sub.name).svg} logo={sub.brand_logo || sub.name.charAt(0)} />
+                  <BrandIcon svg={getBrandConfig(sub.name).svg} img={getBrandConfig(sub.name).img} logo={sub.brand_logo || sub.name.charAt(0)} />
                 </div>
                 <div className="subscription-card-info">
                   <div className="list-item-name-row">

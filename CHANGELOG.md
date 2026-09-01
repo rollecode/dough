@@ -8,7 +8,7 @@
 * Fix icon top-margin misalignment
 * Stop the dashboard clipping popovers
 * Add pie mark beside the sidebar wordmark
-* Add ten subscription brand templates
+* Add real brand icons for subscription logos
 
 ### 3.19.2: 2026-09-01
 

@@ -50,6 +50,16 @@
   color: #fff;
   flex-shrink: 0;
   letter-spacing: -0.02em;
+  overflow: hidden;
+}
+
+/* Real brand icon fills the rounded box, covering the colour tile behind it. */
+.brand-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
 }
 
 .subscription-card-info {
