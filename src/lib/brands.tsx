@@ -36,7 +36,7 @@ export const BRANDS: Record<string, { color: string; logo: string; svg?: string;
   oura: { color: "#2F4A73", logo: "O", svg: "oura" },
   "no-ip": { color: "#8fbe00", logo: "N", svg: "noip" },
   bookbeat: { color: "#CD96FF", logo: "B", svg: "bookbeat" },
-  runna: { color: "#1E8C74", logo: "R", svg: "runna" },
+  runna: { color: "#1E8C74", logo: "R", img: "runna.png" },
   torbox: { color: "#17A34A", logo: "T", img: "torbox.png" },
   cronometer: { color: "#F26B21", logo: "C", img: "cronometer.png" },
   "insight timer": { color: "#17A2B8", logo: "I", img: "insighttimer.png" },
