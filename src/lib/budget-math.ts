@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { getBudgetMode } from "./household";
 import { localDateIso } from "./date-utils";
+import { billMonthlySetAside } from "./bills";
 
 // Shared budget math so the move/cover endpoint validates against the same available
 // balance the budget page shows. Mirrors the carryover model in app/api/budget/route.ts:
@@ -393,7 +394,7 @@ export function makeTargetResolver(
     (db.prepare("SELECT id, name, amount FROM subscriptions").all() as { id: number; name: string; amount: number }[]).map((s) => [s.id, s])
   );
   const billMap = new Map(
-    (db.prepare("SELECT id, name, amount FROM recurring_bills").all() as { id: number; name: string; amount: number }[]).map((b) => [b.id, b])
+    (db.prepare("SELECT id, name, amount, COALESCE(interval_months, 1) AS interval_months, due_month FROM recurring_bills").all() as { id: number; name: string; amount: number; interval_months: number; due_month: number | null }[]).map((b) => [b.id, b])
   );
   const debtMap = new Map(
     (db.prepare(
@@ -430,11 +431,15 @@ export function makeTargetResolver(
       : (linked && linked.amount > 0 ? linked.amount : (linked ? 0 : (t?.monthly_amount || 0)));
     const target_cadence = goalByDate ? "by_date" : (linked ? "monthly" : (t?.cadence || "monthly"));
     const target_date = goalByDate ? (linkedGoal!.target_date) : (linked ? "" : (t?.target_date || ""));
-    const target_monthly = target_amount > 0
-      ? (target_cadence === "by_date"
-          ? byDateMonthlyTarget(target_amount, carry, month, target_date)
-          : monthlyTargetEquivalent(target_amount, target_cadence, month))
-      : 0;
+    // A linked bill sets aside amount / interval each month (quarterly bill -> a third every month),
+    // so the category has the full amount by the time the bill is due. Monthly bills are unchanged.
+    const target_monthly = linkedBill && linkedBill.amount > 0
+      ? billMonthlySetAside(linkedBill.amount, linkedBill)
+      : (target_amount > 0
+          ? (target_cadence === "by_date"
+              ? byDateMonthlyTarget(target_amount, carry, month, target_date)
+              : monthlyTargetEquivalent(target_amount, target_cadence, month))
+          : 0);
     const snooze_until_month = t?.snooze_until_month || "";
     const snoozed = snoozedSet.has(cat.id);
     const target_active = target_monthly > 0 && !snoozed && (!snooze_until_month || snooze_until_month < month);

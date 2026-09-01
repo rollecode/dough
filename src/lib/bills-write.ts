@@ -15,6 +15,15 @@ function normCadence(v: unknown): "monthly" | "yearly" {
 function clampMonth(v: unknown): number {
   return Math.min(12, Math.max(1, parseInt(String(v), 10) || 1));
 }
+function clampInterval(v: unknown): number {
+  const n = parseInt(String(v), 10);
+  return Number.isFinite(n) && n >= 1 ? Math.min(120, n) : 1;
+}
+// Interval in months from either the new interval_months or the legacy cadence flag.
+function resolveInterval(p: { interval_months?: number; cadence?: string }): number {
+  if (p.interval_months !== undefined) return clampInterval(p.interval_months);
+  return normCadence(p.cadence) === "yearly" ? 12 : 1;
+}
 function toAmount(v: unknown): number {
   return parseFloat(String(v).replace(",", "."));
 }
@@ -26,18 +35,20 @@ export interface BillCreate {
   category?: string;
   cadence?: string;
   due_month?: number;
+  interval_months?: number;
 }
 
 export function createBill(userId: number, p: BillCreate): { id: number } | { error: string } {
   if (!p.name || p.amount === undefined || p.amount === null || p.amount === "" || !p.due_day) {
     return { error: "name, amount and due_day required" };
   }
-  const cadence = normCadence(p.cadence);
-  const dueMonth = cadence === "yearly" ? clampMonth(p.due_month) : null;
+  const interval = resolveInterval(p);
+  const cadence = interval === 12 ? "yearly" : "monthly";
+  const dueMonth = interval > 1 ? clampMonth(p.due_month) : null;
   const db = getDb();
   const r = db.prepare(
-    "INSERT INTO recurring_bills (user_id, name, amount, due_day, category, cadence, due_month) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).run(userId, p.name, toAmount(p.amount), p.due_day, p.category || "", cadence, dueMonth);
+    "INSERT INTO recurring_bills (user_id, name, amount, due_day, category, cadence, due_month, interval_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(userId, p.name, toAmount(p.amount), p.due_day, p.category || "", cadence, dueMonth, interval);
   console.info("[bills] Created bill:", p.name, "id:", r.lastInsertRowid);
   eventBus.emit("data:updated", { source: "bill-added" });
   return { id: Number(r.lastInsertRowid) };
@@ -51,6 +62,7 @@ export interface BillUpdate {
   category?: string;
   cadence?: string;
   due_month?: number;
+  interval_months?: number;
   is_priority?: boolean;
   is_active?: boolean;
   mark_paid?: boolean;
@@ -89,10 +101,11 @@ export function updateBill(p: BillUpdate): { found: boolean } {
   }
   if (p.due_day !== undefined) { updates.push("due_day = ?"); values.push(p.due_day); }
   if (p.category !== undefined) { updates.push("category = ?"); values.push(p.category); }
-  if (p.cadence !== undefined) {
-    const cadence = normCadence(p.cadence);
-    updates.push("cadence = ?"); values.push(cadence);
-    updates.push("due_month = ?"); values.push(cadence === "yearly" ? clampMonth(p.due_month) : null);
+  if (p.interval_months !== undefined || p.cadence !== undefined) {
+    const interval = resolveInterval(p);
+    updates.push("interval_months = ?"); values.push(interval);
+    updates.push("cadence = ?"); values.push(interval === 12 ? "yearly" : "monthly");
+    updates.push("due_month = ?"); values.push(interval > 1 ? clampMonth(p.due_month) : null);
   } else if (p.due_month !== undefined) {
     updates.push("due_month = ?"); values.push(clampMonth(p.due_month));
   }

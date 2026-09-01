@@ -688,6 +688,14 @@ function initializeDb(db: Database.Database) {
     db.exec("ALTER TABLE recurring_bills ADD COLUMN due_month INTEGER");
   }
 
+  // Generalize cadence to "every N months": interval_months (1 = monthly, 3 = quarterly, 12 = yearly).
+  // Backfilled from the old cadence flag; due_month stays the anchor month-of-year for any interval > 1.
+  if (!billCols.some((c) => c.name === "interval_months")) {
+    console.info("[db] Adding interval_months column to recurring_bills");
+    db.exec("ALTER TABLE recurring_bills ADD COLUMN interval_months INTEGER NOT NULL DEFAULT 1");
+    db.exec("UPDATE recurring_bills SET interval_months = 12 WHERE cadence = 'yearly'");
+  }
+
   // Create chat_reactions table if missing
   const hasReactions = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_reactions'").get();
   if (!hasReactions) {

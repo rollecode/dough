@@ -12,7 +12,7 @@ export async function GET() {
 
     const db = getDb();
     const bills = db
-      .prepare("SELECT id, name, amount, due_day, category, is_active, is_priority, COALESCE(cadence, 'monthly') AS cadence, due_month FROM recurring_bills ORDER BY due_day ASC")
+      .prepare("SELECT id, name, amount, due_day, category, is_active, is_priority, COALESCE(cadence, 'monthly') AS cadence, due_month, COALESCE(interval_months, 1) AS interval_months FROM recurring_bills ORDER BY due_day ASC")
       .all() as any[];
 
     // Get matches for this month

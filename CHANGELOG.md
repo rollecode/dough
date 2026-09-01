@@ -1,3 +1,10 @@
+### 3.21.0: 2026-09-01
+
+* Bills can recur every N months, not just monthly or yearly
+* A linked bill sets aside amount / interval each month
+* Hide the centered wordmark on the mobile top bar
+* Outsider brand icon
+
 ### 3.20.0: 2026-09-01
 
 * Switch interface font to Google Sans

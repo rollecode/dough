@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { resolveDayThisMonth } from "@/lib/date-utils";
+import { isYearly, cadenceLabel } from "@/lib/bills";
 import { useLocale } from "@/lib/locale-context";
 import { useEvent } from "@/lib/use-events";
 import { Card } from "@/components/ui/card";
@@ -28,6 +29,7 @@ interface Bill {
   category: string;
   cadence: string;
   due_month: number | null;
+  interval_months: number;
   is_active: number;
   is_paid: boolean;
   is_manual_paid: boolean;
@@ -46,10 +48,10 @@ export default function BillsPage() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
-  const [addCadence, setAddCadence] = useState<"monthly" | "yearly">("monthly");
+  const [addInterval, setAddInterval] = useState(1);
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Bill | null>(null);
-  const [editCadence, setEditCadence] = useState<"monthly" | "yearly">("monthly");
+  const [editInterval, setEditInterval] = useState(1);
   const [patternOpen, setPatternOpen] = useState<number | null>(null);
   const [newPattern, setNewPattern] = useState("");
   const [patternMinAmount, setPatternMinAmount] = useState("");
@@ -91,8 +93,8 @@ export default function BillsPage() {
           amount: (fd.get("amount") as string).replace(",", "."),
           due_day: parseInt(fd.get("due_day") as string, 10),
           category: fd.get("category"),
-          cadence: fd.get("cadence") || "monthly",
-          due_month: fd.get("cadence") === "yearly" ? parseInt(fd.get("due_month") as string, 10) : null,
+          interval_months: parseInt(fd.get("interval_months") as string, 10) || 1,
+          due_month: (parseInt(fd.get("interval_months") as string, 10) || 1) > 1 ? parseInt(fd.get("due_month") as string, 10) : null,
         }),
       });
       setAddOpen(false);
@@ -115,8 +117,8 @@ export default function BillsPage() {
           amount: (fd.get("amount") as string).replace(",", "."),
           due_day: parseInt(fd.get("due_day") as string, 10),
           category: fd.get("category"),
-          cadence: fd.get("cadence") || "monthly",
-          due_month: fd.get("cadence") === "yearly" ? parseInt(fd.get("due_month") as string, 10) : null,
+          interval_months: parseInt(fd.get("interval_months") as string, 10) || 1,
+          due_month: (parseInt(fd.get("interval_months") as string, 10) || 1) > 1 ? parseInt(fd.get("due_month") as string, 10) : null,
         }),
       });
       setEditOpen(false);
@@ -218,7 +220,7 @@ export default function BillsPage() {
   const active = bills.filter((b) => b.is_active);
   // Yearly bills are not a monthly cost, so keep them out of the monthly total and the remaining
   // (unpaid) monthly amount; they surface only through the daily budget near their due date.
-  const monthlyActive = active.filter((b) => b.cadence !== "yearly");
+  const monthlyActive = active.filter((b) => !isYearly(b));
   const monthlyTotal = monthlyActive.reduce((s, b) => s + b.amount, 0);
   const remainingUnpaid = monthlyActive.filter((b) => !b.is_paid).reduce((s, b) => s + b.amount, 0);
   const overdueCount = active.filter((b) => b.is_overdue).length;
@@ -235,7 +237,7 @@ export default function BillsPage() {
           <h1 className="page-heading">{t.bills.title}</h1>
           <p className="page-subtitle">{t.bills.subtitle}</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (o) setAddCadence("monthly"); }}>
+        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (o) setAddInterval(1); }}>
           <DialogTrigger render={<Button size="sm" />}>
             <Plus className="icon-sm" />
             {t.bills.addBill}
@@ -259,15 +261,12 @@ export default function BillsPage() {
               </div>
               <div className="form-grid-2">
                 <div className="form-field">
-                  <Label>{locale === "fi" ? "Toistuvuus" : "Recurrence"}</Label>
-                  <select className="input" name="cadence" value={addCadence} onChange={(e) => setAddCadence(e.target.value as "monthly" | "yearly")}>
-                    <option value="monthly">{locale === "fi" ? "Kuukausittain" : "Monthly"}</option>
-                    <option value="yearly">{locale === "fi" ? "Vuosittain" : "Yearly"}</option>
-                  </select>
+                  <Label>{locale === "fi" ? "Toistuu (kk välein)" : "Repeat every (months)"}</Label>
+                  <Input name="interval_months" type="number" min="1" max="120" value={String(addInterval)} onChange={(e) => setAddInterval(Math.max(1, parseInt(e.target.value, 10) || 1))} />
                 </div>
-                {addCadence === "yearly" && (
+                {addInterval > 1 && (
                   <div className="form-field">
-                    <Label>{locale === "fi" ? "Erääntymiskuukausi" : "Due month"}</Label>
+                    <Label>{locale === "fi" ? "Seuraava erääntymiskuukausi" : "Next due month"}</Label>
                     <select className="input" name="due_month" defaultValue={String(new Date().getMonth() + 1)}>
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                         <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(locale === "fi" ? "fi-FI" : "en-US", { month: "long" })}</option>
@@ -316,7 +315,7 @@ export default function BillsPage() {
             <div key={bill.id} className="list-item list-item-col">
               <div
                 className="list-item-main"
-                onClick={() => { setEditTarget(bill); setEditCadence(bill.cadence === "yearly" ? "yearly" : "monthly"); setEditOpen(true); }}
+                onClick={() => { setEditTarget(bill); setEditInterval(bill.interval_months || 1); setEditOpen(true); }}
               >
                 <div className="list-item-body">
                   <div className="list-item-name-row">
@@ -329,8 +328,8 @@ export default function BillsPage() {
                     </button>
                   </div>
                   <p className="list-item-meta">
-                    {bill.category ? `${bill.category} · ` : ""}{locale === "fi" ? "Erääntyy" : t.bills.dueOn} {bill.cadence === "yearly" && bill.due_month
-                      ? `${bill.due_day}.${bill.due_month}. ${locale === "fi" ? "vuosittain" : "yearly"}`
+                    {bill.category ? `${bill.category} · ` : ""}{locale === "fi" ? "Erääntyy" : t.bills.dueOn} {isYearly(bill) && bill.due_month
+                      ? `${bill.due_day}.${bill.due_month}. (${cadenceLabel(bill, locale)})`
                       : `${resolveDayThisMonth(bill.due_day)}. ${t.bills.dayOfMonth}`}
                     {bill.patterns.length > 0 && (
                       <span className="list-item-patterns"> – {bill.patterns.map((p) => p.payee_pattern).join(", ")}</span>
@@ -392,15 +391,12 @@ export default function BillsPage() {
               </div>
               <div className="form-grid-2">
                 <div className="form-field">
-                  <Label>{locale === "fi" ? "Toistuvuus" : "Recurrence"}</Label>
-                  <select className="input" name="cadence" value={editCadence} onChange={(e) => setEditCadence(e.target.value as "monthly" | "yearly")}>
-                    <option value="monthly">{locale === "fi" ? "Kuukausittain" : "Monthly"}</option>
-                    <option value="yearly">{locale === "fi" ? "Vuosittain" : "Yearly"}</option>
-                  </select>
+                  <Label>{locale === "fi" ? "Toistuu (kk välein)" : "Repeat every (months)"}</Label>
+                  <Input name="interval_months" type="number" min="1" max="120" value={String(editInterval)} onChange={(e) => setEditInterval(Math.max(1, parseInt(e.target.value, 10) || 1))} />
                 </div>
-                {editCadence === "yearly" && (
+                {editInterval > 1 && (
                   <div className="form-field">
-                    <Label>{locale === "fi" ? "Erääntymiskuukausi" : "Due month"}</Label>
+                    <Label>{locale === "fi" ? "Seuraava erääntymiskuukausi" : "Next due month"}</Label>
                     <select className="input" name="due_month" defaultValue={String(editTarget.due_month || new Date().getMonth() + 1)}>
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                         <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(locale === "fi" ? "fi-FI" : "en-US", { month: "long" })}</option>

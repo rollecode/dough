@@ -36,11 +36,7 @@
 }
 
 .l-topbar-title {
-  font-family: var(--font-syne), var(--font-google-sans), sans-serif;
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--foreground);
+  display: none;
 }
 
 .l-topbar-btn {
