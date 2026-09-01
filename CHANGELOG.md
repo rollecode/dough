@@ -9,6 +9,7 @@
 * Stop the dashboard clipping popovers
 * Add pie mark beside the sidebar wordmark
 * Add real brand icons for subscription logos
+* Center list name rows, brighten priority toggles
 
 ### 3.19.2: 2026-09-01
 
