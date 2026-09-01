@@ -37,6 +37,16 @@ export const BRANDS: Record<string, { color: string; logo: string; svg?: string 
   "no-ip": { color: "#8fbe00", logo: "N", svg: "noip" },
   bookbeat: { color: "#CD96FF", logo: "B", svg: "bookbeat" },
   runna: { color: "#1E8C74", logo: "R", svg: "runna" },
+  torbox: { color: "#EC4899", logo: "T" },
+  cronometer: { color: "#F97316", logo: "C" },
+  "insight timer": { color: "#16A9C7", logo: "I" },
+  patreon: { color: "#FF424D", logo: "P" },
+  rungap: { color: "#E8552D", logo: "R" },
+  "pixel union": { color: "#5B57D1", logo: "P" },
+  trakt: { color: "#ED1C24", logo: "T" },
+  hostingby: { color: "#2563EB", logo: "H" },
+  mementomori: { color: "#6364FF", logo: "M" },
+  outsider: { color: "#D7263D", logo: "O" },
 };
 
 export function getBrandConfig(name: string): { color: string; logo: string; svg?: string; known: boolean } {

@@ -1,11 +1,14 @@
 ### 3.20.0: 2026-09-01
 
-* Switch the interface font to Google Sans, wired through its font variable so it actually applies (the old Geist reference never resolved and fell back to the system font)
-* Set the Dough wordmark to Syne bold
-* Cap interface weights at 600, render numbers at 700, and raise the minimum text size to 13px, keeping the spending-heatmap axis labels small so the calendar grid still fits
-* Drop the 0.125rem top margin that misaligned list, metric and trend icons
-* Let the dashboard show overflowing popovers instead of clipping them
-* Show the pie mark beside the wordmark in the expanded sidebar as a trimmed SVG, dropping its black background via a theme-aware mask
+* Switch interface font to Google Sans
+* Set the wordmark to Syne bold
+* Numbers at 700, other weights capped at 600
+* Raise minimum text size to 13px
+* Keep heatmap axis labels small
+* Fix icon top-margin misalignment
+* Stop the dashboard clipping popovers
+* Add pie mark beside the sidebar wordmark
+* Add ten subscription brand templates
 
 ### 3.19.2: 2026-09-01
 

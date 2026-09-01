@@ -171,14 +171,14 @@
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
 /* Pie mark as a theme-aware mask: painted in the foreground colour with the black background and the
    slice cuts dropped out, so it sits on the sidebar with no black box. */
 .l-sidebar-logo-mark {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   background-color: var(--foreground);
   -webkit-mask: url(/dough-mark.svg) center / contain no-repeat;
