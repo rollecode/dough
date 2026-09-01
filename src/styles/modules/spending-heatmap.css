@@ -45,7 +45,7 @@
 }
 
 .spending-heatmap-label {
-  font-size: 0.8125rem;
+  font-size: 0.55rem;
   color: var(--muted-foreground);
   height: 10px;
   min-height: 10px;
@@ -69,7 +69,7 @@
 }
 
 .spending-heatmap-month {
-  font-size: 0.8125rem;
+  font-size: 0.55rem;
   color: var(--muted-foreground);
   line-height: 1;
   white-space: nowrap;

@@ -36,9 +36,10 @@
 }
 
 .l-topbar-title {
+  font-family: var(--font-zalando-expanded), var(--font-google-sans), sans-serif;
   font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   color: var(--foreground);
 }
 
@@ -173,9 +174,10 @@
 }
 
 .l-sidebar-logo-text {
+  font-family: var(--font-zalando-expanded), var(--font-google-sans), sans-serif;
   font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   color: var(--foreground);
 }
 

@@ -1,11 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Google_Sans, Zalando_Sans_Expanded } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "@/styles/index.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const googleSans = Google_Sans({
+  variable: "--font-google-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+// Logo wordmark only.
+const zalandoExpanded = Zalando_Sans_Expanded({
+  variable: "--font-zalando-expanded",
+  subsets: ["latin"],
+  weight: ["600"],
   display: "swap",
 });
 
@@ -38,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.variable}>
+      <body className={`${googleSans.variable} ${zalandoExpanded.variable}`}>
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
