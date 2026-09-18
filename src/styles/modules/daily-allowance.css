@@ -248,21 +248,38 @@
   pointer-events: none;
   white-space: normal;
   opacity: 0;
-  visibility: hidden;
-  transition: opacity 150ms, visibility 150ms;
+  /* display:none, not visibility:hidden: a hidden-but-laid-out popup is 240px wide and anchored at
+     the icon, so on a phone its right edge sat past the viewport and widened the page. */
+  display: none;
+  transition: opacity 150ms, display 150ms allow-discrete;
+}
+
+/* Anchor to the icon's right edge so an open popup opens inwards and stays on screen. */
+.metric-card-label .metric-info-popup,
+.metric-card-label-info .metric-info-popup,
+.page-heading .metric-info-popup {
+  left: auto;
+  right: 0;
 }
 
 /* Mobile: show on tap via .is-open */
 .metric-info-wrap.is-open .metric-info-popup {
+  display: block;
   opacity: 1;
-  visibility: visible;
 }
 
 /* Desktop: show on hover */
 @media (hover: hover) {
   .metric-info-wrap:hover .metric-info-popup {
+    display: block;
     opacity: 1;
-    visibility: visible;
+  }
+}
+
+@starting-style {
+  .metric-info-wrap.is-open .metric-info-popup,
+  .metric-info-wrap:hover .metric-info-popup {
+    opacity: 0;
   }
 }
 

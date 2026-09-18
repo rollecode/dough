@@ -1,9 +1,11 @@
-### 3.21.0: 2026-09-01
+### 3.21.0: 2026-09-18
 
 * Bills can recur every N months, not just monthly or yearly
 * A linked bill sets aside amount / interval each month
 * Hide the centered wordmark on the mobile top bar
 * Outsider brand icon
+* Fix horizontal overflow from hidden info tooltips
+* Disable pinch zoom on mobile
 
 ### 3.20.0: 2026-09-01
 
