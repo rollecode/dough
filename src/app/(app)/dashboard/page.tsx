@@ -32,8 +32,9 @@ import { RefreshCw, Info } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fi as fiFns, enUS } from "date-fns/locale";
 
-// Chart colors for categories
-const CATEGORY_COLORS = ["#818cf8", "#4ade80", "#fbbf24", "#c084fc", "#f472b6", "#71717a"];
+// Chart colors for categories. Hues stay clear of green, amber and red so a spending slice
+// can never read as income or as a warning; the last slot is the neutral "other".
+const CATEGORY_COLORS = ["#239f9f", "#136491", "#6381f7", "#771bcc", "#b31a83", "#6b6a7c"];
 
 interface IncomeSource {
   id: number;

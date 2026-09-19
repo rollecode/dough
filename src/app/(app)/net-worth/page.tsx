@@ -447,8 +447,8 @@ export default function NetWorthPage() {
                         <stop offset="100%" stopColor="#4ade80" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="nwBaselineGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#818cf8" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#9f6ce9" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#9f6ce9" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
@@ -462,13 +462,13 @@ export default function NetWorthPage() {
                           <div className="chart-tooltip">
                             <p className="chart-tooltip-label">{label}</p>
                             <p className="chart-tooltip-value" style={{ color: "#4ade80" }}>{locale === "fi" ? "Varallisuus" : "Net worth"}: {fmt(Number(payload[0].value))} €</p>
-                            <p className="chart-tooltip-value" style={{ color: "#818cf8" }}>{locale === "fi" ? "Ilman tuottoa" : "Without returns"}: {fmt(Number(payload[1].value))} €</p>
+                            <p className="chart-tooltip-value" style={{ color: "#9f6ce9" }}>{locale === "fi" ? "Ilman tuottoa" : "Without returns"}: {fmt(Number(payload[1].value))} €</p>
                           </div>
                         ) : null
                       }
                     />
                     <Area type="monotone" dataKey="netWorth" stroke="#4ade80" strokeWidth={2} fill="url(#nwGrowthGrad)" />
-                    <Area type="monotone" dataKey="baseline" stroke="#818cf8" strokeWidth={1.5} fill="url(#nwBaselineGrad)" strokeDasharray="4 4" />
+                    <Area type="monotone" dataKey="baseline" stroke="#9f6ce9" strokeWidth={1.5} fill="url(#nwBaselineGrad)" strokeDasharray="4 4" />
                   </AreaChart>
                 </ResponsiveContainer>
               </ChartContainer>

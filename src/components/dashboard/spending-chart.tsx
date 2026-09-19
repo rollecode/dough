@@ -53,8 +53,8 @@ export function SpendingChart({ data }: SpendingChartProps) {
           <AreaChart data={data} margin={{ top: 10, right: 4, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="spentGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                <stop offset="0%" stopColor="#9f6ce9" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#9f6ce9" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="savingsTargetGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#4ade80" stopOpacity={0.1} />
@@ -67,7 +67,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
             {tt.reporter}
             <Tooltip {...tt.tooltipProps} content={<CustomTooltip />} trigger={tooltipTrigger} />
             <Area type="monotone" dataKey="savingsTarget" stroke="#4ade80" strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.5} fill="url(#savingsTargetGradient)" />
-            <Area type="monotone" dataKey="spent" stroke="#818cf8" strokeWidth={2} fill="url(#spentGradient)" />
+            <Area type="monotone" dataKey="spent" stroke="#9f6ce9" strokeWidth={2} fill="url(#spentGradient)" />
           </AreaChart>
         </ResponsiveContainer>
         </div>

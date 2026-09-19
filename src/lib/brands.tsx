@@ -53,7 +53,7 @@ export function getBrandConfig(name: string): { color: string; logo: string; svg
   for (const [key, config] of Object.entries(BRANDS)) {
     if (lower.includes(key)) return { ...config, known: true };
   }
-  return { color: "#6366f1", logo: name.charAt(0).toUpperCase(), known: false };
+  return { color: "#9f6ce9", logo: name.charAt(0).toUpperCase(), known: false };
 }
 
 // True when the name matches a known brand (so callers can skip the generic initial fallback)

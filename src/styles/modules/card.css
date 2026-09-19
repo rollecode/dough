@@ -6,13 +6,19 @@
   gap: 1rem;
   overflow: visible;
   border-radius: var(--radius);
+  /* Glass: a very low fill plus a blur of whatever sits behind, so the colour comes from the
+     app's background field rather than from the card. The sheen is a background layer, not a
+     pseudo-element, so cards keep their stacking context and popovers still escape them. */
   background-color: var(--glass-bg, var(--card));
+  background-image: var(--glass-sheen, none);
+  backdrop-filter: var(--glass-blur, none);
+  -webkit-backdrop-filter: var(--glass-blur, none);
   padding-top: 1rem;
   padding-bottom: 1rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: var(--card-foreground);
-  border: 1px solid transparent;
+  border: 1px solid var(--glass-border, transparent);
   transition: background-color 200ms;
 }
 

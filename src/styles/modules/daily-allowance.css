@@ -23,8 +23,6 @@
   overflow: visible;
   border: none;
   background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   padding: 0 0.25rem;
   grid-column: 1 / -1;
   gap: 0;
@@ -115,17 +113,14 @@
 
 /* Metric cards — minimal, no icon boxes */
 .card.metric-card {
-  border: none;
-  background: var(--glass-bg, rgba(255, 255, 255, 0.02));
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  border: 1px solid var(--glass-border, transparent);
+  background-color: var(--glass-bg, rgba(255, 255, 255, 0.02));
   padding: 0.875rem;
   gap: 0;
 }
 
 .card.metric-card:hover {
   background: var(--glass-hover, rgba(255, 255, 255, 0.04));
-  border-color: transparent;
 }
 
 @media (min-width: 768px) {

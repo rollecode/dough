@@ -1,6 +1,6 @@
 {
   "name": "dough",
-  "version": "3.21.1",
+  "version": "4.0.0-rc",
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3030",

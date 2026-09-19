@@ -2,8 +2,7 @@
 
 .card.debt-donut-card {
   border: none;
-  background: var(--glass-bg, rgba(255, 255, 255, 0.02));
-  backdrop-filter: none;
+  background-color: var(--glass-bg, rgba(255, 255, 255, 0.02));
   padding: 0.75rem;
   gap: 0;
 }

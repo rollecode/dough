@@ -4,7 +4,6 @@
 .card.net-worth-hero {
   border: none;
   background: transparent;
-  backdrop-filter: none;
   padding: 0 0.25rem;
   gap: 0.125rem;
   grid-column: 1 / -1;
@@ -74,8 +73,7 @@
 /* Metric cards — minimal */
 .card.net-worth-card {
   border: none;
-  background: var(--glass-bg, rgba(255, 255, 255, 0.02));
-  backdrop-filter: none;
+  background-color: var(--glass-bg, rgba(255, 255, 255, 0.02));
   padding: 0.75rem;
   gap: 0;
 }
@@ -142,8 +140,7 @@
 /* Investment list */
 .card.net-worth-list {
   border: none;
-  background: var(--glass-bg, rgba(255, 255, 255, 0.02));
-  backdrop-filter: none;
+  background-color: var(--glass-bg, rgba(255, 255, 255, 0.02));
   padding: 0.75rem;
   gap: 0.5rem;
 }

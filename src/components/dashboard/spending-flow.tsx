@@ -155,7 +155,7 @@ export function SpendingFlow({
   const todayTarget = cumulativeToToday > 0 ? Math.round(cumulativeToToday) : 0;
   const todayDiff = todayTarget - lastActual;
   const todayRatio = todayTarget > 0 ? lastActual / todayTarget : 0;
-  const ballColor = targetPerDay > 0 ? ratioToColor(todayRatio) : "#818cf8";
+  const ballColor = targetPerDay > 0 ? ratioToColor(todayRatio) : "#9f6ce9";
 
   const gradientStops = data.filter((d) => d.actual !== undefined).map((d, i, arr) => {
     const pos = arr.length > 1 ? i / (arr.length - 1) : 0.5;

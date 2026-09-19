@@ -3505,7 +3505,7 @@
   gap: 0.5rem;
   padding: 0.5rem 0.625rem;
   border-radius: 0.375rem;
-  background: var(--glass-bg, rgba(255, 255, 255, 0.02));
+  background-color: var(--glass-bg, rgba(255, 255, 255, 0.02));
   border: 1px solid var(--border);
 }
 

@@ -135,6 +135,8 @@
   flex-direction: column;
   border-right: 1px solid var(--border);
   background-color: var(--sidebar);
+  backdrop-filter: var(--glass-blur, none);
+  -webkit-backdrop-filter: var(--glass-blur, none);
   transition: transform 150ms ease, width 150ms ease;
   width: 240px;
   transform: translateX(-100%);

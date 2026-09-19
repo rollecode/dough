@@ -1,3 +1,11 @@
+### 4.0.0-rc: 2026-09-19
+
+* Glass surfaces: cards blur the background field behind them
+* Three soft colour fields replace the flat indigo glow
+* Replace indigo with violet across the interface
+* New category colours, checked for colour-blind separation
+* Categories no longer borrow green, amber or red
+
 ### 3.21.1: 2026-09-19
 
 * Stop accidental double-tap zoom on mobile
