@@ -1,36 +1,24 @@
+### 4.0.1: 2026-09-19
+
+* Fix budget popovers opening behind other cards
+* Fix version footer alignment
+
 ### 4.0.0: 2026-09-19
 
-* Glass surfaces: cards blur the background field behind them
-* Three soft colour fields replace the flat indigo glow
-* Replace indigo with violet across the interface
-* New category colours, checked for colour-blind separation
-* Categories no longer borrow green, amber or red
-* Card edges are a pointer-lit rim instead of a border
-* Hover refracts the background rather than lighting the card
-* Savings streak reads as a seven-day bar chart
-* Burn rate gains a fourteen-day chart with its average
-* Metric cards sit two per row on mobile
-* Daily budget and net worth heroes stay outside the glass
-* Allow LAN hosts to load dev assets via DEV_ORIGINS
-* Top categories donut scales with the card
-* Donut lines up with the card heading
-* Paid and received badges are green again
-* Spent tooltip matches its chart line
-* View all link is quiet instead of coloured
-* Trend card shows the three biggest movers as bars
-* Trend categories link to their budget row
-* Month status compares income and expenses as bars
-* Savings streak and burn rate share one history fetch
-* Chart callout bubbles fit their label
-* Demo data seed for screenshots and trying the app
-* DOUGH_DB_PATH points the app at another database
-* Dashboard drops to one column before cards overflow
-* Spending heatmap runs green for quiet days, red for heavy ones
-* Heatmap fetches the full window its grid draws
-* Collapsing the nav gives its space back to the page
-* The logo collapses the nav, arrow shows on hover
-* More room around the page on desktop
-* Nav edges are barely there
+* Redesign the interface in glass
+* Replace indigo with violet
+* New category colours that work for colour blindness
+* Keep green, amber and red for money direction only
+* Colour the spending heatmap green to red
+* Chart the savings streak, burn rate and month status
+* Show the three biggest category movers
+* Link trend categories to the budget
+* Scale the top categories donut to the card
+* Collapse the nav from the logo
+* Give the page more room on desktop
+* Drop to one column before cards overflow
+* Add demo data for screenshots
+* Add DOUGH_DB_PATH to pick a database
 
 ### 3.21.1: 2026-09-19
 

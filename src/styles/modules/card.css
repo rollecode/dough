@@ -19,6 +19,9 @@
   color: var(--card-foreground);
   border: none;
   position: relative;
+  /* isolate: keep the negative z-index decoration inside this card instead of letting it fall
+     behind the page background. */
+  isolation: isolate;
   transition: background-color 200ms, backdrop-filter 200ms;
 }
 
@@ -40,7 +43,7 @@
   mask-composite: exclude;
   -webkit-mask-composite: xor;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 /* The liquid. A second layer of backdrop-filter, masked to two soft blobs whose size and position
@@ -70,7 +73,7 @@
   pointer-events: none;
   transition: opacity 700ms ease;
   animation: glass-liquid 19s ease-in-out infinite alternate;
-  z-index: 0;
+  z-index: -1;
 }
 
 @keyframes glass-liquid {
@@ -116,10 +119,14 @@
   }
 }
 
-/* Card content sits above the rim and the specular. */
-.card > * {
-  position: relative;
-  z-index: 1;
+/* Glass makes every card its own stacking context, so a popup inside one cannot paint over the
+   card below it however high its z-index. Lift the whole card while it holds an open popup. */
+.card:has(.budget-autoassign-menu),
+.card:has(.budget-cover-popover),
+.card:has(.budget-calc-popover),
+.card:has(.metric-info-wrap.is-open),
+.card:has(.dropdown-menu-content) {
+  z-index: 50;
 }
 
 .card:has([data-slot="card-footer"]) {
