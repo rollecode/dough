@@ -10,8 +10,9 @@ export async function GET() {
 
     const db = getDb();
     const now = new Date();
-    // 10 months back
-    const since = new Date(now.getFullYear(), now.getMonth() - 9, 1);
+    // The grid draws 44 weeks, a little over ten months, so fetch eleven months back from the start
+    // of the month. Anything shorter leaves empty cells on the left of the chart.
+    const since = new Date(now.getFullYear(), now.getMonth() - 10, 1);
     const sinceDate = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-01`;
 
     const transactions = db.prepare(

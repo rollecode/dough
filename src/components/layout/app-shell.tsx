@@ -10,6 +10,7 @@ import { useLocale } from "@/lib/locale-context";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const { t, privacyMode, setPrivacyMode } = useLocale();
 
   return (
@@ -43,9 +44,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onClose={() => setSidebarOpen(false)}
         privacyMode={privacyMode}
         onTogglePrivacy={() => setPrivacyMode(!privacyMode)}
+        collapsed={navCollapsed}
+        onToggleCollapsed={() => setNavCollapsed((v) => !v)}
       />
 
-      <main className="l-main">
+      <main className="l-main" data-collapsed={navCollapsed || undefined}>
         <div className="l-page-container">
           {children}
         </div>

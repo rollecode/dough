@@ -49,12 +49,15 @@ interface SidebarProps {
   onClose: () => void;
   privacyMode?: boolean;
   onTogglePrivacy?: () => void;
+  /* Owned by the shell: the main area has to shrink its padding with the rail, or the content keeps
+     a 240px gutter next to a 68px sidebar. */
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
-export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy, collapsed, onToggleCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
   const [unreadChat, setUnreadChat] = useState(0);
   const [unreadTx, setUnreadTx] = useState(0);
   const [overspent, setOverspent] = useState(0);
@@ -135,23 +138,21 @@ export function Sidebar({ isOpen, onClose, privacyMode, onTogglePrivacy }: Sideb
       className={cn("l-sidebar", isOpen && "is-open")}
       data-collapsed={collapsed || undefined}
     >
-      {/* Logo */}
+      {/* Logo doubles as the collapse control: the arrow only appears on hover, so the rail keeps
+          its wordmark rather than a permanent button. */}
       <div className="l-sidebar-logo">
-        <Link href="/dashboard" onClick={handleNavClick} className="l-sidebar-logo-link">
-          {collapsed ? (
-            <span className="l-sidebar-logo-mark" role="img" aria-label="Dough" />
-          ) : (
-            <>
-              <span className="l-sidebar-logo-mark" role="img" aria-label="Dough" />
-              <span className="l-sidebar-logo-text">Dough</span>
-            </>
-          )}
-        </Link>
         <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="l-sidebar-collapse-btn"
+          type="button"
+          className="l-sidebar-logo-link"
+          onClick={onToggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? (locale === "fi" ? "Laajenna valikko" : "Expand menu") : (locale === "fi" ? "Kutista valikko" : "Collapse menu")}
         >
-          {collapsed ? <ChevronRight className="l-sidebar-collapse-icon" /> : <ChevronLeft className="l-sidebar-collapse-icon" />}
+          <span className="l-sidebar-logo-mark" role="img" aria-label="Dough" />
+          {!collapsed && <span className="l-sidebar-logo-text">Dough</span>}
+          <span className="l-sidebar-logo-chevron" aria-hidden="true">
+            {collapsed ? <ChevronRight className="l-sidebar-collapse-icon" /> : <ChevronLeft className="l-sidebar-collapse-icon" />}
+          </span>
         </button>
       </div>
 

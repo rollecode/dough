@@ -111,20 +111,22 @@
   background: color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
+/* Diverging, not sequential: a quiet day is a good day, so the low end is green, the middle is a
+   neutral grey and only the heavy days climb into red. Every step clears 3:1 on the surface. */
 .spending-heatmap-cell.heatmap-level-1 {
-  background: #a15554;
+  background: #4d9965;
 }
 
 .spending-heatmap-cell.heatmap-level-2 {
-  background: #c27370;
+  background: #5f636f;
 }
 
 .spending-heatmap-cell.heatmap-level-3 {
-  background: #e3918e;
+  background: #b25e5c;
 }
 
 .spending-heatmap-cell.heatmap-level-4 {
-  background: #ffb1ad;
+  background: #eb817f;
 }
 
 /* Tooltip — rendered outside scroll container, positioned via JS */

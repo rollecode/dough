@@ -40,6 +40,7 @@
   --sidebar-accent: #f4f4f5;
   --sidebar-accent-foreground: #09090b;
   --sidebar-border: #e4e4e7;
+  --chrome-border: rgba(0, 0, 0, 0.05);
   --sidebar-ring: #7b2dcd;
 }
 
@@ -99,6 +100,8 @@
   --glass-hover: rgba(255, 255, 255, 0.022);
   /* Divider-weight edge, for rules inside cards — the card's own edge is the rim below. */
   --glass-border: rgba(255, 255, 255, 0.07);
+  /* Chrome edges: present enough to separate the rail from the page, not enough to read as a rule. */
+  --chrome-border: rgba(255, 255, 255, 0.03);
   --glass-blur: blur(44px) saturate(190%) brightness(1.05);
   --glass-blur-hover: blur(54px) saturate(220%) brightness(1.09);
   /* The rim is a 1px ring drawn by a pseudo-element, brightest where the pointer is. */

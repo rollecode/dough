@@ -1,4 +1,4 @@
-### 4.0.0-rc: 2026-09-19
+### 4.0.0: 2026-09-19
 
 * Glass surfaces: cards blur the background field behind them
 * Three soft colour fields replace the flat indigo glow
@@ -25,6 +25,12 @@
 * Demo data seed for screenshots and trying the app
 * DOUGH_DB_PATH points the app at another database
 * Dashboard drops to one column before cards overflow
+* Spending heatmap runs green for quiet days, red for heavy ones
+* Heatmap fetches the full window its grid draws
+* Collapsing the nav gives its space back to the page
+* The logo collapses the nav, arrow shows on hover
+* More room around the page on desktop
+* Nav edges are barely there
 
 ### 3.21.1: 2026-09-19
 

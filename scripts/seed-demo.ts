@@ -45,9 +45,9 @@ const iso = (d: Date) =>
 const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
 const ACCOUNTS = [
-  { id: "acc-checking", name: "Käyttötili", type: "checking", balance: 2480.35, on_budget: 1 },
+  { id: "acc-checking", name: "Käyttötili", type: "checking", balance: 3100.4, on_budget: 1 },
   { id: "acc-savings", name: "Säästötili", type: "savings", balance: 7415.0, on_budget: 1 },
-  { id: "acc-card", name: "Luottokortti", type: "creditCard", balance: -642.18, on_budget: 1 },
+  { id: "acc-card", name: "Luottokortti", type: "creditCard", balance: -641.9, on_budget: 1 },
   { id: "acc-buffer", name: "Puskuritili", type: "savings", balance: 1850.0, on_budget: 1 },
   { id: "acc-invest", name: "Indeksirahasto", type: "otherAsset", balance: 8450.0, on_budget: 0 },
   { id: "acc-fund", name: "Korkorahasto", type: "otherAsset", balance: 2890.0, on_budget: 0 },
@@ -111,6 +111,32 @@ const BUDGET_GROUPS: Record<string, string> = {
   Tilaukset: "Kiinteät",
 };
 
+// The dashboard's main chart colours the line by cumulative spending against the target pace, so a
+// flat spend rate paints one colour for the whole month. These factors bend the rate: the current
+// month starts frugal, runs level through the middle and overshoots at the end, which is what makes
+// the line travel green to amber to red. Past months take turns finishing under, level and over so
+// the history charts are not uniform either.
+const MONTH_OUTCOME = [0.86, 1.14, 0.97, 1.2, 0.83, 1.02, 1.18, 0.88, 1.05, 0.92, 1.12, 0.95];
+
+function paceFactor(date: Date, today: Date): number {
+  const isCurrentMonth =
+    date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth();
+
+  if (!isCurrentMonth) {
+    const monthsBack =
+      (today.getFullYear() - date.getFullYear()) * 12 + (today.getMonth() - date.getMonth());
+    return MONTH_OUTCOME[monthsBack % MONTH_OUTCOME.length];
+  }
+
+  // Through the current month: well under for the first week, on the line in the middle, over by the
+  // end, so today's marker sits somewhere the colour has already changed twice.
+  const daysIn = date.getDate();
+  if (daysIn <= 7) return 0.5;
+  if (daysIn <= 14) return 0.95;
+  if (daysIn <= 21) return 1.35;
+  return 1.55;
+}
+
 async function main() {
   const { getDb } = await import("../src/lib/db");
   const db = getDb();
@@ -132,6 +158,9 @@ async function main() {
     ["budget_threshold_normal", "30"],
     ["budget_threshold_good", "50"],
     ["budget_include_bills", "auto"],
+    // Savings and the buffer are not day to day money, so they stay out of the daily budget. Without
+    // this the whole balance is treated as spendable and the daily figure reads several hundred.
+    ["budget_excluded_accounts", JSON.stringify(["acc-savings", "acc-buffer"])],
     ["last_ynab_sync", new Date(now.getTime() - 3 * 60000).toISOString()],
   ];
   const putSetting = db.prepare("INSERT OR REPLACE INTO household_settings (key, value) VALUES (?, ?)");
@@ -209,12 +238,14 @@ async function main() {
     const day = d.getDate();
     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
 
-    // Everyday purchases. Weekends run a little busier, as they do.
-    const purchases = Math.floor(between(isWeekend ? 2 : 1, isWeekend ? 5 : 4));
+    // Everyday purchases. Weekends run a little busier, as they do, and the month's pace bends the
+    // rate so the spending line crosses its target instead of sitting on one side of it.
+    const pace = paceFactor(d, now);
+    const purchases = Math.round(between(isWeekend ? 2 : 1, isWeekend ? 5 : 4) * pace);
     for (let i = 0; i < purchases; i++) {
       let roll = rnd() * totalWeight;
       const bucket = SPEND.find((c) => (roll -= c.weight) <= 0) ?? SPEND[0];
-      const amount = -round2(between(bucket.lo, bucket.hi));
+      const amount = -round2(between(bucket.lo, bucket.hi) * pace);
       putTx.run(userId, nextId(), date, amount, pick(bucket.payees), bucket.cat, 0, pick(["acc-checking", "acc-card"]));
       bump(month, 0, -amount, bucket.cat, -amount);
     }
