@@ -1,3 +1,7 @@
+### 4.0.3: 2026-09-20
+
+* Actually hide metric card icons on mobile
+
 ### 4.0.2: 2026-09-20
 
 * Smaller top categories donut on mobile

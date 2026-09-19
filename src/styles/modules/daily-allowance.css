@@ -164,9 +164,11 @@
   height: 1.125rem;
 }
 
-/* The label already says what the figure is; on a phone the icon column only costs width. */
+/* The label already says what the figure is; on a phone the icon column only costs width.
+   Selected through the row because `.metric-card-row > div` sets display on the same element and
+   outranks a lone class. */
 @media (max-width: 767px) {
-  .metric-card-icon {
+  .metric-card-row > .metric-card-icon {
     display: none;
   }
 }
