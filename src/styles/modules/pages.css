@@ -2349,8 +2349,10 @@
   height: 0.625rem;
 }
 
-.badge-matched {
-  background-color: color-mix(in srgb, var(--positive) 10%, transparent);
+/* Two classes: the default badge variant sets a colour at the same specificity, and a paid or
+   received badge states an outcome, so it wears the positive colour rather than the brand one. */
+.badge.badge-matched {
+  background-color: color-mix(in srgb, var(--positive) 12%, transparent);
   color: var(--positive);
   border: none;
 }

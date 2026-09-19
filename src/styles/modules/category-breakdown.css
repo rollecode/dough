@@ -38,14 +38,27 @@
 @media (min-width: 640px) {
   .category-breakdown-body {
     flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1.75rem;
   }
 }
 
+/* The donut gives way instead of the legend: it takes a share of the card and keeps its square
+   ratio, so both sit side by side however narrow the column gets. */
 .category-breakdown-donut {
   position: relative;
-  height: 280px;
   width: 280px;
+  height: 280px;
   flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .category-breakdown-donut {
+    width: clamp(10rem, 42%, 17.5rem);
+    height: auto;
+    aspect-ratio: 1;
+  }
 }
 
 @media (max-width: 639px) {
@@ -82,19 +95,28 @@
 }
 
 .category-breakdown-legend {
-  flex: 1;
+  flex: 0 1 auto;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
 }
 
+@media (min-width: 640px) {
+  .category-breakdown-legend {
+    /* Capped so a name and its amount stay paired rather than sitting at opposite card edges. */
+    width: auto;
+    min-width: 0;
+    max-width: 22rem;
+    flex: 1 1 auto;
+  }
+}
+
 .category-breakdown-legend-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding-right: 0.25rem;
+  gap: 2rem;
 }
 
 .category-breakdown-legend-name {

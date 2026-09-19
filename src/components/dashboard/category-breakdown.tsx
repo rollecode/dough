@@ -44,7 +44,7 @@ export function CategoryBreakdown({ categories, total, currency = "€" }: Categ
           <ChartContainer height={280}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={categories} cx="50%" cy="50%" innerRadius={75} outerRadius={125} paddingAngle={2} dataKey="amount">
+                <Pie data={categories} cx="50%" cy="50%" innerRadius="60%" outerRadius="100%" paddingAngle={2} dataKey="amount">
                   {categories.map((entry, index) => (
                     <Cell key={index} fill={entry.color} stroke="transparent" />
                   ))}

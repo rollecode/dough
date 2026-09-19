@@ -12,6 +12,11 @@
 * Metric cards sit two per row on mobile
 * Daily budget and net worth heroes stay outside the glass
 * Allow LAN hosts to load dev assets via DEV_ORIGINS
+* Top categories donut scales with the card
+* Donut lines up with the card heading
+* Paid and received badges are green again
+* Spent tooltip matches its chart line
+* View all link is quiet instead of coloured
 
 ### 3.21.1: 2026-09-19
 
