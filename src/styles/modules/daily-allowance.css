@@ -266,12 +266,18 @@
   transition: opacity 150ms, display 150ms allow-discrete;
 }
 
-/* Anchor to the icon's right edge so an open popup opens inwards and stays on screen. */
+/* Open inwards from whichever edge the trigger sits near. In a metric card the icon is close to the
+   right edge, so the popup hangs off its right; the page heading's icon is at the far left, where
+   right anchoring pushed the popup off the side of the screen. */
 .metric-card-label .metric-info-popup,
-.metric-card-label-info .metric-info-popup,
-.page-heading .metric-info-popup {
+.metric-card-label-info .metric-info-popup {
   left: auto;
   right: 0;
+}
+
+.page-heading .metric-info-popup {
+  left: 0;
+  right: auto;
 }
 
 /* Mobile: show on tap via .is-open */

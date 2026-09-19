@@ -1,3 +1,8 @@
+### 4.0.4: 2026-09-20
+
+* Savings streak counts what you actually spent
+* Keep the summary tooltip on screen
+
 ### 4.0.3: 2026-09-20
 
 * Actually hide metric card icons on mobile

@@ -34,6 +34,7 @@ interface DailyAllowanceProps {
     dailyBudget: number;
     todaySpent: number;
     discretionaryTarget?: number;
+    spentByDate?: Record<string, number>;
   };
   thresholds?: { tight: number; normal: number; good: number };
   budgetBreakdown?: {

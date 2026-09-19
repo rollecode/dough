@@ -10,9 +10,11 @@ interface SavingsStreakProps {
   dailyBudget: number;
   todaySpent: number;
   discretionaryTarget?: number;
+  /* Real spend per date, which outranks the stored snapshot for any day it covers. */
+  spentByDate?: Record<string, number>;
 }
 
-export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget }: SavingsStreakProps) {
+export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget, spentByDate }: SavingsStreakProps) {
   const { locale, fmt } = useLocale();
   const history = useDailyHistory();
   const savedRef = useRef(false);
@@ -55,12 +57,17 @@ export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget }: 
       continue;
     }
 
-    if (entry.budget > 0 && entry.spent <= entry.budget) {
+    // The stored row is a snapshot taken whenever the dashboard was last open that day, so it can
+    // sit at zero for a day that had spending. Transactions are the record; fall back to the
+    // snapshot only for days they do not reach.
+    const spent = spentByDate?.[dateStr] ?? entry.spent;
+
+    if (entry.budget > 0 && spent <= entry.budget) {
       currentStreak++;
-      days.push({ day: dayNum, month: monthNum, status: "fire", budget: entry.budget, spent: entry.spent });
+      days.push({ day: dayNum, month: monthNum, status: "fire", budget: entry.budget, spent });
     } else {
       currentStreak = 0;
-      days.push({ day: dayNum, month: monthNum, status: "fail", budget: entry.budget, spent: entry.spent });
+      days.push({ day: dayNum, month: monthNum, status: "fail", budget: entry.budget, spent });
     }
   }
 

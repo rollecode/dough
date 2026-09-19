@@ -285,6 +285,15 @@ export default function DashboardPage() {
   const todaySpentAll = data.transactions
     .filter((t) => t.date === todayStr && t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
+  // Actual discretionary spend per date. The streak prefers this over daily_budget_history, whose
+  // rows are snapshots written while the dashboard happened to be open: open it in the morning,
+  // spend in the evening, and the row stays at zero for a day that had spending on it.
+  const spentByDate: Record<string, number> = {};
+  for (const t of data.transactions) {
+    if (t.amount >= 0 || t.excluded || isTransfer(t.payee, t.category) || isFixedCost(t.payee, t.category)) continue;
+    spentByDate[t.date] = (spentByDate[t.date] ?? 0) + Math.abs(t.amount);
+  }
+
   const todaySpentPersonal = data.transactions
     .filter((t) => t.date === todayStr && t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category)
       && (linkedAccountIds.length === 0 || linkedAccountIds.includes(t.account_id || "")))
@@ -712,7 +721,7 @@ export default function DashboardPage() {
         monthExpenses={monthExpensesEstimate}
         trendPercent={trendPercent}
         budgetBreakdown={budgetResult.tightestSegment}
-        streakProps={{ dailyBudget, todaySpent: todaySpentAll, discretionaryTarget: discretionaryTargetPerDay }}
+        streakProps={{ dailyBudget, todaySpent: todaySpentAll, discretionaryTarget: discretionaryTargetPerDay, spentByDate }}
       />
 
       <div className="page-grid-2">
