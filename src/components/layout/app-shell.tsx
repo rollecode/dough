@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { FabAddExpense } from "./fab-add-expense";
+import { OverflowReporter } from "./overflow-reporter";
 import { AppVersion } from "./app-version";
 import { PanelLeft, Eye, EyeOff } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
@@ -13,6 +14,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={`l-app-shell ${privacyMode ? "privacy-mode" : ""}`}>
+      <OverflowReporter />
       {/* Mobile top bar */}
       <div className="l-topbar">
         <button

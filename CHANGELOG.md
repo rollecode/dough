@@ -1,3 +1,8 @@
+### 3.21.1: 2026-09-19
+
+* Stop accidental double-tap zoom on mobile
+* Log sideways pans to find the mobile overflow
+
 ### 3.21.0: 2026-09-18
 
 * Bills can recur every N months, not just monthly or yearly
