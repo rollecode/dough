@@ -5,7 +5,7 @@
 ![Claude](https://img.shields.io/badge/Claude_AI-cc785c?style=for-the-badge&logo=anthropic&logoColor=white)
 <img width="80" height="28" alt="YNAB" src="https://github.com/user-attachments/assets/c7300ced-3496-4604-ad5d-22cd60f73276" /> 
 
-A self-hosted personal finance dashboard for households. It runs on its own - managing your accounts, transactions, and envelope budgeting - or connected to [YNAB](https://www.ynab.com/). It uses [Claude](https://code.claude.com/docs/en/cli-reference) for financial advice, spending summaries, transaction categorization, and debt strategies.
+A self-hosted personal finance dashboard for households. It runs on its own - managing your accounts, transactions, and envelope budgeting - or connected to [YNAB](https://www.ynab.com/). It uses [Claude](https://code.claude.com/docs/en/cli-reference) for financial advice, spending summaries, transaction categorization, and debt strategies. **Now with [MCP!](https://github.com/rollecode/dough-mcp)**
 
 <img width="3138" height="1736" alt="192 168 2 69_3030_dashboard (3)" src="https://github.com/user-attachments/assets/3926c5b6-2e94-4524-a0e2-cb863c0bd2c7" />
 
