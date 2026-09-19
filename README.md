@@ -7,7 +7,7 @@
 
 A self-hosted personal finance dashboard for households. It runs on its own - managing your accounts, transactions, and envelope budgeting - or connected to [YNAB](https://www.ynab.com/). It uses [Claude](https://code.claude.com/docs/en/cli-reference) for financial advice, spending summaries, transaction categorization, and debt strategies. **Now with [MCP!](https://github.com/rollecode/dough-mcp)**
 
-<img width="932" height="679" alt="image" src="https://github.com/user-attachments/assets/8d576986-fc44-4a85-9048-5ca3fa52433a" />
+<img width="1891" height="1376" alt="Dough v4 close up screenshot" src="https://github.com/user-attachments/assets/59700290-fdba-4772-aa51-e04d977831ef" />
 
 ## Why Dough
 
