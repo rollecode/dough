@@ -51,7 +51,7 @@ export function SpendingTrends({ trends }: SpendingTrendsProps) {
   return (
     <Card className="spending-trends-card">
       <div className="spending-trends-head">
-        <h3 className="spending-trends-title">{locale === "fi" ? "Trendi" : "Trend"}</h3>
+        <h3 className="spending-trends-title"><Link href="/budget" className="card-title-link">{locale === "fi" ? "Trendi" : "Trend"}</Link></h3>
         <span className="spending-trends-summary">
           {locale === "fi"
             ? `${mask(rising)} nousussa, ${mask(movers.length - rising)} laskussa`

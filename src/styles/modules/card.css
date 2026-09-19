@@ -230,3 +230,20 @@
 .card[data-size="sm"] .card-footer {
   padding: 0.75rem;
 }
+
+/* A card heading that opens the page it summarises. It carries no link colour: the card is already
+   the affordance, and a blue title in every card would shout. */
+.card-title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+@media (hover: hover) {
+  .card-title-link:hover {
+    color: var(--foreground);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--glass-border);
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
@@ -46,7 +47,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
 
   return (
     <Card className="spending-chart-card">
-      <h3 className="spending-chart-title">{t.dashboard.spendingThisMonth}</h3>
+      <h3 className="spending-chart-title"><Link href="/transactions" className="card-title-link">{t.dashboard.spendingThisMonth}</Link></h3>
       <ChartContainer height={280}>
         <div {...tt.wrapperProps}>
         <ResponsiveContainer width="100%" height="100%">

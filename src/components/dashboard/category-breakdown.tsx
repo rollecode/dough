@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
 import { ChartContainer } from "@/components/ui/chart-container";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
@@ -38,7 +39,7 @@ export function CategoryBreakdown({ categories, total, currency = "€" }: Categ
 
   return (
     <Card className="category-breakdown-card">
-      <h3 className="category-breakdown-title">{t.dashboard.topCategories}</h3>
+      <h3 className="category-breakdown-title"><Link href="/budget" className="card-title-link">{t.dashboard.topCategories}</Link></h3>
       <div className="category-breakdown-body">
         <div className="category-breakdown-donut">
           <ChartContainer height={280}>

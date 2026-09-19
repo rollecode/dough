@@ -1,3 +1,9 @@
+### 4.1.0: 2026-09-20
+
+* Open the matching page from a dashboard card
+* Keep info tooltips inside the screen
+* Spell out days in age of money
+
 ### 4.0.4: 2026-09-20
 
 * Savings streak counts what you actually spent

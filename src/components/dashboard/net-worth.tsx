@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { useLocale } from "@/lib/locale-context";
 import { F } from "@/components/ui/f";
@@ -38,7 +39,7 @@ export function NetWorth({ accounts }: NetWorthProps) {
     <div className="net-worth-section">
       <div className="net-worth-grid">
         <Card className="net-worth-hero">
-          <p className="net-worth-hero-label">{t.dashboard.netWorth}</p>
+          <Link href="/net-worth" className="net-worth-hero-label card-title-link">{t.dashboard.netWorth}</Link>
           <p className="net-worth-hero-value" data-positive={netWorth >= 0 || undefined}>
             <F v={netWorth} />
           </p>
@@ -90,7 +91,7 @@ export function NetWorth({ accounts }: NetWorthProps) {
                 </div>
                 <div>
                   <p className="net-worth-card-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</p>
-                  <p className={`net-worth-card-value ${tone}`}>{ageOfMoney} {locale === "fi" ? "pv" : "days"}</p>
+                  <p className={`net-worth-card-value ${tone}`}>{ageOfMoney} {locale === "fi" ? (ageOfMoney === 1 ? "päivä" : "päivää") : (ageOfMoney === 1 ? "day" : "days")}</p>
                 </div>
               </div>
             </Card>

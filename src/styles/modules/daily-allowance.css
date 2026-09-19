@@ -255,7 +255,7 @@
   padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
   width: max-content;
-  max-width: min(15rem, calc(100vw - 2rem));
+  max-width: min(15rem, calc(100vw - 1.5rem));
   z-index: 50;
   pointer-events: none;
   white-space: normal;
@@ -266,18 +266,14 @@
   transition: opacity 150ms, display 150ms allow-discrete;
 }
 
-/* Open inwards from whichever edge the trigger sits near. In a metric card the icon is close to the
-   right edge, so the popup hangs off its right; the page heading's icon is at the far left, where
-   right anchoring pushed the popup off the side of the screen. */
-.metric-card-label .metric-info-popup,
-.metric-card-label-info .metric-info-popup {
-  left: auto;
-  right: 0;
-}
-
-.page-heading .metric-info-popup {
-  left: 0;
+/* Centred on the trigger, then slid back inside the viewport by InfoPopupPosition, which sets
+   --info-shift. Anchoring left or right per component only moved the overflow from one edge of the
+   screen to the other, because it depends on where the trigger sits, not on which component it is
+   in. */
+.metric-info-popup {
+  left: 50%;
   right: auto;
+  transform: translateX(calc(-50% + var(--info-shift, 0px)));
 }
 
 /* Mobile: show on tap via .is-open */
@@ -305,7 +301,8 @@
   content: "";
   position: absolute;
   top: -0.25rem;
-  left: 50%;
+  /* Cancels the popup's own shift, so the tip keeps pointing at the icon. */
+  left: calc(50% - var(--info-shift, 0px));
   transform: translateX(-50%) rotate(45deg);
   width: 0.5rem;
   height: 0.5rem;

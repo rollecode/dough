@@ -233,7 +233,7 @@ export function DailyAllowance({
             </div>
             <div>
               <p className="metric-card-label metric-card-label-info">
-                {locale === "fi" ? "Kuukauden tilanne" : "Month status"}
+                <Link href="/budget" className="card-title-link">{locale === "fi" ? "Kuukauden tilanne" : "Month status"}</Link>
                 <span className={`metric-info-wrap ${infoOpen ? "is-open" : ""}`}>
                   <button type="button" className="metric-info-trigger" onClick={() => setInfoOpen((v) => !v)}>
                     <Info />
@@ -275,7 +275,7 @@ export function DailyAllowance({
             <Wallet />
           </div>
           <div>
-            <p className="metric-card-label">{t.dashboard.available}</p>
+            <p className="metric-card-label"><Link href="/accounts" className="card-title-link">{t.dashboard.available}</Link></p>
             <p className="metric-card-value"><F v={availableBalance} s={` ${currency}`} /></p>
             {accountCount > 0 && <p className="metric-card-note">{mask(accountCount)} {locale === "fi" ? "tiliä" : "accounts"}</p>}
           </div>
@@ -289,7 +289,7 @@ export function DailyAllowance({
           </div>
           <div>
             <p className="metric-card-label">
-              {t.dashboard.billsDue}
+              <Link href="/bills" className="card-title-link">{t.dashboard.billsDue}</Link>
               <span className={`metric-info-wrap ${billsInfoOpen ? "is-open" : ""}`}>
                 <button type="button" className="metric-info-trigger" onClick={() => setBillsInfoOpen((v) => !v)}>
                   <Info />
@@ -313,7 +313,7 @@ export function DailyAllowance({
             <ArrowDown />
           </div>
           <div>
-            <p className="metric-card-label">{t.dashboard.nextIncome}</p>
+            <p className="metric-card-label"><Link href="/income" className="card-title-link">{t.dashboard.nextIncome}</Link></p>
             <p className="metric-card-value"><F v={nextIncomeAmount} s={` ${currency}`} /></p>
             <p className="metric-card-note">{mask(nextIncomeDate)}</p>
           </div>
@@ -326,7 +326,7 @@ export function DailyAllowance({
             <CalendarClock />
           </div>
           <div>
-            <p className="metric-card-label">{locale === "fi" ? "Kulutusvauhti" : "Burn rate"}</p>
+            <p className="metric-card-label"><Link href="/transactions" className="card-title-link">{locale === "fi" ? "Kulutusvauhti" : "Burn rate"}</Link></p>
             <p className="metric-card-value"><F v={burnRate} s={` ${currency}/${locale === "fi" ? "pv" : "day"}`} /></p>
             <BurnBars history={dailyHistory} average={burnRate} />
             <p className="metric-card-note">

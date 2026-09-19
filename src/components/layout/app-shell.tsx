@@ -5,6 +5,7 @@ import { Sidebar } from "./sidebar";
 import { FabAddExpense } from "./fab-add-expense";
 import { AppVersion } from "./app-version";
 import { GlassPointer } from "./glass-pointer";
+import { InfoPopupPosition } from "./info-popup-position";
 import { PanelLeft, Eye, EyeOff } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 
@@ -57,6 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <FabAddExpense />
       <GlassPointer />
+      <InfoPopupPosition />
     </div>
   );
 }

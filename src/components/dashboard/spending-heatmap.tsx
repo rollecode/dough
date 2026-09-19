@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
 import { useLocale } from "@/lib/locale-context";
 import { useEvent } from "@/lib/use-events";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -137,7 +138,9 @@ export function SpendingHeatmap() {
   return (
     <Card className="spending-heatmap-card" ref={cardRef}>
       <h3 className="spending-heatmap-title">
-        {locale === "fi" ? "Kulutuskartta" : "Spending heatmap"}
+        <Link href="/transactions" className="card-title-link">
+          {locale === "fi" ? "Kulutuskartta" : "Spending heatmap"}
+        </Link>
       </h3>
       <div className="spending-heatmap-scroll" ref={scrollRef}>
         <div className="spending-heatmap-grid">
