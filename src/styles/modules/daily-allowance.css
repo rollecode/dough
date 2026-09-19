@@ -164,6 +164,13 @@
   height: 1.125rem;
 }
 
+/* The label already says what the figure is; on a phone the icon column only costs width. */
+@media (max-width: 767px) {
+  .metric-card-icon {
+    display: none;
+  }
+}
+
 .metric-card-icon[data-color="primary"] { color: var(--primary); }
 .metric-card-icon[data-color="positive"] { color: var(--positive); }
 .metric-card-icon[data-color="negative"] { color: var(--negative); }

@@ -64,7 +64,7 @@
 @media (max-width: 639px) {
   .category-breakdown-donut {
     width: 100%;
-    max-width: 280px;
+    max-width: 220px;
     margin: 0 auto;
   }
 }

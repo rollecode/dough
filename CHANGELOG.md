@@ -1,3 +1,11 @@
+### 4.0.2: 2026-09-20
+
+* Smaller top categories donut on mobile
+* Thinner donut ring
+* Hide metric card icons on mobile
+* Top align recent transaction rows
+* Smoother background gradient on mobile
+
 ### 4.0.1: 2026-09-19
 
 * Fix budget popovers opening behind other cards

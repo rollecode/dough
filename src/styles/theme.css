@@ -111,3 +111,14 @@
   --glass-rim-dim-idle: rgba(255, 255, 255, 0.025);
   --glass-sheen: linear-gradient(140deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 45%);
 }
+
+/* Phones: the same fields, but wider and with an eased falloff. At phone width the desktop
+   ellipses are narrow enough that the fade happens over very few pixels and reads as a hard edge. */
+@media (max-width: 767px) {
+  .dark {
+    --app-gradient:
+      radial-gradient(150% 40% at 88% -10%, rgba(139, 92, 246, 0.30) 0%, rgba(139, 92, 246, 0.13) 38%, rgba(139, 92, 246, 0) 80%),
+      radial-gradient(140% 36% at -25% 26%, rgba(30, 127, 212, 0.22) 0%, rgba(30, 127, 212, 0.09) 40%, rgba(30, 127, 212, 0) 80%),
+      radial-gradient(150% 38% at 112% 98%, rgba(42, 167, 155, 0.16) 0%, rgba(42, 167, 155, 0.07) 40%, rgba(42, 167, 155, 0) 80%);
+  }
+}
