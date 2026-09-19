@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
+import { bubbleWidth, BUBBLE_FONT_SIZE } from "@/lib/chart-bubble";
 import { useTouchTooltip } from "@/components/charts/use-touch-tooltip";
 import {
   AreaChart,
@@ -178,7 +179,7 @@ export function SpendingFlow({
     if (!viewBox) return null;
     const { x, y } = viewBox;
 
-    const bw = bubbleLabel.length * 5.8 + 6;
+    const bw = bubbleWidth(bubbleLabel);
     const bh = 20;
     const flipLeft = isEndOfMonth && typeof window !== "undefined" && window.innerWidth < 768;
     const bx = flipLeft ? x - bw + 4 : x + 8;
@@ -198,7 +199,7 @@ export function SpendingFlow({
           textAnchor="middle"
           dominantBaseline="middle"
           fill="#0a0a10"
-          fontSize={12}
+          fontSize={BUBBLE_FONT_SIZE}
           fontWeight={600}
           style={{ fontVariantNumeric: "tabular-nums" }}
         >

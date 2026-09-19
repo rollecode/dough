@@ -40,6 +40,22 @@ USER2_EMAIL=partner USER2_PASSWORD=partnerpassword USER2_NAME="Partner" \
 npx tsx scripts/seed.ts
 ```
 
+### Demo data
+
+To try the app, or to take screenshots, without using real finances:
+
+```bash
+npx tsx scripts/seed-demo.ts
+DOUGH_DB_PATH=data/dough-demo.db npm run dev
+```
+
+The script writes `data/dough-demo.db` and refuses to touch `data/dough.db`. Everything in it is
+invented: twelve months of transactions, bills, subscriptions, income, categories and balances, all
+generated from a fixed seed so repeated runs produce the same database. Sign in with
+`demo@example.com` and `demo1234`.
+
+`DOUGH_DB_PATH` points the app at any database file, so the real one stays where it is.
+
 ### Build and run
 
 ```bash

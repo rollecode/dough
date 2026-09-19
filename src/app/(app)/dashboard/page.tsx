@@ -86,7 +86,7 @@ export default function DashboardPage() {
   const [monthlyHistory, setMonthlyHistory] = useState<{ month: string; income: number; expenses: number; categories_json?: string }[]>([]);
   const [lastYnabSync, setLastYnabSync] = useState<string | null>(null);
   const [sideDataLoaded, setSideDataLoaded] = useState(false);
-  const [trendData, setTrendData] = useState<{ category: string; thisMonth: number; lastMonth: number }[]>([]);
+  const [trendData, setTrendData] = useState<{ category: string; categoryId?: number | null; thisMonth: number; lastMonth: number }[]>([]);
 
   const loadSideData = useCallback(() => {
     // Each fetch has a timeout and falls back to {} so a single stalled request on a flaky mobile

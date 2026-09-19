@@ -12,7 +12,9 @@
   margin-top: 0.5rem;
 }
 
-@media (min-width: 768px) {
+/* Four across needs roughly 1280px of viewport once the sidebar is taken off; below that the metric
+   cards stay two across, which is what they are designed for. */
+@media (min-width: 1280px) {
   .daily-allowance-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -365,4 +367,52 @@
 
 .budget-notice-btn:hover {
   background: color-mix(in srgb, var(--chart-3) 20%, transparent);
+}
+
+/* Month status: income and expenses share one scale, so the gap between the bars is the surplus. */
+.month-bars {
+  display: flex;
+  flex-direction: column;
+  /* The two bars are one comparison, so they sit as a pair; the verdict below gets its own space. */
+  gap: 0.1875rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.month-bar-row {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.month-bar-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.month-bar-track {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.month-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0.25rem;
+}
+
+.month-bar-fill.is-income {
+  background: var(--positive);
+}
+
+.month-bar-fill.is-expenses {
+  background: var(--negative);
+}
+
+.month-bar-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }

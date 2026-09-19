@@ -34,10 +34,16 @@ export async function GET() {
     const recentMap = new Map(recent.map((r) => [r.category, r.total]));
     const prevMap = new Map(previous.map((r) => [r.category, r.total]));
 
+    // Transactions carry the category name; the budget is addressed by id. Resolve here so the
+    // dashboard can deep link a trend straight to the category it is about.
+    const budgetCategories = db.prepare("SELECT id, name FROM categories WHERE is_active = 1").all() as { id: number; name: string }[];
+    const idByName = new Map(budgetCategories.map((c) => [c.name, c.id]));
+
     const allCategories = new Set([...recentMap.keys(), ...prevMap.keys()]);
     const trends = [...allCategories]
       .map((c) => ({
         category: c,
+        categoryId: idByName.get(c) ?? null,
         thisMonth: Math.round((recentMap.get(c) || 0) * 100) / 100,
         lastMonth: Math.round((prevMap.get(c) || 0) * 100) / 100,
       }))

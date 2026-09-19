@@ -249,11 +249,17 @@ export function DailyAllowance({
                   {monthIncome - monthExpenses >= 0 ? <>+<F v={Math.abs(monthIncome - monthExpenses)} s={` ${currency}`} /></> : <>{"\u2212"}<F v={Math.abs(monthIncome - monthExpenses)} s={` ${currency}`} /></>}
                 </span>
               </p>
+              <MonthBars
+                income={monthIncome}
+                expenses={monthExpenses}
+                incomeLabel={locale === "fi" ? "tulot" : "income"}
+                expensesLabel={locale === "fi" ? "menot" : "expenses"}
+              />
               <p className="metric-card-note">
                 {monthIncome - monthExpenses >= 0
                   ? (locale === "fi" ? "Plussalla" : "Surplus")
                   : (locale === "fi" ? "Miinuksella" : "Deficit")}
-                {" \u00B7 "}{locale === "fi" ? "tulot " : "income "}<span className="text-positive"><F v={monthIncome} s={` ${currency}`} /></span>{", "}{locale === "fi" ? "menot (arvio) " : "expenses (est.) "}<span className="text-negative"><F v={monthExpenses} s={` ${currency}`} /></span>
+                {" \u00B7 "}{locale === "fi" ? "menot arvio" : "expenses estimated"}
               </p>
             </div>
           </div>
@@ -360,6 +366,40 @@ function BurnBars({ history, average }: { history: { date: string; spent: number
         </span>
       ))}
       <span className="burn-bars-average" style={{ bottom: `${(average / peak) * 100}%` }} />
+    </div>
+  );
+}
+
+// Income against expenses on one scale, so the month reads as a comparison and not as a sentence.
+function MonthBars({
+  income,
+  expenses,
+  incomeLabel,
+  expensesLabel,
+}: {
+  income: number;
+  expenses: number;
+  incomeLabel: string;
+  expensesLabel: string;
+}) {
+  const peak = Math.max(income, expenses) || 1;
+
+  return (
+    <div className="month-bars">
+      <div className="month-bar-row">
+        <span className="month-bar-label">{incomeLabel}</span>
+        <span className="month-bar-track">
+          <span className="month-bar-fill is-income" style={{ width: `${(income / peak) * 100}%` }} />
+        </span>
+        <span className="month-bar-value text-positive"><F v={income} /></span>
+      </div>
+      <div className="month-bar-row">
+        <span className="month-bar-label">{expensesLabel}</span>
+        <span className="month-bar-track">
+          <span className="month-bar-fill is-expenses" style={{ width: `${(expenses / peak) * 100}%` }} />
+        </span>
+        <span className="month-bar-value text-negative"><F v={expenses} /></span>
+      </div>
     </div>
   );
 }

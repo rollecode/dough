@@ -34,7 +34,10 @@
   gap: 1.5rem;
 }
 
-@media (min-width: 1024px) {
+/* The sidebar takes 240px and the container another 48px of padding, so a viewport query is about
+   290px wider than the space a card actually gets. Two columns only once that leaves each card a
+   usable width, otherwise charts and legends overflow their track. */
+@media (min-width: 1280px) {
   .page-grid-2 {
     /* minmax(0, 1fr) (not 1fr = minmax(auto, 1fr)): the auto minimum equals a child's
        intrinsic width, so a recharts chart with an explicit pixel width cannot shrink and

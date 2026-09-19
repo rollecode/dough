@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { bubbleWidth } from "@/lib/chart-bubble";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { useYnab } from "@/lib/ynab-context";
@@ -282,7 +283,7 @@ export default function NetWorthPage() {
             const lastNw = lastActualPoint?.netWorth ?? 0;
             const dotColor = nwColor(lastNw);
             const bubbleText = `${fmt(lastNw)} €`;
-            const bubbleW = bubbleText.length * 5.8 + 14;
+            const bubbleW = bubbleWidth(bubbleText);
 
             /* eslint-disable @typescript-eslint/no-explicit-any */
             const renderDotLabel = (props: any) => {

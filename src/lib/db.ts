@@ -2,7 +2,10 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "data", "dough.db");
+// Overridable so a throwaway database (the demo seed) can be opened without touching the real one.
+const DB_PATH = process.env.DOUGH_DB_PATH
+  ? path.resolve(process.env.DOUGH_DB_PATH)
+  : path.join(process.cwd(), "data", "dough.db");
 
 // Ensure data directory exists
 const dataDir = path.dirname(DB_PATH);

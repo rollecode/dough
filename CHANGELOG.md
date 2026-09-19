@@ -17,6 +17,14 @@
 * Paid and received badges are green again
 * Spent tooltip matches its chart line
 * View all link is quiet instead of coloured
+* Trend card shows the three biggest movers as bars
+* Trend categories link to their budget row
+* Month status compares income and expenses as bars
+* Savings streak and burn rate share one history fetch
+* Chart callout bubbles fit their label
+* Demo data seed for screenshots and trying the app
+* DOUGH_DB_PATH points the app at another database
+* Dashboard drops to one column before cards overflow
 
 ### 3.21.1: 2026-09-19
 

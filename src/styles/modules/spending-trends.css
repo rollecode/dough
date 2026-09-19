@@ -16,69 +16,85 @@
   margin-bottom: 0.75rem;
 }
 
-.spending-trends-content {
+.spending-trends-head {
   display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 0.75rem;
-  flex: 1;
-  align-items: flex-start;
+  margin-bottom: 0.875rem;
 }
 
-.spending-trends-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  min-width: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
+.spending-trends-head .spending-trends-title {
+  margin-bottom: 0;
 }
 
-.spending-trends-icon svg {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.spending-trends-icon.is-up {
-  background: color-mix(in srgb, var(--negative) 15%, transparent);
-  color: var(--negative);
-}
-
-.spending-trends-icon.is-down {
-  background: color-mix(in srgb, var(--positive) 15%, transparent);
-  color: var(--positive);
-}
-
-.spending-trends-icon.is-flat {
-  background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
+.spending-trends-summary {
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
-.spending-trends-text {
+.spending-trends-rows {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
+  gap: 0.375rem;
+  flex: 1;
 }
 
-.spending-trends-fact {
-  font-size: 1.1rem;
-  font-weight: 600;
+/* Name, bar, percentage on one grid so every bar starts and ends in the same place. */
+.trend-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem 3.25rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.trend-row-name {
+  font-size: 0.8125rem;
   color: var(--foreground);
-  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 150ms;
 }
 
-.spending-trends-category {
+a.trend-row-name:hover {
   color: var(--primary);
 }
 
-.spending-trends-detail {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
+.trend-row-track {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
 }
 
-.spending-trends-amounts {
-  font-size: 0.85rem;
+.trend-row-bar {
+  display: block;
+  height: 100%;
+  border-radius: 0.25rem;
+}
+
+/* Spending more is the bad direction, spending less is the good one. */
+.trend-row-bar.is-up {
+  background: var(--negative);
+}
+
+.trend-row-bar.is-down {
+  background: var(--positive);
+}
+
+.trend-row-pct {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.spending-trends-foot {
+  margin-top: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
