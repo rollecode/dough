@@ -32,7 +32,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
           <p className="chart-tooltip-label">{label}</p>
           {sorted.map((entry, index) => (
             <p key={index} className="chart-tooltip-value">
-              <span style={{ color: entry.dataKey === "spent" ? "var(--chart-1)" : "#4ade80" }}>
+              <span style={{ color: entry.dataKey === "spent" ? "var(--primary)" : "#4ade80" }}>
                 {entry.dataKey === "spent" ? t.dashboard.spent : t.dashboard.savingsTarget}:{" "}
                 {fmt(entry.value)} €
               </span>

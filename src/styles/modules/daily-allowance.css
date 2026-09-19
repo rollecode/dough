@@ -2,6 +2,7 @@
 
 .daily-allowance-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -34,8 +35,16 @@
   }
 }
 
-.card.daily-allowance-hero:hover {
-  border-color: transparent;
+.card.daily-allowance-hero {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-image: none;
+}
+
+/* No rim and no pointer highlight: the hero is part of the heading, not a pane. */
+.card.daily-allowance-hero::before,
+.card.daily-allowance-hero::after {
+  content: none;
 }
 
 .daily-allowance-hero-content {
@@ -85,7 +94,7 @@
 }
 
 .daily-allowance-hero-value[data-status="good"] { color: var(--positive); }
-.daily-allowance-hero-value[data-status="tight"] { color: var(--chart-3); }
+.daily-allowance-hero-value[data-status="tight"] { color: var(--warning); }
 .daily-allowance-hero-value[data-status="danger"] { color: var(--negative); }
 
 .daily-allowance-hero-unit {
@@ -112,15 +121,12 @@
 }
 
 /* Metric cards — minimal, no icon boxes */
+/* The thinnest glass in the app: almost no fill, a heavier blur and a brighter rim, so the card
+   reads as a pane over the background rather than as a panel of its own. */
 .card.metric-card {
-  border: 1px solid var(--glass-border, transparent);
-  background-color: var(--glass-bg, rgba(255, 255, 255, 0.02));
+  border: none;
   padding: 0.875rem;
   gap: 0;
-}
-
-.card.metric-card:hover {
-  background: var(--glass-hover, rgba(255, 255, 255, 0.04));
 }
 
 @media (min-width: 768px) {
@@ -160,7 +166,7 @@
 .metric-card-icon[data-color="positive"] { color: var(--positive); }
 .metric-card-icon[data-color="negative"] { color: var(--negative); }
 .metric-card-icon[data-color="chart-4"] { color: var(--chart-4); }
-.metric-card-icon[data-color="chart-3"] { color: var(--chart-3); }
+.metric-card-icon[data-color="chart-3"] { color: var(--warning); }
 
 .metric-card-icon-standalone {
   width: 1.125rem;

@@ -6,20 +6,120 @@
   gap: 1rem;
   overflow: visible;
   border-radius: var(--radius);
-  /* Glass: a very low fill plus a blur of whatever sits behind, so the colour comes from the
-     app's background field rather than from the card. The sheen is a background layer, not a
-     pseudo-element, so cards keep their stacking context and popovers still escape them. */
+  /* Glass, not a panel: the fill is almost nothing, the depth comes from a heavy blur of what is
+     behind and from the 1px rim below. No solid surface anywhere. */
   background-color: var(--glass-bg, var(--card));
   background-image: var(--glass-sheen, none);
   backdrop-filter: var(--glass-blur, none);
   -webkit-backdrop-filter: var(--glass-blur, none);
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding-top: 1.125rem;
+  padding-bottom: 1.125rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: var(--card-foreground);
-  border: 1px solid var(--glass-border, transparent);
-  transition: background-color 200ms;
+  border: none;
+  position: relative;
+  transition: background-color 200ms, backdrop-filter 200ms;
+}
+
+/* The rim. A 1px ring cut from a radial gradient whose bright end leans towards the pointer. Kept
+   faint on purpose — the edge states where the glass is, the refraction below does the work. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    11rem circle at var(--glass-x, 50%) var(--glass-y, 50%),
+    var(--glass-rim-lit-idle, rgba(255, 255, 255, 0.14)),
+    var(--glass-rim-dim-idle, rgba(255, 255, 255, 0.025)) 74%
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* The liquid. A second layer of backdrop-filter, masked to two soft blobs whose size and position
+   drift on a long cycle, so the amount of refraction varies across the pane and keeps moving. What
+   changes is how the background behind the card is bent, not how much light is thrown at it.
+   --glass-px / --glass-py lean the whole layer a few pixels towards the pointer. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(9px) saturate(150%) brightness(1.09);
+  -webkit-backdrop-filter: blur(9px) saturate(150%) brightness(1.09);
+  mask-image:
+    radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%),
+    radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.45) 50%, transparent 100%);
+  -webkit-mask-image:
+    radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%),
+    radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.45) 50%, transparent 100%);
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  transform: translate(
+    calc(var(--glass-px, 0) * 5px),
+    calc(var(--glass-py, 0) * 5px)
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 700ms ease;
+  animation: glass-liquid 19s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+@keyframes glass-liquid {
+  0% {
+    mask-size: 150% 130%, 110% 150%;
+    mask-position: -25% 120%, 115% -20%;
+  }
+
+  50% {
+    mask-size: 185% 105%, 140% 115%;
+    mask-position: 60% 30%, 15% 70%;
+  }
+
+  100% {
+    mask-size: 120% 165%, 165% 125%;
+    mask-position: 120% -15%, -20% 115%;
+  }
+}
+
+@media (hover: hover) {
+  .card:hover::after {
+    opacity: 1;
+  }
+
+  .card:hover::before {
+    background: radial-gradient(
+      11rem circle at var(--glass-x, 50%) var(--glass-y, 50%),
+      var(--glass-rim-lit, rgba(255, 255, 255, 0.42)),
+      var(--glass-rim-dim, rgba(255, 255, 255, 0.04)) 74%
+    );
+  }
+
+  .card:hover {
+    background-color: var(--glass-hover, var(--glass-bg));
+    backdrop-filter: var(--glass-blur-hover, var(--glass-blur));
+    -webkit-backdrop-filter: var(--glass-blur-hover, var(--glass-blur));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card::after {
+    animation: none;
+  }
+}
+
+/* Card content sits above the rim and the specular. */
+.card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .card:has([data-slot="card-footer"]) {

@@ -12,6 +12,10 @@ try {
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
+  // Dev only: next dev refuses /_next requests whose origin is not localhost, so reviewing the app
+  // from another machine on the LAN loads a shell with no assets and no HMR. Hosts come from the
+  // environment (comma separated) because they are private addresses and this repo is public.
+  allowedDevOrigins: (process.env.DEV_ORIGINS ?? "").split(",").map((h) => h.trim()).filter(Boolean),
   // Exposed to the client so the app can show its version + commit (see AppVersion).
   env: { NEXT_PUBLIC_APP_VERSION: version, NEXT_PUBLIC_APP_COMMIT: commit },
 };

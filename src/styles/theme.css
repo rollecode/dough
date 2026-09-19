@@ -22,6 +22,7 @@
   --ring: #7b2dcd;
   --positive: #22c55e;
   --negative: #ef4444;
+  --warning: #d97706;
   --chart-1: #2ec6bf;
   --chart-2: #0f5483;
   --chart-3: #98a7fa;
@@ -64,6 +65,7 @@
   --ring: #9f6ce9;
   --positive: #4ade80;
   --negative: #f87171;
+  --warning: #fbbf24;
   /* Categorical series. Hues are confined to 185-345 deg so none of them lands near the
      reserved status hues, and every adjacent pair clears the colour-blind and
      normal-vision separation floors on this surface. */
@@ -72,7 +74,7 @@
   --chart-3: #6381f7;
   --chart-4: #771bcc;
   --chart-5: #b31a83;
-  --radius: 0.875rem;
+  --radius: 1.375rem;
   --sidebar: rgba(13, 11, 22, 0.58);
   --sidebar-foreground: #fafafa;
   --sidebar-primary: #9f6ce9;
@@ -85,15 +87,24 @@
   /* Three soft colour fields behind the whole app. Cards are translucent and blur what is
      behind them, so each card picks up whichever field it happens to sit over. */
   --app-gradient:
-    radial-gradient(90% 55% at 88% -8%, rgba(139, 92, 246, 0.20) 0%, rgba(139, 92, 246, 0) 62%),
-    radial-gradient(80% 50% at -10% 32%, rgba(30, 127, 212, 0.15) 0%, rgba(30, 127, 212, 0) 60%),
-    radial-gradient(95% 55% at 105% 96%, rgba(42, 167, 155, 0.11) 0%, rgba(42, 167, 155, 0) 62%);
+    radial-gradient(85% 50% at 92% -6%, rgba(139, 92, 246, 0.34) 0%, rgba(139, 92, 246, 0) 64%),
+    radial-gradient(75% 45% at -12% 30%, rgba(30, 127, 212, 0.26) 0%, rgba(30, 127, 212, 0) 62%),
+    radial-gradient(90% 50% at 108% 94%, rgba(42, 167, 155, 0.18) 0%, rgba(42, 167, 155, 0) 64%);
 
   /* Glass surfaces. The blur is what makes a card read as glass; the fill stays very low so the
      colour comes from the field behind it rather than from the card itself. */
-  --glass-bg: rgba(255, 255, 255, 0.045);
-  --glass-hover: rgba(255, 255, 255, 0.075);
+  /* Almost no fill: what you see through a pane is the background, lifted slightly. Depth comes
+     from the blur and from the rim, never from an opaque surface. One weight for every card. */
+  --glass-bg: rgba(255, 255, 255, 0.012);
+  --glass-hover: rgba(255, 255, 255, 0.022);
+  /* Divider-weight edge, for rules inside cards — the card's own edge is the rim below. */
   --glass-border: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(18px) saturate(140%);
+  --glass-blur: blur(44px) saturate(190%) brightness(1.05);
+  --glass-blur-hover: blur(54px) saturate(220%) brightness(1.09);
+  /* The rim is a 1px ring drawn by a pseudo-element, brightest where the pointer is. */
+  --glass-rim-lit: rgba(255, 255, 255, 0.42);
+  --glass-rim-dim: rgba(255, 255, 255, 0.04);
+  --glass-rim-lit-idle: rgba(255, 255, 255, 0.14);
+  --glass-rim-dim-idle: rgba(255, 255, 255, 0.025);
   --glass-sheen: linear-gradient(140deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 45%);
 }

@@ -9,8 +9,15 @@
   grid-column: 1 / -1;
 }
 
-.card.net-worth-hero:hover {
-  border-color: transparent;
+.card.net-worth-hero {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-image: none;
+}
+
+.card.net-worth-hero::before,
+.card.net-worth-hero::after {
+  content: none;
 }
 
 .net-worth-hero-label {

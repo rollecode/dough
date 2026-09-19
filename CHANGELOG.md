@@ -5,6 +5,13 @@
 * Replace indigo with violet across the interface
 * New category colours, checked for colour-blind separation
 * Categories no longer borrow green, amber or red
+* Card edges are a pointer-lit rim instead of a border
+* Hover refracts the background rather than lighting the card
+* Savings streak reads as a seven-day bar chart
+* Burn rate gains a fourteen-day chart with its average
+* Metric cards sit two per row on mobile
+* Daily budget and net worth heroes stay outside the glass
+* Allow LAN hosts to load dev assets via DEV_ORIGINS
 
 ### 3.21.1: 2026-09-19
 

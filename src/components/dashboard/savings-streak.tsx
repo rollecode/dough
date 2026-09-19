@@ -3,7 +3,8 @@
 import { useLocale } from "@/lib/locale-context";
 import { Card } from "@/components/ui/card";
 import { Flame } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import { useDailyHistory } from "@/lib/use-daily-history";
 
 interface SavingsStreakProps {
   dailyBudget: number;
@@ -11,27 +12,12 @@ interface SavingsStreakProps {
   discretionaryTarget?: number;
 }
 
-interface HistoryEntry {
-  date: string;
-  budget: number;
-  spent: number;
-}
-
 export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget }: SavingsStreakProps) {
   const { locale, fmt } = useLocale();
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const history = useDailyHistory();
   const savedRef = useRef(false);
   const now = new Date();
   const today = now.getDate();
-
-  useEffect(() => {
-    fetch("/api/daily-budget-history")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.history) setHistory(data.history);
-      })
-      .catch(() => {});
-  }, []);
 
   // Save today's budget + spending once
   useEffect(() => {
@@ -84,6 +70,11 @@ export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget }: 
     currentStreak++;
   }
 
+  // Bar height is the day's spending against that day's budget, so the row reads as a chart of
+  // how close each day ran rather than as a row of pass/fail badges.
+  const ratio = (d: { budget: number; spent: number }) => (d.budget > 0 ? d.spent / d.budget : 0);
+  const scale = Math.max(1.25, ...days.map(ratio));
+
   return (
     <Card className="metric-card savings-streak-card">
       <div className="metric-card-row">
@@ -92,22 +83,27 @@ export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget }: 
         </div>
         <div>
           <p className="metric-card-label">{locale === "fi" ? "Säästöputki" : "Savings streak"}</p>
-          <div className="savings-streak-dots">
-            {days.map((d, i) => (
-              <div
-                key={i}
-                className={`savings-streak-dot ${d.status === "fire" ? "is-fire" : d.status === "fail" ? "is-fail" : d.status === "today" ? (dailyBudget > 0 && d.spent <= dailyBudget ? "is-fire" : "is-fail") : "is-neutral"}`}
-              >
-                {(d.status === "fire" || (d.status === "today" && dailyBudget > 0 && d.spent <= dailyBudget)) && <span className="savings-streak-fire-icon" />}
-                {d.status === "fail" && <span className="savings-streak-x-icon" />}
-                {d.status === "today" && dailyBudget > 0 && d.spent > dailyBudget && <span className="savings-streak-x-icon" />}
-                {d.status === "nodata" && <span className="savings-streak-neutral-dot" />}
-                <span className="savings-streak-tooltip">
-                  <span>{d.day}.{d.month}.</span>
-                  <span>{d.status === "nodata" ? (locale === "fi" ? "ei dataa" : "no data") : `${fmt(d.status === "today" ? todaySpent : d.spent)}/${fmt(d.budget)} €`}</span>
+          <p className="metric-card-value">{currentStreak} {locale === "fi" ? (currentStreak === 1 ? "päivä" : "päivää") : (currentStreak === 1 ? "day" : "days")}</p>
+          <div className="streak-bars" aria-hidden="true">
+            {days.map((d, i) => {
+              const isToday = d.status === "today";
+              const over = isToday ? dailyBudget > 0 && d.spent > dailyBudget : d.status === "fail";
+              const none = d.status === "nodata";
+              return (
+                <span
+                  key={i}
+                  className={`streak-bar ${none ? "is-none" : over ? "is-over" : "is-under"} ${isToday ? "is-today" : ""}`}
+                >
+                  <span className="streak-bar-fill" style={{ height: `${Math.min(100, (ratio(d) / scale) * 100)}%` }} />
+                  <span className="savings-streak-tooltip">
+                    <span>{d.day}.{d.month}.</span>
+                    <span>{none ? (locale === "fi" ? "ei dataa" : "no data") : `${fmt(isToday ? todaySpent : d.spent)}/${fmt(d.budget)} €`}</span>
+                  </span>
                 </span>
-              </div>
-            ))}
+              );
+            })}
+            {/* The budget line sits where a bar would reach at exactly 100% of that day's budget. */}
+            <span className="streak-bars-limit" style={{ bottom: `${(1 / scale) * 100}%` }} />
           </div>
           <p className="metric-card-note">
             {currentStreak > 0

@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, CalendarClock, Wallet, Info } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { F } from "@/components/ui/f";
 import { SavingsStreak } from "./savings-streak";
+import { useDailyHistory } from "@/lib/use-daily-history";
 
 interface DailyAllowanceProps {
   dailyBudget: number;
@@ -75,6 +76,7 @@ export function DailyAllowance({
   currency = "€",
 }: DailyAllowanceProps) {
   const { t, locale, fmt, mask } = useLocale();
+  const dailyHistory = useDailyHistory();
   const [infoOpen, setInfoOpen] = useState(false);
   const [budgetInfoOpen, setBudgetInfoOpen] = useState(false);
   const [billsInfoOpen, setBillsInfoOpen] = useState(false);
@@ -319,6 +321,7 @@ export function DailyAllowance({
           <div>
             <p className="metric-card-label">{locale === "fi" ? "Kulutusvauhti" : "Burn rate"}</p>
             <p className="metric-card-value"><F v={burnRate} s={` ${currency}/${locale === "fi" ? "pv" : "day"}`} /></p>
+            <BurnBars history={dailyHistory} average={burnRate} />
             <p className="metric-card-note">
               {trendPercent !== 0 ? (
                 <>
@@ -334,6 +337,29 @@ export function DailyAllowance({
           </div>
         </div>
       </Card>
+    </div>
+  );
+}
+
+function BurnBars({ history, average }: { history: { date: string; spent: number }[]; average: number }) {
+  const days = [...history]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-14);
+
+  if (days.length < 3) {
+    return null;
+  }
+
+  const peak = Math.max(average, ...days.map((d) => d.spent)) || 1;
+
+  return (
+    <div className="burn-bars" aria-hidden="true">
+      {days.map((d) => (
+        <span key={d.date} className={`burn-bar ${d.spent > average ? "is-over" : ""}`}>
+          <span className="burn-bar-fill" style={{ height: `${Math.max(2, (d.spent / peak) * 100)}%` }} />
+        </span>
+      ))}
+      <span className="burn-bars-average" style={{ bottom: `${(average / peak) * 100}%` }} />
     </div>
   );
 }

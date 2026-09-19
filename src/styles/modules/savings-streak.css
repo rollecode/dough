@@ -1,5 +1,61 @@
 /* Module: savings-streak — compact card */
 
+/* Seven-day bar chart: height is the day's spend against that day's budget, colour is whether it
+   stayed under. Replaces the badge row, same data, same tooltips. */
+.streak-bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  height: 2.25rem;
+  margin: 0.375rem 0 0.5rem;
+}
+
+.streak-bar {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 0.1875rem;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: default;
+}
+
+.streak-bar-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 0.1875rem;
+  background: var(--positive);
+}
+
+.streak-bar.is-over .streak-bar-fill {
+  background: var(--negative);
+}
+
+.streak-bar.is-none .streak-bar-fill {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Today reads as the live bar, not just another past day. */
+.streak-bar.is-today .streak-bar-fill {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--foreground) 35%, transparent);
+}
+
+.streak-bars-limit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--foreground) 22%, transparent);
+  pointer-events: none;
+}
+
+.streak-bar:hover .savings-streak-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 .card.savings-streak-card {
   gap: 0.375rem;
 }

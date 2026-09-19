@@ -1,7 +1,7 @@
 /* Module: spending-heatmap — GitHub-style calendar heatmap */
 
 .spending-heatmap-card {
-  padding: 1rem;
+  padding: 1.125rem;
   overflow: visible;
   min-width: 0;
   gap: 0;
@@ -112,19 +112,19 @@
 }
 
 .spending-heatmap-cell.heatmap-level-1 {
-  background: color-mix(in srgb, var(--negative) 20%, transparent);
+  background: #a15554;
 }
 
 .spending-heatmap-cell.heatmap-level-2 {
-  background: color-mix(in srgb, var(--negative) 40%, transparent);
+  background: #c27370;
 }
 
 .spending-heatmap-cell.heatmap-level-3 {
-  background: color-mix(in srgb, var(--negative) 60%, transparent);
+  background: #e3918e;
 }
 
 .spending-heatmap-cell.heatmap-level-4 {
-  background: color-mix(in srgb, var(--negative) 80%, transparent);
+  background: #ffb1ad;
 }
 
 /* Tooltip — rendered outside scroll container, positioned via JS */

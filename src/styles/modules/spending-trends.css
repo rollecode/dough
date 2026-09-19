@@ -1,7 +1,7 @@
 /* Module: spending-trends — daily trend fact */
 
 .spending-trends-card {
-  padding: 1rem;
+  padding: 1.125rem;
   display: flex;
   flex-direction: column;
   gap: 0;
