@@ -7,7 +7,7 @@
 
 A self-hosted personal finance dashboard for households. It runs on its own - managing your accounts, transactions, and envelope budgeting - or connected to [YNAB](https://www.ynab.com/). It uses [Claude](https://code.claude.com/docs/en/cli-reference) for financial advice, spending summaries, transaction categorization, and debt strategies.
 
-<img width="1746" height="1053" alt="image" src="https://github.com/user-attachments/assets/46017826-49eb-428c-b9d1-a52337b27fe7" />
+<img width="3138" height="1736" alt="192 168 2 69_3030_dashboard (3)" src="https://github.com/user-attachments/assets/3926c5b6-2e94-4524-a0e2-cb863c0bd2c7" />
 
 ## Why Dough
 
@@ -23,6 +23,10 @@ Dough was built to solve this:
 - **Receipt scanning** - snap a photo of a receipt or a bank statement in the add dialog, the AI reads it and adds the transactions for you.
 - **Self-hosted, private** - your financial data stays on your machine. No cloud services, no third-party access. SQLite database you can back up with a single file copy.
 
+### Dough has YNAB-like envelope budgeting
+
+<img width="3138" height="1736" alt="192 168 2 69_3030_budget" src="https://github.com/user-attachments/assets/6dbd278f-583a-429c-ad81-b66c7f2c1647" />
+
 ## Features
 
 - **Dashboard** with daily budget, burn rate, month status, spending chart, category breakdown, cash flow, and net worth
@@ -35,6 +39,7 @@ Dough was built to solve this:
 - **Income** sources with expected dates and auto-matching to incoming transactions
 - **Debts** with editable interest rates and snowball/avalanche strategies (from YNAB or added manually)
 - **Investments** with monthly contributions and compound growth projections (from YNAB or added manually)
+- **Subscription management**, like Netflix, apps, visually pleasing UI with logos
 - **Net worth** history with daily snapshots and area chart
 - **Transactions** with month navigation, account balance, search, filtering, day grouping, splits, transfers, and manual entry
 - **Automatic bank import** via Synci (optional): imports income and expenses, categorizes them, and pairs internal transfers
