@@ -1,7 +1,7 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { getHouseholdSettings } from "@/lib/household";
-import { NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
+import { NOT_BUDGET_EXCLUDED, cashFlowHistory } from "@/lib/budget-math";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
 import { buildDashboard, type DashBill, type DashDebt, type DashIncome } from "@/lib/dashboard-model";
 import { monthCommitments } from "@/lib/commitments";
@@ -121,9 +121,9 @@ export const GET = apiRoute("read", (_request, identity) => {
     isPriority: d.isPriority,
   }));
 
-  const monthlyHistory = db
-    .prepare("SELECT month, income, expenses FROM monthly_snapshots ORDER BY month DESC LIMIT 5")
-    .all() as { month: string; income: number; expenses: number }[];
+  // Straight from the ledger, not from monthly_snapshots: that table is written by a YNAB sync and
+  // stops the day one stops, which left the cash flow chart skipping the months after it.
+  const monthlyHistory = cashFlowHistory(db, 5, month);
 
   // This month against the same stretch of last month, so a comparison on the 3rd is not read as a
   // collapse in spending. Same query the trends route uses.
