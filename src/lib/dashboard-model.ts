@@ -66,6 +66,7 @@ export interface DashThresholds {
 
 export interface DashboardInput {
   now: Date;
+  displayName: string;
   accounts: DashAccount[];
   transactions: DashTransaction[];
   monthBudget: { income: number; activity: number; toBeBudgeted: number; categories: DashCategory[] };
@@ -92,6 +93,8 @@ export interface DashboardModel {
   month: string;
   generated_at: string;
   currency: string;
+  // Who is looking. The greeting says nothing at all without it, exactly as the web does.
+  display_name: string;
   today: {
     day: number;
     spent: number;
@@ -197,7 +200,7 @@ function fixedCostMatcher(bills: DashBill[], accounts: DashAccount[]) {
 
 export function buildDashboard(input: DashboardInput): DashboardModel {
   const {
-    now, accounts, transactions, monthBudget, bills, incomes, debts, savingRate,
+    now, displayName, accounts, transactions, monthBudget, bills, incomes, debts, savingRate,
     debtMonthly, investmentMonthly, excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
     monthlyHistory, trends, targetByDay,
@@ -579,6 +582,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   return {
     month,
     generated_at: now.toISOString(),
+    display_name: displayName,
     currency: "EUR",
     today: {
       day: today,

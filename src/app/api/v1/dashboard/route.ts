@@ -173,6 +173,10 @@ export const GET = apiRoute("read", (_request, identity) => {
       ynab_account_id: string;
     }[]
   ).map((row) => row.ynab_account_id);
+  const displayName =
+    (db.prepare("SELECT COALESCE(display_name, '') AS name FROM users WHERE id = ?").get(identity.userId) as
+      | { name: string }
+      | undefined)?.name ?? "";
   const personalBudgetShare =
     (db.prepare("SELECT COALESCE(budget_share, 0) AS share FROM users WHERE id = ?").get(identity.userId) as
       | { share: number }
@@ -190,6 +194,7 @@ export const GET = apiRoute("read", (_request, identity) => {
 
   const model = buildDashboard({
     now,
+    displayName,
     accounts: data.summary.accounts,
     transactions: data.transactions,
     monthBudget: data.monthBudget,
