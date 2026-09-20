@@ -59,6 +59,10 @@ export function isMatchedThisMonth(sourceType: "income" | "bill" | "investment" 
   return !!row;
 }
 
+function normalisePayee(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function patternToMatcher(pattern: string): (payee: string) => boolean {
   const trimmed = pattern.trim();
 
@@ -80,8 +84,28 @@ function patternToMatcher(pattern: string): (payee: string) => boolean {
     return (payee) => payee.toLowerCase().startsWith(inner);
   }
 
-  // Exact match (case insensitive)
-  return (payee) => payee.toLowerCase() === trimmed.toLowerCase();
+  // A picked payee, compared case and whitespace insensitively. Wildcards above stay supported for
+  // patterns entered before the picker existed.
+  const want = normalisePayee(trimmed);
+  return (payee) => normalisePayee(payee) === want;
+}
+
+/* The configured due day is a guess; the day the money actually left is the fact. Rolling it to the
+   real payment day stops a bill that is always paid on the 12th from reporting itself overdue from
+   the 6th onwards, every month. */
+function rollDueDay(sourceType: string, sourceId: number, txDate: string): void {
+  if (sourceType !== "bill" && sourceType !== "subscription") return;
+
+  const day = parseInt(txDate.split("-")[2], 10);
+  if (!day || day < 1 || day > 31) return;
+
+  const table = sourceType === "bill" ? "recurring_bills" : "subscriptions";
+  const db = getDb();
+  const row = db.prepare(`SELECT due_day FROM ${table} WHERE id = ?`).get(sourceId) as { due_day: number } | undefined;
+  if (!row || row.due_day === day) return;
+
+  db.prepare(`UPDATE ${table} SET due_day = ?, updated_at = datetime('now') WHERE id = ?`).run(day, sourceId);
+  console.info("[matching] Rolled", sourceType, sourceId, "due day", row.due_day, "->", day);
 }
 
 export function runAutoMatch(transactions: any[], month: string): { matched: number; details: string[] } {
@@ -90,18 +114,13 @@ export function runAutoMatch(transactions: any[], month: string): { matched: num
   let matched = 0;
   const details: string[] = [];
 
-  // Load due days for bills and subscriptions to filter by date window
-  const billDueDays: Record<number, number> = {};
-  const bills = db.prepare("SELECT id, due_day FROM recurring_bills WHERE is_active = 1").all() as { id: number; due_day: number }[];
-  for (const b of bills) billDueDays[b.id] = b.due_day;
-  const subs = db.prepare("SELECT id, due_day FROM subscriptions WHERE is_active = 1").all() as { id: number; due_day: number }[];
-  for (const s of subs) billDueDays[s.id] = s.due_day;
-
   for (const pattern of patterns) {
     const matcher = patternToMatcher(pattern.payee_pattern);
-    const dueDay = (pattern.source_type === "bill" || pattern.source_type === "subscription") ? billDueDays[pattern.source_id] || 0 : 0;
-
     const matchingTx = transactions.find((tx: any) => {
+      // Only this month's transactions can settle this month's bill. This replaces a day window
+      // that had no upper bound and did not wrap, so a bill due late in the month rejected any
+      // payment made early and then reported itself overdue.
+      if (!tx.date || !String(tx.date).startsWith(month)) return false;
       const payee = tx.payee || tx.payee_name || "";
       if (!matcher(payee)) return false;
       // Check amount range if set (min > 0 or max > 0). A half-cent tolerance keeps an exact-price
@@ -110,14 +129,6 @@ export function runAutoMatch(transactions: any[], month: string): { matched: num
         const absAmount = Math.abs(tx.amount);
         if (pattern.min_amount > 0 && absAmount < pattern.min_amount - 0.005) return false;
         if (pattern.max_amount > 0 && absAmount > pattern.max_amount + 0.005) return false;
-      }
-      // For bills/subscriptions with a due day, only match transactions near the due date
-      // This prevents a previous month's late payment from being matched as current month
-      if (dueDay > 0 && tx.date) {
-        const txDay = parseInt(tx.date.split("-")[2], 10);
-        // Allow a window: due day minus 10 to due day plus 10 (wrapping)
-        const earliest = Math.max(1, dueDay - 10);
-        if (txDay < earliest) return false;
       }
       return true;
     });
@@ -132,6 +143,7 @@ export function runAutoMatch(transactions: any[], month: string): { matched: num
         matched++;
         details.push(`${pattern.source_type}:${pattern.source_id} matched "${matchingTx.payee || matchingTx.payee_name}" (${txId})`);
         console.debug("[matching] Matched", pattern.source_type, pattern.source_id, "to", matchingTx.payee || matchingTx.payee_name);
+        rollDueDay(pattern.source_type, pattern.source_id, String(matchingTx.date));
       } catch {
         // Already matched, skip
       }

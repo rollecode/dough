@@ -54,7 +54,15 @@ export default function BillsPage() {
   const [editInterval, setEditInterval] = useState(1);
   const [patternOpen, setPatternOpen] = useState<number | null>(null);
   const [newPattern, setNewPattern] = useState("");
+  const [payees, setPayees] = useState<string[]>([]);
   const [patternMinAmount, setPatternMinAmount] = useState("");
+
+  useEffect(() => {
+    fetch("/api/payees")
+      .then((r) => r.json())
+      .then((d) => setPayees(d.payees || []))
+      .catch(() => {});
+  }, []);
   const [patternMaxAmount, setPatternMaxAmount] = useState("");
   const addFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
@@ -358,9 +366,13 @@ export default function BillsPage() {
                   <Input
                     value={newPattern}
                     onChange={(e) => setNewPattern(e.target.value)}
-                    placeholder={locale === "fi" ? "esim. *Elisa* tai Helen Oy" : "e.g. *Netflix* or Company Name"}
+                    list="bill-payees"
+                    placeholder={locale === "fi" ? "Valitse saaja" : "Pick a payee"}
                     className="match-pattern-input"
                   />
+                  <datalist id="bill-payees">
+                    {payees.map((p) => <option key={p} value={p} />)}
+                  </datalist>
                   <Button type="button" size="sm" onClick={() => addPattern(bill.id)}>{locale === "fi" ? "Lisää" : "Add"}</Button>
                 </div>
               )}

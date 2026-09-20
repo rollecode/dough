@@ -94,6 +94,16 @@ export async function GET() {
       console.error("[api/ynab/sync] Failed to save net worth snapshot:", err);
     }
 
+    // Auto-match runs here too, not only on a YNAB pull: in local mode that pull never happens, so
+    // patterns were never evaluated and every bill stayed unpaid and overdue.
+    try {
+      const { runAutoMatch } = await import("@/lib/matching");
+      const result = runAutoMatch(transactions, currentMonth);
+      if (result.matched > 0) console.info("[api/ynab/sync] Auto-match:", result.matched, "new matches");
+    } catch (err) {
+      console.error("[api/ynab/sync] Auto-match error:", err);
+    }
+
     console.debug("[api/ynab/sync] Serving from SQLite:", accounts.length, "accounts,", transactions.length, "transactions,", categories.length, "categories");
     return NextResponse.json({ success: true, data, cached: true });
   } catch (error) {
