@@ -19,17 +19,13 @@
 }
 
 .login-title {
-  font-size: 32px;
-  font-weight: 600;
-  color: var(--foreground);
-  letter-spacing: -0.04em;
-  margin-bottom: 8px;
+  margin: 0 0 2rem;
+  line-height: 0;
 }
 
-.login-subtitle {
-  font-size: 14px;
-  color: var(--muted-foreground);
-  margin-bottom: 40px;
+.login-title img {
+  width: 176.05px;
+  height: 40px;
 }
 
 .login-form {

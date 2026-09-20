@@ -50,8 +50,9 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-container">
-        <h1 className="login-title">Dough</h1>
-        <p className="login-subtitle">Sign in to continue</p>
+        <h1 className="login-title">
+          <img src="/dough-logo.svg" alt="Dough" width={176} height={40} />
+        </h1>
 
         <form ref={formRef} onSubmit={handleLogin} className="login-form">
           <input

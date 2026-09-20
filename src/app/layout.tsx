@@ -18,9 +18,27 @@ const syne = Syne({
   display: "swap",
 });
 
+const TITLE = "Dough";
+const DESCRIPTION = "Know whether you are living above or below your means, in real time.";
+
 export const metadata: Metadata = {
-  title: "Dough",
-  description: "AI-powered personal finance advisor",
+  // Absolute URLs for the social card; relative ones are dropped by most scrapers.
+  metadataBase: new URL("https://doughapp.cloud"),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: TITLE,
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: TITLE }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ["/og-image.jpg"],
+  },
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.png",

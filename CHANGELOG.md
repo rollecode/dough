@@ -1,3 +1,8 @@
+### Unreleased
+
+* Social share image, title and description
+* Logo replaces the wordmark on the login page
+
 ### 4.1.2: 2026-09-20
 
 * Fix see-through mobile menu on desktop widths
