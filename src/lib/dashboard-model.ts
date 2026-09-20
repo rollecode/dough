@@ -69,7 +69,14 @@ export interface DashboardInput {
   displayName: string;
   accounts: DashAccount[];
   transactions: DashTransaction[];
-  monthBudget: { income: number; activity: number; toBeBudgeted: number; categories: DashCategory[] };
+  monthBudget: {
+    income: number;
+    // What has actually landed this month, where `income` also counts what is still expected.
+    received?: number;
+    activity: number;
+    toBeBudgeted: number;
+    categories: DashCategory[];
+  };
   bills: DashBill[];
   incomes: DashIncome[];
   debts: DashDebt[];
@@ -733,7 +740,9 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
         })),
       {
         month,
-        income: round(monthBudget.income),
+        // Only what has arrived: the income still to come is stacked on top of this, and counting
+        // it in both places drew a bar nearly twice the month's real income.
+        income: round(monthBudget.received ?? Math.max(0, monthBudget.income - upcomingIncome)),
         expenses: round(Math.abs(monthBudget.activity)),
         upcoming_income: upcomingIncome,
       },

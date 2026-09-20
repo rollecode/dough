@@ -42,6 +42,7 @@ export function buildLocalFinancialData(database: Database.Database = getDb()) {
     .filter((t) => t.amount > 0 && !t.payee.startsWith("Transfer") && !t.payee.startsWith("Starting") && !t.payee.startsWith("Reconciliation"))
     .reduce((s, t) => s + t.amount, 0);
   const expectedIncome = (database.prepare("SELECT COALESCE(SUM(amount), 0) AS v FROM income_sources WHERE is_active = 1").get() as { v: number }).v || 0;
+  const received = Math.round(txIncome * 100) / 100;
   const income = Math.round(Math.max(txIncome, expectedIncome) * 100) / 100;
 
   const budgeted = Math.round(categories.reduce((s, c) => s + c.budgeted, 0) * 100) / 100;
@@ -51,7 +52,9 @@ export function buildLocalFinancialData(database: Database.Database = getDb()) {
   return {
     summary: { totalBalance, accounts, categories },
     transactions,
-    monthBudget: { income, budgeted, activity, toBeBudgeted, categories },
+    // `income` carries the expectation as a floor, so anything drawing "what has arrived" - the
+    // cash flow's solid bar, which stacks the rest on top - has to read `received` instead.
+    monthBudget: { income, received, budgeted, activity, toBeBudgeted, categories },
     syncedAt: now.toISOString(),
   };
 }
