@@ -1,4 +1,4 @@
-### Unreleased
+### 4.2.0: 2026-09-20
 
 * Serve the API reference at /api-docs and on the api. subdomain
 * Document every v1 endpoint in one place
