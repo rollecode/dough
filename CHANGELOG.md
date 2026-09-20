@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Model the net worth projection in one place and serve it over the API
 * Serve every brand mark as a file, so both clients draw the same logo
 * Order the cash flow months oldest first
 * Fix the transactions API failing on a broken query

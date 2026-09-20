@@ -7,6 +7,7 @@ import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { useYnab } from "@/lib/ynab-context";
 import { Card } from "@/components/ui/card";
 import { localDateIso } from "@/lib/date-utils";
+import { netWorthProjection } from "@/lib/net-worth-projection";
 import { Button } from "@/components/ui/button";
 import {
   AreaChart,
@@ -60,92 +61,19 @@ export default function NetWorthPage() {
         setSnapshots(snapshotData.snapshots);
       }
 
-      // Net worth projection: model cash, investments, and debts separately
+      // Where it goes from here, modelled in one place so the phone cannot answer differently.
       const latestSnap = snapshotData.snapshots?.length > 0 ? snapshotData.snapshots[snapshotData.snapshots.length - 1] : null;
-      const currentNw = latestSnap?.net_worth || 0;
-
-      // Current components
-      const investValue = (investData.investments || []).reduce((s: number, i: { balance: number }) => s + i.balance, 0);
-
-      // Monthly flows
-      const invs = investData.investments || [];
-      const monthlyInvestContrib = invs.reduce((s: number, i: { monthlyContribution: number }) => s + i.monthlyContribution, 0);
-      const monthlyDebtPayment = (debtData.debts || []).reduce((s: number, d: { minimumPayment: number }) => s + (d.minimumPayment || 0), 0);
-      const wr = invs.length > 0
-        ? (monthlyInvestContrib > 0
-          ? invs.reduce((s: number, i: { expectedReturn: number; monthlyContribution: number }) => s + i.expectedReturn * i.monthlyContribution, 0) / monthlyInvestContrib
-          : invs.reduce((s: number, i: { expectedReturn: number }) => s + i.expectedReturn, 0) / invs.length)
-        : 0;
-      const mr = wr / 100 / 12;
-
-      // Exclude incomplete current month from average
-      const history = (historyData.snapshots || []).filter((h: { month: string }) => {
-        const now2 = new Date();
-        return h.month !== `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, "0")}`;
-      });
-      // rawAvg = income - ALL expenses (already includes debt payments and invest contributions as expenses)
-      // Debt reduction and investment growth are tracked separately in the simulation
-      // So cash change = rawAvg (the net after everything)
-      const rawAvg = history.length > 0
-        ? history.reduce((s: number, h: { income: number; expenses: number }) => s + (h.income - h.expenses), 0) / history.length
-        : 0;
-
-      const currentYear = new Date().getFullYear();
-      const tl: { year: string; netWorth: number; baseline: number }[] = [{ year: String(currentYear), netWorth: Math.round(currentNw), baseline: Math.round(currentNw) }];
-
-      // --- Component model: cash + investments - debts each month ---
-      // rawAvg = income - ALL_expenses (includes debt payments + invest contributions)
-      // Cash changes by rawAvg each month
-      // Investments: compound growth (contributions leave cash, enter investments)
-      // Debts: snowball payoff (payments leave cash, reduce debts)
-      // Net worth = cash + investments - debts (computed fresh each year)
-
-      const debts = (debtData.debts || []) as { balance: number; interestRate: number; minimumPayment: number; monthlyTarget: number }[];
-      const simDebts = debts
-        .map((d) => ({ bal: d.balance, rate: (d.interestRate || 0) / 100 / 12, pay: d.minimumPayment || d.monthlyTarget || 50 }))
-        .sort((a, b) => a.bal - b.bal);
-
-      const cash0 = latestSnap ? latestSnap.checking + latestSnap.savings : 0;
-      let cash = cash0;
-      let inv1 = investValue, inv2 = investValue;
-
-      for (let y = 1; y <= 20; y++) {
-        for (let m = 0; m < 12; m++) {
-          // Cash changes by rawAvg (net income - all expenses)
-          cash += rawAvg;
-
-          // After debts paid off, freed payments stay in cash (no longer leaving as debt payments)
-          if (simDebts.every((d) => d.bal <= 0)) {
-            cash += simDebts.reduce((s, d) => s + d.pay, 0);
-          } else {
-            // Snowball step (same as Velat tab)
-            let extra = 0;
-            for (const d of simDebts) {
-              if (d.bal <= 0) { extra += d.pay; continue; }
-              const interest = d.bal * d.rate;
-              let payment = d.pay + (d === simDebts.find((x) => x.bal > 0) ? extra : 0);
-              payment = Math.min(payment, d.bal + interest);
-              d.bal = d.bal + interest - payment;
-              if (d.bal < 1) d.bal = 0;
-              extra = 0;
-            }
-          }
-
-          // Investments compound (same as Sijoitukset tab)
-          inv1 = inv1 * (1 + mr) + monthlyInvestContrib;
-          inv2 += monthlyInvestContrib;
-        }
-
-        const debtLeft = simDebts.reduce((s, d) => s + Math.max(0, d.bal), 0);
-        tl.push({
-          year: String(currentYear + y),
-          netWorth: Math.round(cash + inv1 - debtLeft),
-          baseline: Math.round(cash + inv2 - debtLeft),
-        });
-      }
-
-      const finalNw = tl[tl.length - 1].netWorth;
-      setNwProjection({ timeline: tl, finalValue: finalNw, totalGrowth: finalNw - currentNw });
+      const now2 = new Date();
+      const thisMonth = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, "0")}`;
+      setNwProjection(netWorthProjection({
+        currentNetWorth: latestSnap?.net_worth || 0,
+        cash: latestSnap ? latestSnap.checking + latestSnap.savings : 0,
+        investments: investData.investments || [],
+        debts: debtData.debts || [],
+        // A month still running would drag the average down.
+        monthlyHistory: (historyData.snapshots || []).filter((h: { month: string }) => h.month !== thisMonth),
+        currentYear: now2.getFullYear(),
+      }));
     })
       .catch((err) => console.error("[net-worth] Load error:", err))
       .finally(() => setLoading(false));
@@ -200,9 +128,6 @@ export default function NetWorthPage() {
   const changeDays = latest && compareSnapshot
     ? Math.round((new Date(latest.date).getTime() - new Date(compareSnapshot.date).getTime()) / 86400000)
     : 0;
-
-  // Total investments
-  const totalInvestments = latest ? latest.investments : 0;
 
   // Chart data — deduplicate per day, keep latest snapshot
   const byDay = new Map<string, Snapshot>();
