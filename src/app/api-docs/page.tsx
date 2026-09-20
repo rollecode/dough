@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SECTIONS, ENDPOINT_COUNT } from "@/lib/api-docs";
+import { CodeBlock } from "@/components/api-docs/code-block";
 
 export const metadata: Metadata = {
   title: "Dough API",
@@ -47,10 +48,10 @@ export default function ApiDocs() {
             JSON, amounts are in euros, and a <code>month</code> parameter is always{" "}
             <code>YYYY-MM</code>, defaulting to the current month in the server&rsquo;s timezone.
           </p>
-          <pre className="api-docs-code">
-            {`curl -s https://dough.example.com/api/v1/summary \\
+          <CodeBlock
+            code={`curl -s https://dough.example.com/api/v1/summary \\
   -H "Authorization: Bearer $DOUGH_API_KEY"`}
-          </pre>
+          />
         </section>
 
         <section id="auth" className="api-docs-section">
@@ -60,7 +61,7 @@ export default function ApiDocs() {
             SHA-256 hash is stored: the database never holds a usable secret. Send it as a bearer
             token, or as <code>x-api-key</code>.
           </p>
-          <pre className="api-docs-code">{`Authorization: Bearer dough_xxxxxxxx`}</pre>
+          <CodeBlock code={`Authorization: Bearer dough_xxxxxxxx`} language="http" />
           <p>
             A key carries <code>read</code>, or <code>read</code> and <code>write</code>. A read key
             can see everything and change nothing. A missing or revoked key returns{" "}
@@ -71,9 +72,7 @@ export default function ApiDocs() {
             On an instance without the settings page, a key can still be minted on the machine that
             owns the database:
           </p>
-          <pre className="api-docs-code">
-            {`npx tsx scripts/create-api-key.ts --name "my-client" --scopes read,write`}
-          </pre>
+          <CodeBlock code={`npx tsx scripts/create-api-key.ts --name "my-client" --scopes read,write`} />
         </section>
 
         {SECTIONS.map((section) => (

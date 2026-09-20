@@ -1,3 +1,7 @@
+### Unreleased
+
+* Highlight and copy code snippets in the API reference
+
 ### 4.2.0: 2026-09-20
 
 * Serve the API reference at /api-docs and on the api. subdomain
