@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Serve the whole dashboard from one API call
+* Share the dashboard maths between the app and the API
 * Fix the API reference wash covering only the centre column
 * Copy button in the API reference loses its box
 

@@ -54,6 +54,21 @@ export const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "dashboard",
+    title: "Dashboard",
+    intro:
+      "Everything the dashboard shows, in one call: the daily budget and the reason behind it, what is left today, the obligations ahead, the charts and the month's figures. Computed by the same module the web dashboard reads, so two clients looking at one instance cannot disagree.",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/dashboard",
+        scope: "read",
+        summary:
+          "The whole dashboard model: daily budget with its breakdown and notice, today's spending and what is left, upcoming bills and income, spending flow against pace, categories, streak, trends, cash flow, recent transactions and net worth.",
+      },
+    ],
+  },
+  {
     id: "accounts",
     title: "Accounts",
     intro:
