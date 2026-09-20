@@ -204,6 +204,8 @@ export const GET = apiRoute("read", (_request, identity) => {
     }
   }
 
+  // The month status this answers with is the same figure lib/month-status assembles for the web
+  // page, from the same rows. Change one and change the other.
   const model = buildDashboard({
     now,
     displayName,

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useEvent } from "@/lib/use-events";
 import { useLocale } from "@/lib/locale-context";
-import { monthStatus } from "@/lib/dashboard-model";
 import { isTransfer } from "@/lib/transaction-utils";
 import { calculateDailyBudget } from "@/lib/daily-budget";
 import { billDueInMonth } from "@/lib/bills";
@@ -69,6 +68,7 @@ export default function DashboardPage() {
   const { data, loading, connected, error: ynabError, sync, savingRate, refresh } = useYnab();
   const [incomes, setIncomes] = useState<IncomeSource[]>([]);
   const [matchedIncomeIds, setMatchedIncomeIds] = useState<Set<number>>(new Set());
+  const [status, setStatus] = useState<{ income: number; expenses: number } | null>(null);
   const [dashInfoOpen, setDashInfoOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [matchedBillIds, setMatchedBillIds] = useState<Set<number>>(new Set());
@@ -191,6 +191,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch("/api/trends").then((r) => r.json()).then((d) => { if (d.trends) setTrendData(d.trends); }).catch(() => {});
+    fetch("/api/month-status").then((r) => r.json()).then((d) => {
+      if (typeof d.expenses === "number") setStatus(d);
+    }).catch(() => {});
   }, []);
 
   // SSE: re-fetch income/bills and YNAB cache when data changes
@@ -512,19 +515,9 @@ export default function DashboardPage() {
   // rate (zero when there is no discretionary room), never the actual month-to-date burn.
   // Extrapolating the burn multiplied a one-off or a late-synced past purchase across the rest of
   // the month, spiking the estimate. Real past spending still counts once via realSpendingTotal.
-  // Income and the month-end estimate come from the shared module, the same one /api/v1/dashboard
-  // answers with, so the card here and the card on a phone cannot disagree.
-  const status = monthStatus({
-    now,
-    transactions: data.transactions,
-    monthBudgetIncome: data.monthBudget.income,
-    incomes,
-    bills,
-    savingRate,
-    debtMonthly,
-    investmentMonthly,
-  });
-  const monthExpensesEstimate = status.expenses;
+  // Income and the month-end estimate are computed on the server and fetched, not assembled from
+  // whatever this page happens to have loaded. Two copies of the assembly disagreed for a week.
+  const monthExpensesEstimate = status?.expenses ?? 0;
 
   // Spending chart: ALL spending with Vakaa talous target (income - savings) / days
   const totalTargetPerDay = combinedIncome > 0 && savingRate > 0
@@ -732,7 +725,7 @@ export default function DashboardPage() {
         projectedMonthEnd={projectedMonthEnd}
         todaySpentAll={todaySpentAll}
         todayRemaining={todayRemaining}
-        monthIncome={status.income}
+        monthIncome={status?.income ?? 0}
         monthExpenses={monthExpensesEstimate}
         trendPercent={trendPercent}
         budgetBreakdown={budgetResult.tightestSegment}
