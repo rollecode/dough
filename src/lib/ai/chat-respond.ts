@@ -463,36 +463,11 @@ export async function respondToChat(
   if (image && image_media_type && add_expense && user) {
     try {
       console.info("[chat] Attempting to auto-add expenses from image");
-      const { queryClaudeWithImage } = await import("@/lib/ai/claude-image");
+      // The same reader the API uses, so a photo sent here and a photo sent from a phone are
+      // understood identically.
+      const { parseReceipt } = await import("@/lib/ai/receipt");
       const chatToday = localDateIso();
-      const chatYesterday = localDateIso(new Date(Date.now() - 86400000));
-      // Load YNAB account names for smart account detection
-      const expAccounts = getDb().prepare("SELECT name FROM ynab_accounts WHERE closed = 0").all() as { name: string }[];
-      const accountNames = expAccounts.map((a) => a.name).join(", ");
-
-      const parseResult = await queryClaudeWithImage(
-        `Extract ALL transactions/expenses from this image. For each: amount (number only), payee/store name, date (YYYY-MM-DD), and account/card name if visible.
-Today is ${chatToday}. "Tänään"/"Today" = ${chatToday}. "Eilen"/"Yesterday" = ${chatYesterday}. Convert dates like "19.3." to YYYY-MM-DD. Transactions under date headings inherit that date. If no date visible, use ${chatToday}.
-For "account": look for card brand, bank name, or app name (Revolut, Visa, Mastercard, S-Pankki, Nordea, OP, etc). Match to one of these YNAB accounts if possible: ${accountNames}. Use the exact YNAB account name. If unclear, leave empty.
-If single receipt, return one item. If bank statement or multiple items, return ALL.
-Reply with ONLY a valid JSON array: [{"amount":"...","payee":"...","date":"YYYY-MM-DD","account":"..."}]`,
-        image,
-        image_media_type,
-        30000
-      );
-
-      let transactions: { amount: string; payee: string; date?: string; account?: string }[] = [];
-      try {
-        const arrayMatch = parseResult.text.match(/\[[\s\S]*\]/);
-        if (arrayMatch) {
-          transactions = JSON.parse(arrayMatch[0]);
-        } else {
-          const objMatch = parseResult.text.match(/\{[\s\S]*\}/);
-          if (objMatch) transactions = [JSON.parse(objMatch[0])];
-        }
-      } catch {
-        console.warn("[chat] Failed to parse receipt JSON:", parseResult.text);
-      }
+      const transactions = await parseReceipt(image, image_media_type);
 
       if (transactions.length > 0) {
         // Default account: user's linked account
