@@ -19,6 +19,7 @@ import { useLocale } from "@/lib/locale-context";
 import type { Locale } from "@/lib/i18n";
 import { F } from "@/components/ui/f";
 import { DEFAULT_CHAT_GUIDELINES, DEFAULT_SUMMARY_INSTRUCTIONS, DEFAULT_DEBT_INSTRUCTIONS } from "@/lib/ai/default-prompts";
+import { ApiKeysCard } from "@/components/settings/api-keys";
 
 interface UserProfile {
   id: number;
@@ -1292,6 +1293,8 @@ export default function SettingsPage() {
             </p>
           </CardContent>
         </Card>
+
+        <ApiKeysCard />
       </div>
     </div>
   );

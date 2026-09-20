@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Create and revoke API keys in settings
+* Show a new API key once, then only its prefix
 * Social share image, title and description
 * Logo replaces the wordmark on the login page
 * Net worth matches between dashboard and its own page
