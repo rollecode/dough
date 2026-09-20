@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Serve the API reference at /api-docs and on the api. subdomain
+* Document every v1 endpoint in one place
 * Create and revoke API keys in settings
 * Show a new API key once, then only its prefix
 * Social share image, title and description

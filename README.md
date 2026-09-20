@@ -227,17 +227,51 @@ ingress:
 
 ## HTTP API and MCP
 
-Dough exposes a small versioned, read-only API under `/api/v1/*` for programmatic access, separate
-from the cookie-authenticated internal routes. It authenticates with an API key (stored only as a
-SHA-256 hash, shown once at creation):
+Dough exposes a versioned API under `/api/v1/*` for programmatic access, separate from the
+cookie-authenticated internal routes. It authenticates with an API key, stored only as a SHA-256
+hash and shown once at creation. Create one in the app under Settings, then API keys, with read, or
+read and write. Revoking it there stops it working on the next request.
+
+```bash
+curl -s https://your-domain.example.com/api/v1/summary -H "Authorization: Bearer $DOUGH_API_KEY"
+```
+
+A key can also be minted on the machine that owns the database, which is how it worked before the
+settings page existed:
 
 ```bash
 npx tsx scripts/create-api-key.ts --name "dough-mcp" --scopes read
-curl -s https://your-host/api/v1/summary -H "Authorization: Bearer $DOUGH_API_KEY"
 ```
 
+### The API reference
+
+Every instance serves its own reference at `/api-docs`, and on the `api.` subdomain of whatever
+domain it runs on. Nothing to configure: point the name at the same instance and
+`api.your-domain.example.com` answers with the reference, while any other path there redirects to
+the app. `/api/v1/*` is served on that host too, so a client can call the API at the same address
+the docs describe. The page reads no data and is public; the cookie-authenticated routes are not
+reachable on that host.
+
+```bash
+cloudflared tunnel route dns dough api.your-domain.example.com
+```
+
+Add it to the tunnel's ingress beside the app hostname:
+
+```yaml
+ingress:
+  - hostname: your-domain.example.com
+    service: http://localhost:3001
+  - hostname: api.your-domain.example.com
+    service: http://localhost:3001
+  - service: http_status:404
+```
+
+If an instance already lives on a name starting with `api.`, set `DOUGH_DOCS_HOST` to the exact host
+that should serve the reference instead.
+
 The Dough MCP server is a separate repo that wraps this API as MCP tools, so an assistant can query
-your finances. See [Public API](docs/public-api.md) for endpoints, auth and the MCP pointer.
+your finances. See [Public API](docs/public-api.md) for auth, scopes and the MCP pointer.
 
 ## Backups
 

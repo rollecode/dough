@@ -1,12 +1,16 @@
 ## Public API (v1)
 
-A small, versioned, read-only HTTP API for programmatic access (scripts, the Dough MCP server).
-Unlike the internal `/api/*` routes, which use the browser `dough-session` cookie, the `/api/v1/*`
-routes authenticate with an API key. This lets external clients read your finances without a login
-session.
+A versioned HTTP API for programmatic access: scripts, the Dough MCP server, the iOS app. Unlike
+the internal `/api/*` routes, which use the browser `dough-session` cookie, the `/api/v1/*` routes
+authenticate with an API key, so an external client reaches your finances without a login session.
 
-The API key model stores a `scopes` field (`read`, or `read,write`) so write access can be added
-later without changing how keys work. Today every v1 endpoint is `read`.
+A key carries `read`, or `read` and `write`. Read sees everything and changes nothing; write also
+creates, edits and deletes. Some write endpoints are local mode only, and answer `400` in YNAB mode
+where the data belongs to YNAB.
+
+The full reference, every endpoint with its parameters, is served by the instance itself at
+`/api-docs` and on the `api.` subdomain of the domain it runs on. This file covers how keys work;
+the reference covers what you can call.
 
 ### Authentication
 
@@ -25,7 +29,11 @@ a public repository).
 
 ### Creating a key
 
-From the project root on the server that owns the database:
+In the app, under Settings, then API keys. Name it, decide whether it may write, and copy it: the
+plaintext is shown once and never again.
+
+It can also be minted from the project root on the machine that owns the database, which is how it
+worked before the settings page existed:
 
 ```
 npx tsx scripts/create-api-key.ts --name "dough-mcp" --scopes read
@@ -41,7 +49,10 @@ The plaintext key is printed once. Store it immediately.
 
 ### Revoking a key
 
-Set `revoked_at` on its row; a revoked key stops authenticating on the next request.
+Revoke it in Settings, then API keys. It stops authenticating on the next request. The row is kept
+rather than deleted, so it still explains what a key was when a client stops working.
+
+By hand, set `revoked_at` on its row:
 
 ```
 sqlite3 data/dough.db "UPDATE api_keys SET revoked_at = datetime('now') WHERE name = 'dough-mcp';"
@@ -49,46 +60,21 @@ sqlite3 data/dough.db "UPDATE api_keys SET revoked_at = datetime('now') WHERE na
 
 ### Endpoints
 
-All responses are JSON. Amounts are in euros. `month` params are `YYYY-MM` and default to the
-current month in the server's Helsinki timezone.
+All responses are JSON. Amounts are in euros. A `month` parameter is `YYYY-MM` and defaults to the
+current month in the server's timezone.
 
-- `GET /api/v1/summary` — total balance, and the month's income, budgeted, activity and Ready to
-  Assign. Accepts `month`; every month figure is computed for that month.
-- `GET /api/v1/accounts` — every account with its balance. `include_closed=1` also returns closed
-  accounts. `budget_excluded` marks the accounts left out of the app's spendable-balance figure.
-- `GET /api/v1/transactions` — transactions newest first. Optional `month`, `account_id`,
-  `category`, `q` (search payee/memo), `limit` (1..500, default 50).
-- `GET /api/v1/budget` — the month's income, total budgeted, Ready to Assign, age of money and every
-  active category's budgeted / activity / available. Accepts `month`. `budget_excluded` marks a
-  category whose transactions are left out of the spending reports.
-- `GET /api/v1/net-worth` — current net worth by kind (checking, savings, investments, debts) plus
-  the saved snapshot history.
-- `GET /api/v1/bills` — recurring bills with amount and due day.
-- `GET /api/v1/subscriptions` — subscriptions with amount and due day.
-- `GET /api/v1/savings-goals` — active goals with target and derived saved amount. Accepts `month`.
+The endpoints, their parameters and their bodies are documented in the reference the instance
+serves at `/api-docs`, built from `src/lib/api-docs.ts`. Adding a route means adding it there too,
+so the reference cannot drift from the routes the way a hand-kept list in this file did.
 
-### Write endpoints (write scope)
-
-These require a key minted with `--scopes read,write` and return `403` for a read-only key.
-
-- `GET /api/v1/budget/auto-assign?month=YYYY-MM[&mode=...]` — preview target funding (no write). Without
-  `mode`, the total each mode would assign; with `mode`, the full per-category plan.
-- `POST /api/v1/budget/auto-assign` — apply a plan. Body: `{ "month": "YYYY-MM", "mode": "underfunded" | "last_assigned" | "last_spent" }`.
-  Funds category targets from Ready to Assign, capped so it never overbudgets.
-- `POST /api/v1/budget/assign` — set one category's amount. Body: `{ "month": "YYYY-MM", "category_id" | "category_name", "budgeted": number }`.
-- `POST /api/v1/transactions/update` — patch one transaction by the id the read endpoints return;
-  only provided fields change. Body: `{ "transaction_id", "amount"?, "inflow"?, "payee_name"?,
-  "memo"?, "account_id"?, "date"?, "category"?, "transfer_account_id"? }`. `amount` is the absolute
-  value (`inflow: true` stores it positive). Setting `category` to `Internal transfer` with a
-  `transfer_account_id` fills the counterpart account and maintains the opposite leg. Local mode
-  only.
-- `POST /api/v1/transactions/delete` — remove one transaction (split siblings included) and reverse
-  its balance effect. Body: `{ "transaction_id" }`. Local mode only.
+Reads cover the summary, accounts, transactions, budget, categories, bills, subscriptions, income,
+savings goals, debts, investments and net worth. Writes cover creating, editing and deleting each of
+those, assigning and moving budget, and auto-assign. Transaction writes are local mode only.
 
 ### Example
 
 ```
-curl -s https://your-dough-host/api/v1/summary \
+curl -s https://your-domain.example.com/api/v1/summary \
   -H "Authorization: Bearer $DOUGH_API_KEY"
 ```
 
