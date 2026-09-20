@@ -1,20 +1,28 @@
 /* Module: api-docs — the public reference served on the api. host. Two columns on a desktop, the
    nav folding above the content on a phone. Same glass surfaces as the app, no app chrome. */
 
-/* One violet field, a fraction of the app's: the reference is a document, so the colour should be
-   felt rather than seen. */
 .api-docs {
-  background-image:
-    radial-gradient(85% 45% at 88% -12%, rgba(139, 92, 246, 0.13) 0%, rgba(139, 92, 246, 0.05) 42%, rgba(139, 92, 246, 0) 78%),
-    radial-gradient(70% 40% at -10% 8%, rgba(139, 92, 246, 0.07) 0%, rgba(139, 92, 246, 0) 70%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
   gap: 3rem;
   max-width: 68rem;
   margin: 0 auto;
   padding: 3rem 1.5rem 6rem;
+}
+
+/* One violet field, a fraction of the app's: the reference is a document, so the colour should be
+   felt rather than seen. Painted by a fixed pseudo-element because .api-docs is a centred 68rem
+   column, so its own background would leave the page bare either side of it. */
+.api-docs::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(85% 45% at 88% -12%, rgba(139, 92, 246, 0.13) 0%, rgba(139, 92, 246, 0.05) 42%, rgba(139, 92, 246, 0) 78%),
+    radial-gradient(70% 40% at -10% 8%, rgba(139, 92, 246, 0.07) 0%, rgba(139, 92, 246, 0) 70%);
+  background-repeat: no-repeat;
 }
 
 .api-docs-nav {
@@ -119,10 +127,10 @@
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: calc(var(--radius) - 0.75rem);
-  border: 1px solid #292e42;
-  background-color: #1f2335;
-  color: #a9b1d6;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #8079a8;
   cursor: pointer;
   opacity: 0.6;
   transition: opacity 150ms, color 150ms;
@@ -134,7 +142,7 @@
 }
 
 .api-code-copy:hover {
-  color: #bb9af7;
+  color: #c4a7ff;
 }
 
 .api-code-copy svg {

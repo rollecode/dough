@@ -1,3 +1,8 @@
+### Unreleased
+
+* Fix the API reference wash covering only the centre column
+* Copy button in the API reference loses its box
+
 ### 4.2.1: 2026-09-20
 
 * Highlight and copy code snippets in the API reference
