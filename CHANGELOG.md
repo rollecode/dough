@@ -1,9 +1,13 @@
-### Unreleased
+### 4.3.0: 2026-09-20
 
 * Sign in to your own instance over OAuth 2.1
 * Register clients dynamically, so nothing needs configuring
 * Ask for consent before an app reads or writes anything
 * Accept OAuth tokens wherever an API key works
+* Pick a payee for a bill instead of writing a wildcard
+* Match bills without a YNAB sync, so matching runs in local mode
+* Move a bill's due day to the day it is actually paid
+* Stop rejecting a payment made earlier than the due day
 * Serve the whole dashboard from one API call
 * Share the dashboard maths between the app and the API
 * Fix the API reference wash covering only the centre column
