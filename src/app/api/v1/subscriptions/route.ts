@@ -16,16 +16,36 @@ export const GET = apiRoute("read", (request) => {
       source_id: number;
     }[]).map((r) => r.source_id)
   );
+  const patterns = db
+    .prepare("SELECT source_id, payee_pattern FROM payee_matches WHERE source_type = 'subscription'")
+    .all() as { source_id: number; payee_pattern: string }[];
+  const patternsById = new Map<number, string[]>();
+  for (const p of patterns) {
+    patternsById.set(p.source_id, [...(patternsById.get(p.source_id) ?? []), p.payee_pattern]);
+  }
+  const today = new Date().getDate();
+
   const rows = db
-    .prepare("SELECT id, name, amount, due_day, is_priority FROM subscriptions ORDER BY due_day ASC")
-    .all() as { id: number; name: string; amount: number; due_day: number; is_priority: number }[];
-  const subscriptions = rows.map((s) => ({
-    id: s.id,
-    is_paid: manual.has(s.id + 10000) ? manual.get(s.id + 10000)! : matched.has(s.id),
-    name: s.name,
-    amount: s.amount,
-    due_day: s.due_day,
-    is_priority: !!s.is_priority,
-  }));
+    .prepare("SELECT id, name, amount, due_day, is_priority, is_active, brand_color, brand_logo FROM subscriptions ORDER BY due_day ASC")
+    .all() as {
+      id: number; name: string; amount: number; due_day: number; is_priority: number;
+      is_active: number; brand_color: string | null; brand_logo: string | null;
+    }[];
+  const subscriptions = rows.map((s) => {
+    const isPaid = manual.has(s.id + 10000) ? manual.get(s.id + 10000)! : matched.has(s.id);
+    return {
+      id: s.id,
+      name: s.name,
+      amount: s.amount,
+      due_day: s.due_day,
+      is_priority: !!s.is_priority,
+      is_active: !!s.is_active,
+      is_paid: isPaid,
+      is_overdue: !isPaid && !!s.is_active && s.due_day < today,
+      brand_color: s.brand_color ?? "",
+      brand_logo: s.brand_logo ?? "",
+      patterns: patternsById.get(s.id) ?? [],
+    };
+  });
   return { subscriptions, count: subscriptions.length, month };
 });
