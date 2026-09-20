@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Open the spending heatmap at today rather than part scrolled
 * Read every category budget in two queries instead of two per category
 * Index the columns the category walk filters on
 * Report what an unlinked savings goal holds over the API

@@ -45,12 +45,18 @@ export function SpendingHeatmap() {
   useEffect(() => { loadHeatmap(); }, [loadHeatmap]);
   useEvent("data:updated", loadHeatmap);
 
+  // Today sits at the right edge, so that is where the grid opens. One frame is not enough: the
+  // columns settle after the cells and labels lay out, and a scroll set before that lands short
+  // and leaves today off screen.
   useEffect(() => {
-    requestAnimationFrame(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
-      }
-    });
+    const el = scrollRef.current;
+    if (!el) return;
+    const toEnd = () => { el.scrollLeft = el.scrollWidth - el.clientWidth; };
+    toEnd();
+    const observer = new ResizeObserver(toEnd);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => observer.disconnect();
   }, [transactions]);
 
   const now = new Date();
