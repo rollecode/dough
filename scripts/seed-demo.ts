@@ -304,7 +304,7 @@ async function main() {
   }
 
   const putNetWorth = db.prepare(
-    "INSERT INTO net_worth_snapshots (user_id, date, checking, savings, investments, debts, net_worth) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO net_worth_snapshots (date, checking, savings, investments, debts, net_worth) VALUES (?, ?, ?, ?, ?, ?)"
   );
   const putProgress = db.prepare(
     "INSERT OR REPLACE INTO investment_progress (date, total_value, total_contributed) VALUES (?, ?, ?)"
@@ -317,7 +317,7 @@ async function main() {
     const savings = round2(4900 + progress * 4365);
     const investments = round2(8200 + progress * 4640);
     const debts = round2(-(5400 - progress * 1200));
-    putNetWorth.run(userId, `${month}-01`, checking, savings, investments, debts, round2(checking + savings + investments + debts));
+    putNetWorth.run(`${month}-01`, checking, savings, investments, debts, round2(checking + savings + investments + debts));
     putProgress.run(`${month}-01`, investments, round2(7100 + progress * 3150));
   });
 
