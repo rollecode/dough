@@ -744,7 +744,9 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     // current month may not exist yet, and when it does it is already stale, so it is replaced
     // rather than trusted - the same thing the web page does before it draws the chart.
     cash_flow: [
-      ...monthlyHistory
+      // Oldest first, so a chart can draw the array as it stands.
+      ...[...monthlyHistory]
+        .sort((a, b) => a.month.localeCompare(b.month))
         .filter((m) => m.month !== month)
         .map((m) => ({
           month: m.month,

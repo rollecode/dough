@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Serve every brand mark as a file, so both clients draw the same logo
+* Order the cash flow months oldest first
 * Fix the transactions API failing on a broken query
 * Read the cash flow history from the ledger, not from the YNAB snapshots
 * Count debt payments and investments still to come in the month status
