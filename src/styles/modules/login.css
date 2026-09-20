@@ -24,8 +24,11 @@
 }
 
 .login-title img {
+  display: block;
   width: 176.05px;
   height: 40px;
+  margin-inline: auto;
+  transform: translateX(-10px);
 }
 
 .login-form {
