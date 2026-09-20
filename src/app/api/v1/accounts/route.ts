@@ -15,7 +15,7 @@ interface AccountRow {
 // GET /api/v1/accounts - every account with its balance. include_closed=1 to also return closed
 // accounts (open only by default). budget_excluded marks the accounts the app leaves out of its
 // spendable-balance figure, so a caller reading this API sees the same picture the UI does.
-export const GET = apiRoute("read", (request) => {
+export const GET = apiRoute("read", (request, identity) => {
   const db = getDb();
   const includeClosed = new URL(request.url).searchParams.get("include_closed") === "1";
   const excludedRaw = getHouseholdSetting("budget_excluded_accounts");
@@ -25,6 +25,11 @@ export const GET = apiRoute("read", (request) => {
   } catch {
     console.warn("[v1/accounts] budget_excluded_accounts is not valid JSON, treating as empty");
   }
+  const mine = new Set(
+    (db.prepare("SELECT ynab_account_id FROM user_linked_accounts WHERE user_id = ?").all(identity.userId) as {
+      ynab_account_id: string;
+    }[]).map((r) => r.ynab_account_id)
+  );
   const rows = db
     .prepare(
       "SELECT id, name, type, balance, cleared_balance, on_budget, closed FROM ynab_accounts " +
@@ -41,6 +46,7 @@ export const GET = apiRoute("read", (request) => {
     on_budget: !!a.on_budget,
     closed: !!a.closed,
     budget_excluded: excludedIds.includes(a.id),
+    mine: mine.has(a.id),
   }));
   return { accounts, count: accounts.length };
 });
