@@ -146,7 +146,17 @@ export interface DashboardModel {
   streak: { days: number; spent_by_date: Record<string, number> };
   cash_flow: { month: string; income: number; expenses: number }[];
   trends: { category: string; this_month: number; last_month: number }[];
-  recent_transactions: DashTransaction[];
+  recent_transactions: {
+    id: string;
+    date: string;
+    amount: number;
+    payee: string;
+    category: string;
+    memo: string | null;
+    account_id: string;
+    account_name: string | null;
+    excluded: boolean;
+  }[];
   net_worth: { checking: number; savings: number; investments: number; debts: number; net_worth: number };
 }
 
@@ -544,6 +554,8 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     return bills.filter((b) => b.is_active && b.due_day <= nextIncomeDay).length;
   })();
 
+  const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
+
   const sumType = (type: string) =>
     round(accounts.filter((a) => a.type === type).reduce((s, a) => s + a.balance, 0));
 
@@ -613,7 +625,18 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     recent_transactions: [...transactions]
       .filter((t) => !isTransfer(t.payee, t.category))
       .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 8),
+      .slice(0, 8)
+      .map((t) => ({
+        id: t.id,
+        date: t.date,
+        amount: t.amount,
+        payee: t.payee,
+        category: t.category,
+        memo: (t as { memo?: string | null }).memo ?? null,
+        account_id: t.account_id ?? "",
+        account_name: accountNames.get(t.account_id ?? "") ?? null,
+        excluded: !!t.excluded,
+      })),
     net_worth: {
       checking: sumType("checking"),
       savings: sumType("savings"),

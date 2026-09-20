@@ -1,3 +1,7 @@
+### Unreleased
+
+* Send full transaction rows in the dashboard payload
+
 ### 4.3.0: 2026-09-20
 
 * Sign in to your own instance over OAuth 2.1
