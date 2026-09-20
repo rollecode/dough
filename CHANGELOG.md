@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Count only income already received in the cash flow bar
+* Say what the month status tooltip actually counts
 * Align the transactions balance on mobile
 * Fix list card backgrounds spilling past rounded corners
 * Larger, better spaced info icon on the dashboard heading
