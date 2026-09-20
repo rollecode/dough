@@ -1,5 +1,9 @@
 ### Unreleased
 
+* Larger, better spaced info icon on the dashboard heading
+
+### Unreleased
+
 * Report personal spending separately from the household in the dashboard payload
 * Hold the pace line to the targets each past day was given
 * Read and write the daily budget figures over the API

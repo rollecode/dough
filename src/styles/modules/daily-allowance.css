@@ -242,6 +242,36 @@
   height: 1rem;
 }
 
+/* The dashboard heading only. Inline flex so the icon sits on the cap height rather than the
+   baseline, with room to breathe next to a 27px title. */
+@media (min-width: 768px) {
+  .dashboard-page .page-heading {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .dashboard-page .page-heading .metric-info-wrap {
+    margin-left: 1rem;
+  }
+
+  .dashboard-page .page-heading .metric-info-trigger svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Phones keep the baseline layout, but the 16px icon looked lost beside a 27px title. */
+@media (max-width: 767px) {
+  .dashboard-page .page-heading .metric-info-wrap {
+    margin-left: 0.625rem;
+  }
+
+  .dashboard-page .page-heading .metric-info-trigger svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .metric-info-popup {
   position: absolute;
   top: calc(100% + 0.5rem);
