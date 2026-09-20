@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Align the transactions balance on mobile
 * Fix list card backgrounds spilling past rounded corners
 * Larger, better spaced info icon on the dashboard heading
 * Report personal spending separately from the household in the dashboard payload

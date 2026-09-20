@@ -562,6 +562,16 @@
   line-height: 1.15;
 }
 
+/* On a phone the balance always wraps to its own line, and there its right-aligned text sat against
+   a left-aligned box. Give it the full width and align it with everything else instead of leaving
+   the layout to depend on how long the month name happens to be. */
+@media (max-width: 767px) {
+  .tx-balance-box {
+    width: 100%;
+    align-items: flex-start;
+  }
+}
+
 .tx-balance-value {
   font-size: 1.375rem;
   font-weight: 600;
