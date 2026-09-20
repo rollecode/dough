@@ -11,7 +11,9 @@ A self-hosted personal finance dashboard for households. It runs on its own - ma
 
 ## Why Dough
 
-YNAB is great for detailed per-account envelope budgeting, but it's an individual tool. When you share finances with a partner, you need a shared view that answers simple questions: "how much can we spend today?", "are we on track this month?", "can we afford eating out tonight?"
+[YNAB](https://www.ynab.com) is great tool for detailed per-account envelope budgeting, but it has a steep learning curve - and let's face it, not everyone is like you. Your significant other might not care about budgeting at all, and YNAB looks a lot like an enterprise spreadsheet, making it even harder to learn.
+
+When you share finances with a partner, you need a shared view that answers simple questions: "How much can we spend today?", "Are we on track this month?", "Can we afford eating out tonight?". If your app doesn't answer those questions instantly, it fails. The purpose of dought is to provide a simple app where you can log transactions and check your situation without needing to worry about envelope budgeting. The person in your family who does care can then fill in the blanks.
 
 Dough was built to solve this:
 
