@@ -146,7 +146,8 @@ export interface DashboardModel {
   spending_chart: { day: number; spent: number; savings_target: number | null }[];
   categories: { name: string; amount: number }[];
   streak: { days: number; spent_by_date: Record<string, number> };
-  cash_flow: { month: string; income: number; expenses: number }[];
+  heatmap: Record<string, number>;
+  cash_flow: { month: string; income: number; expenses: number; upcoming_income: number }[];
   trends: { category: string; this_month: number; last_month: number }[];
   recent_transactions: {
     id: string;
@@ -244,6 +245,15 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   for (const t of transactions) {
     if (!isDiscretionary(t)) continue;
     spentByDate[t.date] = round((spentByDate[t.date] ?? 0) + Math.abs(t.amount));
+  }
+
+  // The heatmap shades every expense the budget counts, transfers aside, which is a wider net than
+  // the streak's discretionary-only total above.
+  const heatmap: Record<string, number> = {};
+  for (const t of transactions) {
+    if (t.amount >= 0) continue;
+    if (isTransfer(t.payee, t.category)) continue;
+    heatmap[t.date] = round((heatmap[t.date] ?? 0) + Math.abs(t.amount));
   }
 
   const activeIncomes = incomes.filter((i) => i.is_active);
@@ -619,10 +629,12 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     spending_chart: spendingChart,
     categories,
     streak: { days: streakDays, spent_by_date: spentByDate },
+    heatmap,
     cash_flow: monthlyHistory.map((m) => ({
       month: m.month,
-      income: round(m.income),
-      expenses: round(m.expenses),
+      income: m.month === month ? round(monthBudget.income) : round(m.income),
+      expenses: m.month === month ? round(Math.abs(monthBudget.activity)) : round(m.expenses),
+      upcoming_income: m.month === month ? upcomingIncome : 0,
     })),
     trends: trends.map((t) => ({
       category: t.category,
