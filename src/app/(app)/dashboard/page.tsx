@@ -415,7 +415,9 @@ export default function DashboardPage() {
 
   // Burn rate = average daily real spending this month
   const daysPassed = now.getDate();
-  const realSpendingTotal = data.transactions
+  const monthStartStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const monthToDate = data.transactions.filter((t) => t.date >= monthStartStr && t.date <= todayStr);
+  const realSpendingTotal = monthToDate
     .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   const dailyBurnRate = daysPassed > 0 ? Math.round((realSpendingTotal / daysPassed) * 100) / 100 : 0;
@@ -488,7 +490,7 @@ export default function DashboardPage() {
     discCumulative += Math.abs(tx.amount);
     discretionaryByDay[day] = Math.round(discCumulative);
   }
-  const discretionarySpendingTrue = data.transactions
+  const discretionarySpendingTrue = monthToDate
     .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   const dailyDiscretionaryTrue = daysPassed > 0 ? Math.round((discretionarySpendingTrue / daysPassed) * 100) / 100 : 0;
