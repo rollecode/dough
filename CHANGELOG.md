@@ -1,3 +1,7 @@
+### 4.1.2: 2026-09-20
+
+* Fix see-through mobile menu on desktop widths
+
 ### 4.1.1: 2026-09-20
 
 * Fix settings fields sticking together
