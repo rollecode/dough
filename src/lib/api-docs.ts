@@ -128,6 +128,14 @@ export const SECTIONS: Section[] = [
     endpoints: [
       {
         method: "GET",
+        path: "/payees",
+        scope: "read",
+        summary:
+          "The payees this household uses, most used first, each with the category it is usually filed under, the account it is usually paid from and what it last cost. A client can complete an entry from this without asking again, and it keeps working offline. The category is stated only when the history agrees, so an inconsistently filed payee gets none rather than a wrong guess.",
+        params: [{ name: "limit", type: "number", description: "1 to 1000, default 300." }],
+      },
+      {
+        method: "GET",
         path: "/transactions",
         scope: "read",
         summary: "Transactions newest first.",

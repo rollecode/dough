@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Serve known payees with their usual category and account
 * Send full transaction rows in the dashboard payload
 
 ### 4.3.0: 2026-09-20
