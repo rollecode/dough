@@ -144,7 +144,9 @@ export interface DashboardModel {
   spending_flow: {
     daily_discretionary: number;
     target_per_day: number;
-    by_day: { day: number; spent: number; target: number }[];
+    // The whole month: what was actually spent up to today, where the current rate lands after it,
+    // and the steady line both are read against.
+    by_day: { day: number; spent: number | null; projected: number | null; target: number }[];
   };
   spending_chart: { day: number; spent: number; savings_target: number | null }[];
   categories: { name: string; amount: number }[];
@@ -457,7 +459,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     .filter((t) => t.date >= monthStart && isSpending(t))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const flowByDay: { day: number; spent: number; target: number }[] = [];
+  const flowByDay: DashboardModel["spending_flow"]["by_day"] = [];
   let discCumulative = 0;
   const discretionaryPerDay: Record<number, number> = {};
   for (const t of sortedSpending) {
@@ -470,11 +472,26 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   // one. Same rule as the web's spending flow, so both draw the same line.
   let carried = 0;
   let cumulativeTarget = 0;
-  for (let day = 1; day <= today; day++) {
-    carried = discretionaryPerDay[day] ?? carried;
+  let projected = 0;
+  for (let day = 1; day <= daysInMonth; day++) {
     const frozen = day < today ? targetByDay[day] : undefined;
     cumulativeTarget += frozen && frozen > 0 ? frozen : targetPerDay;
-    flowByDay.push({ day, spent: carried, target: round(cumulativeTarget) });
+
+    if (day <= today) {
+      carried = discretionaryPerDay[day] ?? carried;
+      projected = carried;
+      // The projection starts where the real line ends, so the two meet instead of jumping.
+      flowByDay.push({
+        day,
+        spent: carried,
+        projected: day === today ? carried : null,
+        target: round(cumulativeTarget),
+      });
+      continue;
+    }
+
+    projected += dailyDiscretionary;
+    flowByDay.push({ day, spent: null, projected: round(projected), target: round(cumulativeTarget) });
   }
 
   const totalTargetPerDay =
