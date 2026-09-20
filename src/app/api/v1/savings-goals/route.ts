@@ -9,17 +9,40 @@ export const GET = apiRoute("read", (request) => {
   const db = getDb();
   const month = resolveMonth(request);
   const goals = db
-    .prepare("SELECT id, name, target_amount, COALESCE(target_date, '') AS target_date, priority, description FROM savings_goals WHERE is_active = 1 ORDER BY created_at ASC")
-    .all() as { id: number; name: string; target_amount: number; target_date: string; priority: string; description: string | null }[];
+    .prepare(
+      "SELECT id, name, target_amount, COALESCE(target_date, '') AS target_date, priority, description, " +
+        "COALESCE(include_in_calculations, 1) AS include_in_calculations " +
+        "FROM savings_goals WHERE is_active = 1 ORDER BY created_at ASC"
+    )
+    .all() as {
+      id: number; name: string; target_amount: number; target_date: string; priority: string;
+      description: string | null; include_in_calculations: number;
+    }[];
 
   const linkRows = db
     .prepare("SELECT id AS category_id, name, savings_goal_id FROM categories WHERE savings_goal_id IS NOT NULL")
     .all() as { category_id: number; name: string; savings_goal_id: number }[];
   const savedByGoal = new Map<number, number>();
+  const categoryByGoal = new Map<number, string>();
   for (const r of linkRows) {
     const v = availableForCategory(db, r.category_id, r.name, month);
     savedByGoal.set(r.savings_goal_id, (savedByGoal.get(r.savings_goal_id) || 0) + v);
+    categoryByGoal.set(r.savings_goal_id, r.name);
   }
+
+  // What putting the goal within reach costs a month. Without a date it is simply what is left.
+  const monthlyNeed = (target: number, saved: number, targetDate: string) => {
+    const remaining = target - saved;
+    if (remaining <= 0) return 0;
+    if (!targetDate) return Math.round(remaining * 100) / 100;
+    const due = new Date(targetDate);
+    const now = new Date();
+    const months = Math.max(
+      1,
+      (due.getFullYear() - now.getFullYear()) * 12 + due.getMonth() - now.getMonth()
+    );
+    return Math.round((remaining / months) * 100) / 100;
+  };
 
   const savingsGoals = goals.map((g) => ({
     id: g.id,
@@ -29,6 +52,13 @@ export const GET = apiRoute("read", (request) => {
     priority: g.priority,
     description: g.description || "",
     saved_amount: savedByGoal.has(g.id) ? Math.round(savedByGoal.get(g.id)! * 100) / 100 : 0,
+    include_in_calculations: !!g.include_in_calculations,
+    linked_category_name: categoryByGoal.get(g.id) ?? "",
+    monthly_need: monthlyNeed(
+      g.target_amount,
+      savedByGoal.has(g.id) ? Math.round(savedByGoal.get(g.id)! * 100) / 100 : 0,
+      g.target_date
+    ),
   }));
 
   return { savings_goals: savingsGoals, count: savingsGoals.length };
