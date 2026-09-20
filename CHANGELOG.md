@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Report what an unlinked savings goal holds over the API
 * Write durations out as years and months
 * Model the investment projection in one place and serve it over the API
 * Model the net worth projection in one place and serve it over the API

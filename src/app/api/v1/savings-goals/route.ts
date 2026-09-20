@@ -11,12 +11,12 @@ export const GET = apiRoute("read", (request) => {
   const goals = db
     .prepare(
       "SELECT id, name, target_amount, COALESCE(target_date, '') AS target_date, priority, description, " +
-        "COALESCE(include_in_calculations, 1) AS include_in_calculations " +
+        "COALESCE(saved_amount, 0) AS saved_amount, COALESCE(include_in_calculations, 1) AS include_in_calculations " +
         "FROM savings_goals WHERE is_active = 1 ORDER BY created_at ASC"
     )
     .all() as {
       id: number; name: string; target_amount: number; target_date: string; priority: string;
-      description: string | null; include_in_calculations: number;
+      description: string | null; saved_amount: number; include_in_calculations: number;
     }[];
 
   const linkRows = db
@@ -44,6 +44,11 @@ export const GET = apiRoute("read", (request) => {
     return Math.round((remaining / months) * 100) / 100;
   };
 
+  // A linked goal derives what is saved from its category's available balance; an unlinked one
+  // keeps the figure that was typed into it, which is what the page shows.
+  const savedFor = (g: { id: number; saved_amount: number }) =>
+    savedByGoal.has(g.id) ? Math.round(savedByGoal.get(g.id)! * 100) / 100 : g.saved_amount;
+
   const savingsGoals = goals.map((g) => ({
     id: g.id,
     name: g.name,
@@ -51,12 +56,13 @@ export const GET = apiRoute("read", (request) => {
     target_date: g.target_date,
     priority: g.priority,
     description: g.description || "",
-    saved_amount: savedByGoal.has(g.id) ? Math.round(savedByGoal.get(g.id)! * 100) / 100 : 0,
+    saved_amount: savedFor(g),
+    derived: savedByGoal.has(g.id),
     include_in_calculations: !!g.include_in_calculations,
     linked_category_name: categoryByGoal.get(g.id) ?? "",
     monthly_need: monthlyNeed(
       g.target_amount,
-      savedByGoal.has(g.id) ? Math.round(savedByGoal.get(g.id)! * 100) / 100 : 0,
+      savedFor(g),
       g.target_date
     ),
   }));
