@@ -8,6 +8,7 @@
 * Logo replaces the wordmark on the login page
 * Net worth matches between dashboard and its own page
 * Record net worth daily again, not only on a YNAB sync
+* Keep one net worth figure per day for the whole household
 
 ### 4.1.2: 2026-09-20
 

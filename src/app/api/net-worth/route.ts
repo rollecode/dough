@@ -50,15 +50,15 @@ export async function POST() {
     const today = localDateIso();
 
     db.prepare(`
-      INSERT INTO net_worth_snapshots (user_id, date, checking, savings, investments, debts, net_worth)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(user_id, date) DO UPDATE SET
+      INSERT INTO net_worth_snapshots (date, checking, savings, investments, debts, net_worth)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(date) DO UPDATE SET
         checking = excluded.checking,
         savings = excluded.savings,
         investments = excluded.investments,
         debts = excluded.debts,
         net_worth = excluded.net_worth
-    `).run(user.id, today, checking, savings, investments, debtTotal, netWorth);
+    `).run(today, checking, savings, investments, debtTotal, netWorth);
 
     console.info("[net-worth] Snapshot saved:", { checking, savings, investments, debts: debtTotal, netWorth });
 

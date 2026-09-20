@@ -107,10 +107,10 @@ function initializeDb(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id, created_at DESC);
 
+    -- One row per day for the whole household: everyone shares the accounts, so a per-person row
+    -- only recorded who happened to open the app first that day.
     CREATE TABLE IF NOT EXISTS net_worth_snapshots (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      date TEXT NOT NULL,
+      date TEXT PRIMARY KEY,
       checking REAL NOT NULL DEFAULT 0,
       savings REAL NOT NULL DEFAULT 0,
       investments REAL NOT NULL DEFAULT 0,
@@ -118,8 +118,6 @@ function initializeDb(db: Database.Database) {
       net_worth REAL NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_net_worth_user_date ON net_worth_snapshots(user_id, date);
 
     CREATE TABLE IF NOT EXISTS investment_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -403,6 +401,34 @@ function initializeDb(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
   `);
+
+  // Collapse net worth snapshots to one row per day. They were stamped per user, so a shared
+  // household recorded two readings a day that differed only by the hour they were taken.
+  try {
+    const nwCols = db.prepare("PRAGMA table_info(net_worth_snapshots)").all() as { name: string }[];
+    if (nwCols.some((c) => c.name === "user_id")) {
+      console.info("[db] Collapsing net_worth_snapshots to one row per day");
+      db.exec(`
+        CREATE TABLE net_worth_snapshots_new (
+          date TEXT PRIMARY KEY,
+          checking REAL NOT NULL DEFAULT 0,
+          savings REAL NOT NULL DEFAULT 0,
+          investments REAL NOT NULL DEFAULT 0,
+          debts REAL NOT NULL DEFAULT 0,
+          net_worth REAL NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO net_worth_snapshots_new (date, checking, savings, investments, debts, net_worth, created_at)
+          SELECT date, checking, savings, investments, debts, net_worth, created_at
+          FROM net_worth_snapshots
+          WHERE id IN (SELECT MAX(id) FROM net_worth_snapshots GROUP BY date);
+        DROP TABLE net_worth_snapshots;
+        ALTER TABLE net_worth_snapshots_new RENAME TO net_worth_snapshots;
+      `);
+    }
+  } catch (err) {
+    console.warn("[db] net_worth_snapshots migration:", err);
+  }
 
   // Add sparkline columns to ticker_cache if missing
   try {

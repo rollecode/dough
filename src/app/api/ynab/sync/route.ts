@@ -10,7 +10,7 @@ type BalanceRow = { type: string; balance: number };
 /* One row per day, upserted. Lives here because both the YNAB pull and the plain read serve account
    balances, and only the pull used to write it: after the move to local mode the pull stopped
    running and the history froze. */
-function saveNetWorthSnapshot(db: import("better-sqlite3").Database, userId: number, accounts: BalanceRow[]) {
+function saveNetWorthSnapshot(db: import("better-sqlite3").Database, accounts: BalanceRow[]) {
   const sum = (type: string) => accounts.filter((a) => a.type === type).reduce((s, a) => s + a.balance, 0);
   const checking = sum("checking");
   const savings = sum("savings");
@@ -18,10 +18,10 @@ function saveNetWorthSnapshot(db: import("better-sqlite3").Database, userId: num
   const debts = sum("otherDebt");
 
   db.prepare(`
-    INSERT INTO net_worth_snapshots (user_id, date, checking, savings, investments, debts, net_worth)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(user_id, date) DO UPDATE SET checking=excluded.checking, savings=excluded.savings, investments=excluded.investments, debts=excluded.debts, net_worth=excluded.net_worth
-  `).run(userId, localDateIso(), checking, savings, investments, debts, checking + savings + investments + debts);
+    INSERT INTO net_worth_snapshots (date, checking, savings, investments, debts, net_worth)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(date) DO UPDATE SET checking=excluded.checking, savings=excluded.savings, investments=excluded.investments, debts=excluded.debts, net_worth=excluded.net_worth
+  `).run(localDateIso(), checking, savings, investments, debts, checking + savings + investments + debts);
 }
 
 export async function GET() {
@@ -89,7 +89,7 @@ export async function GET() {
     };
 
     try {
-      saveNetWorthSnapshot(db, user.id, accounts);
+      saveNetWorthSnapshot(db, accounts);
     } catch (err) {
       console.error("[api/ynab/sync] Failed to save net worth snapshot:", err);
     }
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
 
     try {
       const { getDb } = await import("@/lib/db");
-      saveNetWorthSnapshot(getDb(), user.id, summary.accounts);
+      saveNetWorthSnapshot(getDb(), summary.accounts);
       console.info("[api/ynab/sync] Net worth snapshot auto-saved");
     } catch (err) {
       console.error("[api/ynab/sync] Failed to save net worth snapshot:", err);
