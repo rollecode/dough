@@ -1,5 +1,6 @@
 import { apiRoute, resolveMonth } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
+import { getBrandConfig, brandImagePath } from "@/lib/brand-table";
 
 // GET /api/v1/bills?month=YYYY-MM - recurring bills with amount, due day of month, cadence
 // (monthly, or yearly on due_month/due_day) and whether the month's charge has been paid, resolved
@@ -32,6 +33,9 @@ export const GET = apiRoute("read", (request) => {
   const bills = rows.map((b) => ({
     id: b.id,
     is_paid: manual.has(b.id) ? manual.get(b.id)! : matched.has(b.id),
+    brand_color: getBrandConfig(b.name).color,
+    brand_logo: getBrandConfig(b.name).logo,
+    brand_image: brandImagePath(b.name),
     is_overdue: !(manual.has(b.id) ? manual.get(b.id)! : matched.has(b.id)) && !!b.is_active && b.due_day < today,
     patterns: patternsById.get(b.id) ?? [],
     name: b.name,

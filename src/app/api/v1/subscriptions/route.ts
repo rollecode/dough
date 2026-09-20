@@ -1,5 +1,6 @@
 import { apiRoute, resolveMonth } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
+import { getBrandConfig, brandImagePath } from "@/lib/brand-table";
 
 // GET /api/v1/subscriptions?month=YYYY-MM - recurring subscriptions with their amount, due day and
 // whether the month's charge has been paid, resolved as the bills endpoint resolves it.
@@ -42,8 +43,10 @@ export const GET = apiRoute("read", (request) => {
       is_active: !!s.is_active,
       is_paid: isPaid,
       is_overdue: !isPaid && !!s.is_active && s.due_day < today,
-      brand_color: s.brand_color ?? "",
-      brand_logo: s.brand_logo ?? "",
+      // The brand as every surface draws it: its colour, its mark, and the bitmap when it has one.
+      brand_color: s.brand_color || getBrandConfig(s.name).color,
+      brand_logo: s.brand_logo || getBrandConfig(s.name).logo,
+      brand_image: brandImagePath(s.name),
       patterns: patternsById.get(s.id) ?? [],
     };
   });
