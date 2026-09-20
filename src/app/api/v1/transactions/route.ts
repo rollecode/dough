@@ -49,7 +49,7 @@ export const GET = apiRoute("read", (request) => {
     .prepare(
       "SELECT t.ynab_id AS id, t.date, t.amount, t.payee, t.category, t.memo, t.account_id, " +
         "a.name AS account_name, COALESCE(t.budget_excluded, 0) AS budget_excluded, " +
-        "COALESCE(t.split_group, ) AS split_group " +
+        "COALESCE(t.split_group, '') AS split_group " +
         "FROM transactions t LEFT JOIN ynab_accounts a ON a.id = t.account_id " +
         (where.length ? "WHERE " + where.join(" AND ") + " " : "") +
         "GROUP BY t.ynab_id ORDER BY t.date DESC, t.id DESC LIMIT ?"
