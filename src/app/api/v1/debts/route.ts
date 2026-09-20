@@ -1,6 +1,7 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { localMonthCategories } from "@/lib/budget-math";
+import { snowball, avalanche } from "@/lib/debt-payoff";
 
 interface DebtRow {
   id: string; name: string; balance: number;
@@ -34,7 +35,7 @@ function debtHistory(db: ReturnType<typeof getDb>, accountId: string, currentRaw
 
 // GET /api/v1/debts (read) - every open debt with what it costs, how far it has come down, what was
 // paid toward it this month and twelve months of balance history.
-export const GET = apiRoute("read", () => {
+export const GET = apiRoute("read", (request) => {
   const db = getDb();
   const rows = db.prepare(
     "SELECT a.id, a.name, a.balance, o.interest_rate, o.minimum_payment, o.due_day, o.original_amount, " +
@@ -87,11 +88,19 @@ export const GET = apiRoute("read", () => {
     };
   });
 
-  // How long the debts last at what is being paid toward them now. Interest is left out on purpose:
-  // the page states a horizon, not an amortisation.
   const totalBalance = debts.reduce((s, d) => s + d.balance, 0);
   const monthlyPayments = debts.reduce((s, d) => s + Math.max(d.minimum_payment, 0), 0);
-  const monthsToFree = monthlyPayments > 0 ? Math.ceil(totalBalance / monthlyPayments) : null;
+
+  // Both payoff orders, simulated with interest. ?extra= adds that much every month on top of the
+  // minimums, which is the slider the debts page offers.
+  const extra = Math.max(0, Number(new URL(request.url).searchParams.get("extra")) || 0);
+  const forPayoff = debts.map((d) => ({
+    balance: d.balance,
+    interestRate: d.interest_rate,
+    minimumPayment: d.minimum_payment,
+  }));
+  const bySnowball = snowball(forPayoff, extra);
+  const byAvalanche = avalanche(forPayoff, extra);
 
   return {
     debts,
@@ -99,6 +108,11 @@ export const GET = apiRoute("read", () => {
     total_balance: Math.round(totalBalance * 100) / 100,
     monthly_payments: Math.round(monthlyPayments * 100) / 100,
     paid_this_month: Math.round(debts.reduce((s, d) => s + d.paid_this_month, 0) * 100) / 100,
-    months_to_debt_free: monthsToFree,
+    months_to_debt_free: bySnowball.months > 0 ? bySnowball.months : null,
+    extra_payment: extra,
+    payoff: {
+      snowball: bySnowball,
+      avalanche: byAvalanche,
+    },
   };
 });

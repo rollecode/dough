@@ -1,5 +1,6 @@
 "use client";
 
+import { calculatePayoff } from "@/lib/debt-payoff";
 import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
@@ -93,42 +94,6 @@ function DebtSparkline({ data, uid }: { data: { month: string; balance: number }
     </div>
   );
 }
-
-function calculatePayoff(debts: DebtData[], extraPayment: number, sortFn: (a: DebtData, b: DebtData) => number) {
-  if (debts.length === 0) return { timeline: [], months: 0, totalInterest: 0 };
-  const sorted = [...debts].sort(sortFn);
-  const balances = sorted.map((d) => d.balance);
-  const rates = sorted.map((d) => d.interestRate / 100 / 12);
-  const minPayments = sorted.map((d) => d.minimumPayment || d.monthlyTarget || 50);
-  const timeline: { month: string; total: number }[] = [];
-  let month = 0;
-  let totalInterest = 0;
-
-  while (balances.some((b) => b > 0) && month < 120) {
-    let extra = extraPayment;
-    for (let i = 0; i < balances.length; i++) {
-      if (balances[i] <= 0) {
-        extra += minPayments[i];
-        continue;
-      }
-      const interest = balances[i] * rates[i];
-      totalInterest += interest;
-      let payment = minPayments[i] + (i === balances.findIndex((b) => b > 0) ? extra : 0);
-      payment = Math.min(payment, balances[i] + interest);
-      balances[i] = balances[i] + interest - payment;
-      if (balances[i] < 1) balances[i] = 0;
-    }
-    const date = new Date();
-    date.setMonth(date.getMonth() + month);
-    timeline.push({
-      month: date.toLocaleDateString("en", { month: "short", year: "2-digit" }),
-      total: Math.round(balances.reduce((s, b) => s + b, 0)),
-    });
-    month++;
-  }
-  return { timeline, months: month, totalInterest: Math.round(totalInterest) };
-}
-
 
 export default function DebtsPage() {
   const { t, locale, fmt, mask } = useLocale();
