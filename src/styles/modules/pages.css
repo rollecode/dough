@@ -3058,6 +3058,14 @@
   color: var(--muted-foreground);
 }
 
+/* The content is a stack of a field row, standalone fields and help text, none of which carry their
+   own margin, so they collapse against each other without this. */
+.settings-card .card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .settings-row {
   display: flex;
   align-items: center;

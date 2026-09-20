@@ -1,3 +1,7 @@
+### 4.1.1: 2026-09-20
+
+* Fix settings fields sticking together
+
 ### 4.1.0: 2026-09-20
 
 * Open the matching page from a dashboard card
