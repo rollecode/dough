@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SECTIONS, ENDPOINT_COUNT } from "@/lib/api-docs";
+import { SECTIONS, ENDPOINT_COUNT, OAUTH } from "@/lib/api-docs";
 import { CodeBlock } from "@/components/api-docs/code-block";
 
 export const metadata: Metadata = {
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 const NAV = [
   { id: "start", title: "Getting started" },
   { id: "auth", title: "Authentication" },
+  { id: "oauth", title: "Sign in with OAuth" },
   ...SECTIONS.map((section) => ({ id: section.id, title: section.title })),
   { id: "errors", title: "Errors" },
   { id: "mcp", title: "MCP server" },
@@ -73,6 +74,38 @@ export default function ApiDocs() {
             owns the database:
           </p>
           <CodeBlock code={`npx tsx scripts/create-api-key.ts --name "my-client" --scopes read,write`} />
+        </section>
+
+        <section id="oauth" className="api-docs-section">
+          <h2>Sign in with OAuth</h2>
+          <p>
+            An app can ask a person to sign in to their own instance instead of asking them for a
+            key. Every Dough is its own authorization server, so there is nothing to register with
+            anybody: the app reads <code>{OAUTH.discovery}</code> from whatever host it was pointed
+            at, registers itself at <code>{OAUTH.register}</code>, and sends the person to{" "}
+            <code>{OAUTH.authorize}</code> to approve it.
+          </p>
+          <p>
+            The flow is authorization code with PKCE, which is required: <code>S256</code> only, no
+            client secrets, no implicit grant. Codes are single use and expire in two minutes;
+            reusing one revokes every token it produced. Access tokens last an hour, refresh tokens
+            rotate on use, and a rotated refresh token cannot be used again.
+          </p>
+          <CodeBlock
+            language="http"
+            code={`GET ${OAUTH.discovery}
+POST ${OAUTH.register}     {"client_name": "...", "redirect_uris": ["yourapp://connect"]}
+GET ${OAUTH.authorize}?client_id=...&redirect_uri=...&response_type=code
+    &scope=read+write&state=...&code_challenge=...&code_challenge_method=S256
+POST ${OAUTH.token}        grant_type=authorization_code&code=...&code_verifier=...
+POST ${OAUTH.token}        grant_type=refresh_token&refresh_token=...
+POST ${OAUTH.revoke}       token=...`}
+          />
+          <p>
+            The token that comes back authenticates every endpoint below exactly as an API key does,
+            and carries the same <code>read</code> and <code>write</code> scopes. Revoke it from the
+            app or from Settings.
+          </p>
         </section>
 
         {SECTIONS.map((section) => (

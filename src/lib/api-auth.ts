@@ -1,5 +1,6 @@
 import { randomBytes, createHash, timingSafeEqual } from "crypto";
 import { getDb } from "./db";
+import { authenticateAccessToken } from "./oauth";
 
 // Programmatic API-key auth, used by /api/v1/* so external clients (the Dough MCP server, scripts)
 // can authenticate without a browser session cookie. Keys are high-entropy random tokens; only their
@@ -51,6 +52,14 @@ function extractKey(request: Request): string | null {
 // logging at each decision point, per the project's logging policy, but never logs the key itself.
 export function authenticateApiKey(request: Request): ApiKeyIdentity | null {
   const key = extractKey(request);
+
+  // An OAuth access token authenticates exactly as a key does, and carries the same scopes, so
+  // every v1 route works with either without knowing which it was given.
+  if (key) {
+    const oauthIdentity = authenticateAccessToken(key);
+    if (oauthIdentity) return oauthIdentity;
+  }
+
   if (!key || !key.startsWith(KEY_PREFIX)) {
     console.debug("[api-auth] No API key presented");
     return null;

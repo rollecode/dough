@@ -40,7 +40,10 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.href = "/dashboard";
+      // Only a path on this instance: an absolute URL here would be an open redirect.
+      const next = new URLSearchParams(window.location.search).get("next");
+      const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      window.location.href = safeNext;
     } catch {
       setError("Connection error");
       setLoading(false);

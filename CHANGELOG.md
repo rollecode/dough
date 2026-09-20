@@ -1,5 +1,9 @@
 ### Unreleased
 
+* Sign in to your own instance over OAuth 2.1
+* Register clients dynamically, so nothing needs configuring
+* Ask for consent before an app reads or writes anything
+* Accept OAuth tokens wherever an API key works
 * Serve the whole dashboard from one API call
 * Share the dashboard maths between the app and the API
 * Fix the API reference wash covering only the centre column

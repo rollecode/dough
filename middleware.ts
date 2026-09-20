@@ -53,6 +53,14 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
   const isApiAuth = request.nextUrl.pathname.startsWith("/api/auth");
   const isEvents = request.nextUrl.pathname === "/api/events";
+  // Discovery, registration, token and revocation are reached by a client that has no session by
+  // definition. The consent screen at /oauth/authorize is deliberately not here: it needs the
+  // person signed in, which is the whole point of it.
+  const isOAuthPublic =
+    request.nextUrl.pathname.startsWith("/.well-known/oauth") ||
+    request.nextUrl.pathname === "/api/oauth/register" ||
+    request.nextUrl.pathname === "/api/oauth/token" ||
+    request.nextUrl.pathname === "/api/oauth/revoke";
   // The reference is public wherever it is asked for: it holds no data, only the API's shape.
   const isApiDocs = request.nextUrl.pathname === "/api-docs";
   const isSynciSync = request.nextUrl.pathname === "/api/synci/sync";
@@ -61,7 +69,7 @@ export async function middleware(request: NextRequest) {
   const isApiV1 = request.nextUrl.pathname.startsWith("/api/v1");
 
   // Allow auth API, the key-authed public API, SSE events, cron endpoints, and static assets
-  if (isApiAuth || isApiV1 || isApiDocs || isEvents || isSynciSync) {
+  if (isApiAuth || isApiV1 || isApiDocs || isOAuthPublic || isEvents || isSynciSync) {
     return NextResponse.next();
   }
 
@@ -80,6 +88,13 @@ export async function middleware(request: NextRequest) {
   if (!isValid && !isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    // Signing in should land where the person was headed, which for a consent screen is the whole
+    // flow. Only a path is carried, never an absolute URL, so this cannot become an open redirect.
+    const intended = request.nextUrl.pathname + request.nextUrl.search;
+    if (intended !== "/" && !intended.startsWith("/api/")) {
+      url.searchParams.set("next", intended);
+    }
     return NextResponse.redirect(url);
   }
 

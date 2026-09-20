@@ -560,4 +560,15 @@ export const SECTIONS: Section[] = [
   },
 ];
 
+// Signing in is not an endpoint of the finance API, so it is described beside it rather than in the
+// endpoint list, which counts what /api/v1 serves.
+export const OAUTH = {
+  discovery: "/.well-known/oauth-authorization-server",
+  resource: "/.well-known/oauth-protected-resource",
+  authorize: "/oauth/authorize",
+  token: "/api/oauth/token",
+  register: "/api/oauth/register",
+  revoke: "/api/oauth/revoke",
+};
+
 export const ENDPOINT_COUNT = SECTIONS.reduce((total, section) => total + section.endpoints.length, 0);

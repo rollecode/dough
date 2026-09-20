@@ -12,9 +12,20 @@ The full reference, every endpoint with its parameters, is served by the instanc
 `/api-docs` and on the `api.` subdomain of the domain it runs on. This file covers how keys work;
 the reference covers what you can call.
 
+### Signing in instead of pasting a key
+
+An app can send a person to their own instance to sign in, rather than asking for a key. Each
+instance is its own OAuth 2.1 authorization server: a client reads
+`/.well-known/oauth-authorization-server`, registers itself at `/api/oauth/register`, and opens
+`/oauth/authorize`. Authorization code with PKCE (`S256`) is the only supported flow; there are no
+client secrets. Codes are single use and expire in two minutes, access tokens last an hour, and
+refresh tokens rotate on use. The resulting token authenticates `/api/v1` exactly as a key does.
+
+The full sequence is on the instance's own reference at `/api-docs`.
+
 ### Authentication
 
-Send the key as a bearer token:
+Send the key, or an OAuth access token, as a bearer token:
 
 ```
 Authorization: Bearer dough_xxxxxxxx...
