@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Fix list card backgrounds spilling past rounded corners
 * Larger, better spaced info icon on the dashboard heading
 
 ### Unreleased

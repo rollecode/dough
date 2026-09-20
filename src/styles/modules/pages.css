@@ -380,6 +380,19 @@
   gap: 0;
 }
 
+/* The card has no padding, so its first and last children sit on the rounded corners. They cannot
+   be clipped with overflow: hidden because the budget popovers have to escape the card, so the
+   children round themselves instead. */
+.card.list-card > *:first-child {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+.card.list-card > *:last-child {
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+
 .list-card-divider > * + * {
   border-top: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
 }
