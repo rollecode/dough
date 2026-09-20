@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Write durations out as years and months
+* Model the investment projection in one place and serve it over the API
 * Model the net worth projection in one place and serve it over the API
 * Serve every brand mark as a file, so both clients draw the same logo
 * Order the cash flow months oldest first

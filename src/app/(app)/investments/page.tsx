@@ -33,6 +33,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ChartContainer } from "@/components/ui/chart-container";
+import { calculateProjection } from "@/lib/investment-projection";
 import { F } from "@/components/ui/f";
 import { BudgetLinkControl } from "@/components/shared/budget-link-control";
 
@@ -110,44 +111,6 @@ function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: {
       </AreaChart>
     </ResponsiveContainer>
   );
-}
-
-function calculateProjection(
-  investments: InvestmentData[],
-  years: number
-): { timeline: { year: string; value: number; invested: number }[]; finalValue: number; totalInvested: number; totalReturns: number } {
-  if (investments.length === 0) return { timeline: [], finalValue: 0, totalInvested: 0, totalReturns: 0 };
-
-  const timeline: { year: string; value: number; invested: number }[] = [];
-  let totalValue = investments.reduce((s, i) => s + i.balance, 0);
-  let totalInvested = totalValue;
-  const totalMonthly = investments.reduce((s, i) => s + i.monthlyContribution, 0);
-
-  // Weighted average return
-  const weightedReturn = totalMonthly > 0
-    ? investments.reduce((s, i) => s + i.expectedReturn * i.monthlyContribution, 0) / totalMonthly
-    : investments.length > 0
-      ? investments.reduce((s, i) => s + i.expectedReturn, 0) / investments.length
-      : 7;
-
-  const monthlyRate = weightedReturn / 100 / 12;
-
-  timeline.push({ year: "0", value: Math.round(totalValue), invested: Math.round(totalInvested) });
-
-  for (let year = 1; year <= years; year++) {
-    for (let month = 0; month < 12; month++) {
-      totalValue = totalValue * (1 + monthlyRate) + totalMonthly;
-      totalInvested += totalMonthly;
-    }
-    timeline.push({ year: String(year), value: Math.round(totalValue), invested: Math.round(totalInvested) });
-  }
-
-  return {
-    timeline,
-    finalValue: Math.round(totalValue),
-    totalInvested: Math.round(totalInvested),
-    totalReturns: Math.round(totalValue - totalInvested),
-  };
 }
 
 export default function InvestmentsPage() {

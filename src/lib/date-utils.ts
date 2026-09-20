@@ -41,13 +41,24 @@ export function dayHeading(dateStr: string, locale: string = "en"): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Written out rather than abbreviated: "2 years 5 months", never "2y 5m".
+function spellMonths(count: number, locale: string): string {
+  if (locale === "fi") return count === 1 ? `${count} kuukausi` : `${count} kuukautta`;
+  return count === 1 ? `${count} month` : `${count} months`;
+}
+
+function spellYears(count: number, locale: string): string {
+  if (locale === "fi") return count === 1 ? `${count} vuosi` : `${count} vuotta`;
+  return count === 1 ? `${count} year` : `${count} years`;
+}
+
 export function formatDuration(months: number, locale: string = "en"): string {
-  if (months <= 0) return locale === "fi" ? "0 kk" : "0m";
-  if (months < 12) return locale === "fi" ? `${months} kk` : `${months}m`;
+  if (months <= 0) return spellMonths(0, locale);
+  if (months < 12) return spellMonths(months, locale);
   const years = Math.floor(months / 12);
   const remaining = months % 12;
-  if (remaining === 0) return locale === "fi" ? `${years}v` : `${years}y`;
-  return locale === "fi" ? `${years}v ${remaining}kk` : `${years}y ${remaining}m`;
+  if (remaining === 0) return spellYears(years, locale);
+  return `${spellYears(years, locale)} ${spellMonths(remaining, locale)}`;
 }
 
 export function formatDateShort(dateStr: string): string {

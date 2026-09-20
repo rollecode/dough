@@ -1,5 +1,6 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
+import { calculateProjection } from "@/lib/investment-projection";
 
 interface InvRow {
   id: string; name: string; balance: number;
@@ -8,7 +9,7 @@ interface InvRow {
 }
 
 // GET /api/v1/investments (read) - investment (otherAsset) accounts with their overrides.
-export const GET = apiRoute("read", () => {
+export const GET = apiRoute("read", (request) => {
   const rows = getDb().prepare(
     "SELECT a.id, a.name, a.balance, o.monthly_contribution, o.expected_return, o.notes, o.ticker, o.contributed " +
       "FROM ynab_accounts a LEFT JOIN investment_overrides o ON o.ynab_account_id = a.id " +
@@ -31,9 +32,24 @@ export const GET = apiRoute("read", () => {
   const totalValue = Math.round(investments.reduce((s, i) => s + i.value, 0) * 100) / 100;
   const totalInvested = Math.round(investments.reduce((s, i) => s + i.contributed, 0) * 100) / 100;
 
+  // ?years= is the horizon the page offers; the projection itself is modelled here so both
+  // clients draw the same curve.
+  const yearsRaw = Number(new URL(request.url).searchParams.get("years"));
+  const years = Math.min(50, Math.max(1, Number.isFinite(yearsRaw) && yearsRaw > 0 ? Math.round(yearsRaw) : 20));
+  const projection = calculateProjection(
+    investments.map((i) => ({
+      balance: i.value,
+      monthlyContribution: i.monthly_contribution,
+      expectedReturn: i.expected_return,
+    })),
+    years
+  );
+
   return {
     investments,
     count: investments.length,
+    projection_years: years,
+    projection,
     progress,
     total_value: totalValue,
     total_invested: totalInvested,
