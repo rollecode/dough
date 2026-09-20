@@ -719,12 +719,25 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     categories,
     streak: { days: streakDays, spent_by_date: spentByDate },
     heatmap,
-    cash_flow: monthlyHistory.map((m) => ({
-      month: m.month,
-      income: m.month === month ? round(monthBudget.income) : round(m.income),
-      expenses: m.month === month ? round(Math.abs(monthBudget.activity)) : round(m.expenses),
-      upcoming_income: m.month === month ? upcomingIncome : 0,
-    })),
+    // The months that have a snapshot, then this one from the live ledger. A snapshot for the
+    // current month may not exist yet, and when it does it is already stale, so it is replaced
+    // rather than trusted - the same thing the web page does before it draws the chart.
+    cash_flow: [
+      ...monthlyHistory
+        .filter((m) => m.month !== month)
+        .map((m) => ({
+          month: m.month,
+          income: round(m.income),
+          expenses: round(m.expenses),
+          upcoming_income: 0,
+        })),
+      {
+        month,
+        income: round(monthBudget.income),
+        expenses: round(Math.abs(monthBudget.activity)),
+        upcoming_income: upcomingIncome,
+      },
+    ],
     trends: trends.map((t) => ({
       category: t.category,
       this_month: round(t.thisMonth),
