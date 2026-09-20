@@ -9,7 +9,7 @@ import { buildDashboard, type DashBill, type DashDebt, type DashIncome } from "@
 // is what it is, today's spending, the obligations ahead, the charts and the month's figures. The
 // numbers are produced by lib/dashboard-model, the same module the web dashboard reads, so a phone
 // and a browser looking at the same instance cannot disagree.
-export const GET = apiRoute("read", () => {
+export const GET = apiRoute("read", (_request, identity) => {
   const db = getDb();
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -166,6 +166,28 @@ export const GET = apiRoute("read", () => {
     }))
     .filter((t) => t.thisMonth > 0 || t.lastMonth > 0);
 
+  // Whose spending counts as "yours" rather than the household's: the accounts this user has linked
+  // and the share they have set. Without these the endpoint reported household spending as personal.
+  const linkedAccountIds = (
+    db.prepare("SELECT ynab_account_id FROM user_linked_accounts WHERE user_id = ?").all(identity.userId) as {
+      ynab_account_id: string;
+    }[]
+  ).map((row) => row.ynab_account_id);
+  const personalBudgetShare =
+    (db.prepare("SELECT COALESCE(budget_share, 0) AS share FROM users WHERE id = ?").get(identity.userId) as
+      | { share: number }
+      | undefined)?.share ?? 0;
+
+  // The target each past day was actually given, so the pace line matches the web's.
+  const targetByDay: Record<number, number> = {};
+  for (const row of db
+    .prepare("SELECT date, discretionary_target FROM daily_budget_history WHERE date >= ? AND date <= ?")
+    .all(`${month}-01`, `${month}-31`) as { date: string; discretionary_target: number }[]) {
+    if (row.discretionary_target > 0) {
+      targetByDay[parseInt(row.date.slice(8, 10), 10)] = row.discretionary_target;
+    }
+  }
+
   const model = buildDashboard({
     now,
     accounts: data.summary.accounts,
@@ -178,8 +200,8 @@ export const GET = apiRoute("read", () => {
     debtMonthly,
     investmentMonthly,
     excludedAccountIds: parseJsonSetting("budget_excluded_accounts"),
-    linkedAccountIds: [],
-    personalBudgetShare: 0,
+    linkedAccountIds,
+    personalBudgetShare,
     budgetIncludeBills:
       settings.budget_include_bills === undefined || settings.budget_include_bills === "auto"
         ? "auto"
@@ -193,6 +215,7 @@ export const GET = apiRoute("read", () => {
     lastReservationMonth: settings.last_reservation_month || "",
     monthlyHistory: monthlyHistory.reverse(),
     trends,
+    targetByDay,
   });
 
   console.info("[v1/dashboard] Daily budget", model.daily_budget.amount, "for", model.month);

@@ -84,6 +84,8 @@ export interface DashboardInput {
   lastReservationMonth: string;
   monthlyHistory: { month: string; income: number; expenses: number }[];
   trends: { category: string; thisMonth: number; lastMonth: number }[];
+  // Day of month to the discretionary target frozen on that day, from daily_budget_history.
+  targetByDay: Record<number, number>;
 }
 
 export interface DashboardModel {
@@ -197,7 +199,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     now, accounts, transactions, monthBudget, bills, incomes, debts, savingRate,
     debtMonthly, investmentMonthly, excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
-    monthlyHistory, trends,
+    monthlyHistory, trends, targetByDay,
   } = input;
 
   const month = ym(now);
@@ -451,10 +453,15 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     discCumulative += Math.abs(t.amount);
     discretionaryPerDay[day] = round(discCumulative);
   }
+  // Past days keep the target they were given at the time; today and anything after use the live
+  // one. Same rule as the web's spending flow, so both draw the same line.
   let carried = 0;
+  let cumulativeTarget = 0;
   for (let day = 1; day <= today; day++) {
     carried = discretionaryPerDay[day] ?? carried;
-    flowByDay.push({ day, spent: carried, target: round(targetPerDay * day) });
+    const frozen = day < today ? targetByDay[day] : undefined;
+    cumulativeTarget += frozen && frozen > 0 ? frozen : targetPerDay;
+    flowByDay.push({ day, spent: carried, target: round(cumulativeTarget) });
   }
 
   const totalTargetPerDay =

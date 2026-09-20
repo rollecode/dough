@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Report personal spending separately from the household in the dashboard payload
+* Hold the pace line to the targets each past day was given
 * Read and write the daily budget figures over the API
 * Serve known payees with their usual category and account
 * Send full transaction rows in the dashboard payload
