@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Count debt payments and investments still to come in the month status
 * Count only income already received in the cash flow bar
 * Say what the month status tooltip actually counts
 * Align the transactions balance on mobile

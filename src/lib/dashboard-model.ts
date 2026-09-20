@@ -83,6 +83,7 @@ export interface DashboardInput {
   savingRate: number;
   debtMonthly: number;
   investmentMonthly: number;
+  commitmentCategories: string[];
   excludedAccountIds: string[];
   linkedAccountIds: string[];
   personalBudgetShare: number;
@@ -219,6 +220,9 @@ export interface MonthStatusInput {
   savingRate: number;
   debtMonthly: number;
   investmentMonthly: number;
+  // The budget categories debt payments and investment contributions come out of, so a payment
+  // already made is not counted a second time.
+  commitmentCategories: string[];
 }
 
 export interface MonthStatus {
@@ -228,11 +232,12 @@ export interface MonthStatus {
   unpaidBills: number;
   projectedRest: number;
   savingRate: number;
+  commitmentsLeft: number;
 }
 
 export function monthStatus(input: MonthStatusInput): MonthStatus {
   const { now, transactions, monthBudgetIncome, incomes, bills } = input;
-  const { savingRate, debtMonthly, investmentMonthly } = input;
+  const { savingRate, debtMonthly, investmentMonthly, commitmentCategories } = input;
 
   const month = ym(now);
   const today = now.getDate();
@@ -241,12 +246,19 @@ export function monthStatus(input: MonthStatusInput): MonthStatus {
   const monthStart = `${month}-01`;
   const todayIso = isoDay(now);
 
-  const spent = round(
-    transactions
-      .filter((t) => t.date >= monthStart && t.date <= todayIso)
-      .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category))
-      .reduce((s, t) => s + Math.abs(t.amount), 0)
-  );
+  const soFar = transactions
+    .filter((t) => t.date >= monthStart && t.date <= todayIso)
+    .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category));
+  const spent = round(soFar.reduce((s, t) => s + Math.abs(t.amount), 0));
+
+  // Debt payments and investment contributions are taken out of the daily rate, so what has not
+  // been paid yet is still owed this month. Counted from the same rows as the spending above, so
+  // a payment already made cannot land in both.
+  const commitmentNames = new Set(commitmentCategories.map((c) => c.toLowerCase()));
+  const commitmentsPaid = soFar
+    .filter((t) => commitmentNames.has((t.category ?? "").toLowerCase()))
+    .reduce((s, t) => s + Math.abs(t.amount), 0);
+  const commitmentsLeft = round(Math.max(0, debtMonthly + investmentMonthly - commitmentsPaid));
 
   const activeBills = bills.filter((b) => b.is_active);
   const billsTotal = round(activeBills.reduce((s, b) => s + b.amount, 0));
@@ -266,9 +278,10 @@ export function monthStatus(input: MonthStatusInput): MonthStatus {
 
   return {
     income,
-    expenses: round(spent + unpaidBills + projectedRest + savingRate),
+    expenses: round(spent + unpaidBills + commitmentsLeft + projectedRest + savingRate),
     spent,
     unpaidBills,
+    commitmentsLeft,
     projectedRest,
     savingRate,
   };
@@ -277,7 +290,8 @@ export function monthStatus(input: MonthStatusInput): MonthStatus {
 export function buildDashboard(input: DashboardInput): DashboardModel {
   const {
     now, displayName, accounts, transactions, monthBudget, bills, incomes, debts, savingRate,
-    debtMonthly, investmentMonthly, excludedAccountIds, linkedAccountIds, personalBudgetShare,
+    debtMonthly, investmentMonthly, commitmentCategories,
+    excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
     monthlyHistory, trends, targetByDay,
   } = input;
@@ -527,7 +541,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   // purchase should not be multiplied across the rest of the month. Shared with the web page.
   const monthExpensesEstimate = monthStatus({
     now, transactions, monthBudgetIncome: monthBudget.income, incomes, bills,
-    savingRate, debtMonthly, investmentMonthly,
+    savingRate, debtMonthly, investmentMonthly, commitmentCategories,
   }).expenses;
 
   const sortedSpending = [...transactions]

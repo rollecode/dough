@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { getHouseholdSettings } from "@/lib/household";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
-import { localMonthCategories } from "@/lib/budget-math";
+import { monthCommitments } from "@/lib/commitments";
 import { monthStatus, type MonthStatus } from "@/lib/dashboard-model";
 
 // The month's income and its end-of-month cost, assembled from the database rather than from
@@ -58,28 +58,7 @@ export function currentMonthStatus(now = new Date()): MonthStatus {
     .prepare("SELECT amount, is_active FROM income_sources")
     .all() as { amount: number; is_active: number }[];
 
-  // A debt with no minimum payment set still costs what its budget category is given.
-  const categories = localMonthCategories(db, month) as { name: string; budgeted: number }[];
-  const monthlyTargetFor = (name: string) => {
-    const match = categories.find(
-      (c) =>
-        c.name.toLowerCase().includes(name.split("(")[0].trim().toLowerCase()) ||
-        name.toLowerCase().includes(c.name.split("(")[0].trim().toLowerCase())
-    );
-    return match ? Math.abs(match.budgeted) : 0;
-  };
-  const debtRows = db
-    .prepare(
-      "SELECT a.name, o.minimum_payment FROM ynab_accounts a " +
-        "LEFT JOIN debt_overrides o ON o.ynab_account_id = a.id " +
-        "WHERE a.type = 'otherDebt' AND a.closed = 0"
-    )
-    .all() as { name: string; minimum_payment: number | null }[];
-  const debtMonthly = debtRows.reduce((s, d) => s + (d.minimum_payment || monthlyTargetFor(d.name) || 0), 0);
-
-  const investmentMonthly = (
-    db.prepare("SELECT COALESCE(SUM(monthly_contribution), 0) AS v FROM investment_overrides").get() as { v: number }
-  ).v;
+  const commitments = monthCommitments(db, month);
 
   return monthStatus({
     now,
@@ -88,7 +67,8 @@ export function currentMonthStatus(now = new Date()): MonthStatus {
     incomes,
     bills,
     savingRate: parseFloat(settings.saving_rate || "0") || 0,
-    debtMonthly,
-    investmentMonthly,
+    debtMonthly: commitments.debtMonthly,
+    investmentMonthly: commitments.investmentMonthly,
+    commitmentCategories: commitments.categories,
   });
 }

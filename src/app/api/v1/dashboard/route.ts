@@ -1,9 +1,10 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { getHouseholdSettings } from "@/lib/household";
-import { NOT_BUDGET_EXCLUDED, localMonthCategories } from "@/lib/budget-math";
+import { NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
 import { buildDashboard, type DashBill, type DashDebt, type DashIncome } from "@/lib/dashboard-model";
+import { monthCommitments } from "@/lib/commitments";
 
 // GET /api/v1/dashboard - everything the dashboard shows, in one call: the daily budget and why it
 // is what it is, today's spending, the obligations ahead, the charts and the month's figures. The
@@ -111,40 +112,14 @@ export const GET = apiRoute("read", (_request, identity) => {
     received: manualReceived.has(i.id) ? manualReceived.get(i.id)! : matchedIncome.has(i.id),
   }));
 
-  // A debt's monthly payment is its override, or what its budget category is given when there is no
-  // override, which is how the debts page reads it.
-  const debtRows = db
-    .prepare(
-      "SELECT a.id, a.name, o.minimum_payment, o.due_day, o.is_priority " +
-        "FROM ynab_accounts a LEFT JOIN debt_overrides o ON o.ynab_account_id = a.id " +
-        "WHERE a.type = 'otherDebt' AND a.closed = 0"
-    )
-    .all() as {
-      id: string; name: string; minimum_payment: number | null; due_day: number | null; is_priority: number | null;
-    }[];
-  // A debt with no minimum payment set still costs what its budget category is given, which is
-  // what the debts page falls back to. Without the same fallback the month's discretionary budget
-  // came out higher here than in the browser.
-  const debtCategories = localMonthCategories(db, month) as { name: string; budgeted: number }[];
-  const monthlyTargetFor = (name: string) => {
-    const match = debtCategories.find(
-      (c) =>
-        c.name.toLowerCase().includes(name.split("(")[0].trim().toLowerCase()) ||
-        name.toLowerCase().includes(c.name.split("(")[0].trim().toLowerCase())
-    );
-    return match ? Math.abs(match.budgeted) : 0;
-  };
-  const debts: DashDebt[] = debtRows.map((d) => ({
+  // Every figure the plan sets aside beyond the bills, read the same way the debts page reads it.
+  const commitments = monthCommitments(db, month);
+  const debts: DashDebt[] = commitments.debts.map((d) => ({
     name: d.name,
-    amount: d.minimum_payment || monthlyTargetFor(d.name) || 0,
-    dueDay: d.due_day ?? 0,
-    isPriority: !!d.is_priority,
+    amount: d.amount,
+    dueDay: d.dueDay,
+    isPriority: d.isPriority,
   }));
-  const debtMonthly = debts.reduce((s, d) => s + d.amount, 0);
-
-  const investmentMonthly = (
-    db.prepare("SELECT COALESCE(SUM(monthly_contribution), 0) AS v FROM investment_overrides").get() as { v: number }
-  ).v;
 
   const monthlyHistory = db
     .prepare("SELECT month, income, expenses FROM monthly_snapshots ORDER BY month DESC LIMIT 5")
@@ -216,8 +191,9 @@ export const GET = apiRoute("read", (_request, identity) => {
     incomes,
     debts,
     savingRate: parseFloat(settings.saving_rate || "0") || 0,
-    debtMonthly,
-    investmentMonthly,
+    debtMonthly: commitments.debtMonthly,
+    investmentMonthly: commitments.investmentMonthly,
+    commitmentCategories: commitments.categories,
     excludedAccountIds: parseJsonSetting("budget_excluded_accounts"),
     linkedAccountIds,
     personalBudgetShare,
