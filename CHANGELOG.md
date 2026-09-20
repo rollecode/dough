@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Serve ticker prices and sparklines over the API
 * Open the spending heatmap at today rather than part scrolled
 * Read every category budget in two queries instead of two per category
 * Index the columns the category walk filters on
