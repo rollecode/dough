@@ -24,5 +24,22 @@ export const GET = apiRoute("read", () => {
     notes: r.notes ?? "",
     ticker: r.ticker ?? "",
   }));
-  return { investments, count: investments.length };
+  // The value-over-time snapshots the investments page charts, and the totals it heads with.
+  const progress = getDb()
+    .prepare("SELECT date, total_value AS value, total_contributed AS invested FROM investment_progress ORDER BY date ASC")
+    .all() as { date: string; value: number; invested: number }[];
+  const totalValue = Math.round(investments.reduce((s, i) => s + i.value, 0) * 100) / 100;
+  const totalInvested = Math.round(investments.reduce((s, i) => s + i.contributed, 0) * 100) / 100;
+
+  return {
+    investments,
+    count: investments.length,
+    progress,
+    total_value: totalValue,
+    total_invested: totalInvested,
+    total_profit: Math.round((totalValue - totalInvested) * 100) / 100,
+    monthly_contributions: Math.round(
+      investments.reduce((s, i) => s + i.monthly_contribution, 0) * 100
+    ) / 100,
+  };
 });
