@@ -1,7 +1,14 @@
 /* Module: api-docs — the public reference served on the api. host. Two columns on a desktop, the
    nav folding above the content on a phone. Same glass surfaces as the app, no app chrome. */
 
+/* One violet field, a fraction of the app's: the reference is a document, so the colour should be
+   felt rather than seen. */
 .api-docs {
+  background-image:
+    radial-gradient(85% 45% at 88% -12%, rgba(139, 92, 246, 0.13) 0%, rgba(139, 92, 246, 0.05) 42%, rgba(139, 92, 246, 0) 78%),
+    radial-gradient(70% 40% at -10% 8%, rgba(139, 92, 246, 0.07) 0%, rgba(139, 92, 246, 0) 70%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
   gap: 3rem;
@@ -82,8 +89,8 @@
   position: relative;
   margin: 1rem 0 0;
   border-radius: calc(var(--radius) - 0.5rem);
-  border: 1px solid #292e42;
-  background-color: #16161e;
+  border: 1px solid #241a3a;
+  background-color: #000000;
   overflow: hidden;
 }
 
@@ -99,7 +106,7 @@
   font-size: 0.8125rem;
   line-height: 1.375rem;
   white-space: pre;
-  color: #a9b1d6;
+  color: #c9c2e6;
 }
 
 .api-code-copy {
@@ -135,17 +142,19 @@
   height: 0.9375rem;
 }
 
-.api-token-text { color: #a9b1d6; }
-.api-token-comment { color: #565f89; }
-.api-token-string { color: #9ece6a; }
-.api-token-number { color: #ff9e64; }
-.api-token-keyword { color: #bb9af7; }
-.api-token-command { color: #7dcfff; font-weight: 500; }
-.api-token-flag { color: #e0af68; }
-.api-token-variable { color: #bb9af7; }
-.api-token-punctuation { color: #89ddff; }
-.api-token-method { color: #bb9af7; font-weight: 600; }
-.api-token-path { color: #7aa2f7; }
+/* Tokyo Night pulled towards violet. Hues stay far enough apart that a string is never mistaken
+   for a keyword, which is the one thing a single-hue theme gets wrong. */
+.api-token-text { color: #c9c2e6; }
+.api-token-comment { color: #5f5780; }
+.api-token-string { color: #dda0dd; }
+.api-token-number { color: #ffa7c4; }
+.api-token-keyword { color: #c4a7ff; }
+.api-token-command { color: #9a8cf0; font-weight: 500; }
+.api-token-flag { color: #b39ddb; }
+.api-token-variable { color: #b58cf5; }
+.api-token-punctuation { color: #8f7fd6; }
+.api-token-method { color: #d3bbff; font-weight: 600; }
+.api-token-path { color: #a78bfa; }
 
 .api-endpoint {
   margin-top: 1.5rem;

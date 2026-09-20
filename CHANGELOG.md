@@ -1,6 +1,9 @@
-### Unreleased
+### 4.2.1: 2026-09-20
 
 * Highlight and copy code snippets in the API reference
+* Spending heatmap shades quiet days red instead of grey
+* Black code blocks and a violet theme in the API reference
+* Faint violet wash behind the API reference
 
 ### 4.2.0: 2026-09-20
 
