@@ -1,7 +1,7 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { getHouseholdSettings } from "@/lib/household";
-import { NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
+import { NOT_BUDGET_EXCLUDED, localMonthCategories } from "@/lib/budget-math";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
 import { buildDashboard, type DashBill, type DashDebt, type DashIncome } from "@/lib/dashboard-model";
 
@@ -122,9 +122,21 @@ export const GET = apiRoute("read", (_request, identity) => {
     .all() as {
       id: string; name: string; minimum_payment: number | null; due_day: number | null; is_priority: number | null;
     }[];
+  // A debt with no minimum payment set still costs what its budget category is given, which is
+  // what the debts page falls back to. Without the same fallback the month's discretionary budget
+  // came out higher here than in the browser.
+  const debtCategories = localMonthCategories(db, month) as { name: string; budgeted: number }[];
+  const monthlyTargetFor = (name: string) => {
+    const match = debtCategories.find(
+      (c) =>
+        c.name.toLowerCase().includes(name.split("(")[0].trim().toLowerCase()) ||
+        name.toLowerCase().includes(c.name.split("(")[0].trim().toLowerCase())
+    );
+    return match ? Math.abs(match.budgeted) : 0;
+  };
   const debts: DashDebt[] = debtRows.map((d) => ({
     name: d.name,
-    amount: d.minimum_payment ?? 0,
+    amount: d.minimum_payment || monthlyTargetFor(d.name) || 0,
     dueDay: d.due_day ?? 0,
     isPriority: !!d.is_priority,
   }));
