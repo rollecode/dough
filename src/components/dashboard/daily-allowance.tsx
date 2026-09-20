@@ -240,8 +240,8 @@ export function DailyAllowance({
                   </button>
                   <span className="metric-info-popup">
                     {locale === "fi"
-                      ? "Tulot (odotetut tai saadut) miinus menot: toteutuneet kulut + maksamattomat laskut + säästötavoite + loppukuu suunnitellulla päivävauhdilla, josta laskut, velkaerät ja sijoitukset on jo vähennetty"
-                      : "Income (expected or received) minus expenses: actual spending + unpaid bills + your saving goal + the rest of the month at the planned daily rate, which already has bills, debt payments and investments taken out"}
+                      ? "Tulot (odotetut tai saadut) miinus menot: toteutuneet kulut + maksamattomat laskut + maksamatta olevat velkaerät ja sijoitukset + säästötavoite + loppukuu suunnitellulla päivävauhdilla"
+                      : "Income (expected or received) minus expenses: actual spending + unpaid bills + debt payments and investments not yet made + your saving goal + the rest of the month at the planned daily rate"}
                   </span>
                 </span>
               </p>
