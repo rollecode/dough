@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Read every category budget in two queries instead of two per category
+* Index the columns the category walk filters on
 * Report what an unlinked savings goal holds over the API
 * Write durations out as years and months
 * Model the investment projection in one place and serve it over the API

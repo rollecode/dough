@@ -155,12 +155,13 @@ export function localMonthCategories(
     "SELECT category, ROUND(SUM(amount), 2) AS a FROM transactions WHERE date >= ? AND date <= ? AND " +
       CATEGORY_ACTIVITY_PREDICATE + " GROUP BY category"
   ).all(start, end) as { category: string; a: number }[]).map((r) => [r.category, r.a]));
+  const tables = walkTables(db);
   return cats.map((c) => ({
     name: c.name,
     group: c.group_name,
     budgeted: Math.round((budgeted.get(c.id) || 0) * 100) / 100,
     activity: activity.get(c.name) || 0,
-    balance: walkCategory(db, c.id, c.name, month).availableAt,
+    balance: walkFromTables(tables, c.id, c.name, month).availableAt,
   }));
 }
 
@@ -476,6 +477,86 @@ const ACTIVITY_BY_MONTH =
 // that rolled into `month`. Positive available rolls forward, negative resets to 0 (YNAB default).
 // An opening anchor, when present, starts the walk at its month with the carry-in balance so
 // pre-cutover history (for shallow syncs) is preserved without replaying it.
+// Every category's monthly budgeted and activity in two queries rather than two per category.
+// Walking fifty-odd categories one at a time meant fifty-odd scans of the whole ledger, which is
+// what made the budget screen take a third of a second to answer.
+interface WalkTables {
+  budgets: Map<number, Map<string, number>>;
+  activity: Map<string, Map<string, number>>;
+  anchors: Map<number, { month: string; balance: number }>;
+}
+
+export function walkTables(db: ReturnType<typeof getDb>): WalkTables {
+  const budgets = new Map<number, Map<string, number>>();
+  for (const r of db
+    .prepare("SELECT category_id, month, COALESCE(budgeted,0) AS b FROM monthly_category_budgets ORDER BY month")
+    .all() as { category_id: number; month: string; b: number }[]) {
+    if (!budgets.has(r.category_id)) budgets.set(r.category_id, new Map());
+    budgets.get(r.category_id)!.set(r.month, r.b);
+  }
+
+  const activity = new Map<string, Map<string, number>>();
+  for (const r of db
+    .prepare(
+      "SELECT category, substr(date,1,7) AS month, ROUND(SUM(-amount),2) AS a FROM transactions WHERE " +
+        CATEGORY_ACTIVITY_PREDICATE + " GROUP BY category, substr(date,1,7)"
+    )
+    .all() as { category: string; month: string; a: number }[]) {
+    if (!activity.has(r.category)) activity.set(r.category, new Map());
+    activity.get(r.category)!.set(r.month, r.a);
+  }
+
+  const anchors = new Map<number, { month: string; balance: number }>();
+  try {
+    for (const r of db
+      .prepare("SELECT category_id, anchor_month AS month, balance FROM category_opening_balances")
+      .all() as { category_id: number; month: string; balance: number }[]) {
+      anchors.set(r.category_id, { month: r.month, balance: r.balance });
+    }
+  } catch {
+    // An instance that predates opening balances simply has none.
+  }
+
+  return { budgets, activity, anchors };
+}
+
+// The walk itself, over tables already in memory.
+export function walkFromTables(
+  tables: WalkTables,
+  categoryId: number,
+  categoryName: string,
+  month: string
+): { availableAt: number; carryInto: number } {
+  const bMap = tables.budgets.get(categoryId) ?? new Map<string, number>();
+  const aMap = tables.activity.get(categoryName) ?? new Map<string, number>();
+
+  let firstBudget: string | null = null;
+  for (const key of bMap.keys()) if (firstBudget === null || key < firstBudget) firstBudget = key;
+  let firstActivity: string | null = null;
+  for (const key of aMap.keys()) if (firstActivity === null || key < firstActivity) firstActivity = key;
+
+  let start = firstBudget || firstActivity;
+  if (!start) return { availableAt: 0, carryInto: 0 };
+  if (firstBudget && firstActivity && firstActivity < firstBudget) start = firstActivity;
+
+  let carry = 0;
+  let cursor = start;
+  const anchor = tables.anchors.get(categoryId);
+  if (anchor && anchor.month <= month) {
+    cursor = anchor.month;
+    carry = anchor.balance;
+  }
+  while (cursor <= month) {
+    const b = bMap.get(cursor) || 0;
+    const a = aMap.get(cursor) || 0;
+    const available = Math.round((carry + b - a) * 100) / 100;
+    if (cursor === month) return { availableAt: available, carryInto: carry };
+    carry = available > 0 ? available : 0;
+    cursor = ym(cursor, 1);
+  }
+  return { availableAt: Math.round(carry * 100) / 100, carryInto: carry };
+}
+
 export function walkCategory(
   db: ReturnType<typeof getDb>,
   categoryId: number,
@@ -526,7 +607,8 @@ export function availableForCategory(
 // against real account balances (the golden equation: on-budget balance = RTA + sum of available).
 export function sumCategoryAvailable(db: ReturnType<typeof getDb>, month: string): number {
   const cats = db.prepare("SELECT id, name FROM categories WHERE is_active = 1").all() as { id: number; name: string }[];
+  const tables = walkTables(db);
   let sum = 0;
-  for (const c of cats) sum += walkCategory(db, c.id, c.name, month).availableAt;
+  for (const c of cats) sum += walkFromTables(tables, c.id, c.name, month).availableAt;
   return Math.round(sum * 100) / 100;
 }
