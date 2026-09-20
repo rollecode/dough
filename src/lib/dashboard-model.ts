@@ -200,6 +200,73 @@ function fixedCostMatcher(bills: DashBill[], accounts: DashAccount[]) {
   };
 }
 
+// The month's income against what it will have cost by the end: what has been spent so far, the
+// bills still to pay, the rest of the month at the planned discretionary rate, and the saving goal.
+// Exported because the dashboard page draws the same card; two copies of this drifted apart once.
+export interface MonthStatusInput {
+  now: Date;
+  transactions: DashTransaction[];
+  monthBudgetIncome: number;
+  incomes: { amount: number; is_active: boolean | number }[];
+  bills: { amount: number; is_active: boolean | number; is_paid?: boolean | number }[];
+  savingRate: number;
+  debtMonthly: number;
+  investmentMonthly: number;
+}
+
+export interface MonthStatus {
+  income: number;
+  expenses: number;
+  spent: number;
+  unpaidBills: number;
+  projectedRest: number;
+  savingRate: number;
+}
+
+export function monthStatus(input: MonthStatusInput): MonthStatus {
+  const { now, transactions, monthBudgetIncome, incomes, bills } = input;
+  const { savingRate, debtMonthly, investmentMonthly } = input;
+
+  const month = ym(now);
+  const today = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = daysInMonth - today;
+  const monthStart = `${month}-01`;
+  const todayIso = isoDay(now);
+
+  const spent = round(
+    transactions
+      .filter((t) => t.date >= monthStart && t.date <= todayIso)
+      .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category))
+      .reduce((s, t) => s + Math.abs(t.amount), 0)
+  );
+
+  const activeBills = bills.filter((b) => b.is_active);
+  const billsTotal = round(activeBills.reduce((s, b) => s + b.amount, 0));
+  const paidBills = round(activeBills.filter((b) => b.is_paid).reduce((s, b) => s + b.amount, 0));
+  const unpaidBills = round(billsTotal - paidBills);
+
+  const income = Math.max(
+    monthBudgetIncome,
+    round(incomes.filter((i) => i.is_active).reduce((s, i) => s + i.amount, 0))
+  );
+  const discretionaryBudget = Math.max(
+    0,
+    income - savingRate - billsTotal - debtMonthly - investmentMonthly
+  );
+  const targetPerDay = discretionaryBudget > 0 ? discretionaryBudget / daysInMonth : 0;
+  const projectedRest = round(targetPerDay * daysLeft);
+
+  return {
+    income,
+    expenses: round(spent + unpaidBills + projectedRest + savingRate),
+    spent,
+    unpaidBills,
+    projectedRest,
+    savingRate,
+  };
+}
+
 export function buildDashboard(input: DashboardInput): DashboardModel {
   const {
     now, displayName, accounts, transactions, monthBudget, bills, incomes, debts, savingRate,
@@ -450,10 +517,11 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   const targetPerDay = discretionaryBudget > 0 ? discretionaryBudget / daysInMonth : 0;
 
   // Remaining days are projected at the planned rate, never at the month-to-date burn: one late
-  // purchase should not be multiplied across the rest of the month.
-  const monthExpensesEstimate = round(
-    realSpendingTotal + unpaidBillsAmount + targetPerDay * daysLeft + savingRate
-  );
+  // purchase should not be multiplied across the rest of the month. Shared with the web page.
+  const monthExpensesEstimate = monthStatus({
+    now, transactions, monthBudgetIncome: monthBudget.income, incomes, bills,
+    savingRate, debtMonthly, investmentMonthly,
+  }).expenses;
 
   const sortedSpending = [...transactions]
     .filter((t) => t.date >= monthStart && isSpending(t))

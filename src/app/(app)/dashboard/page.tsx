@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useEvent } from "@/lib/use-events";
 import { useLocale } from "@/lib/locale-context";
+import { monthStatus } from "@/lib/dashboard-model";
 import { isTransfer } from "@/lib/transaction-utils";
 import { calculateDailyBudget } from "@/lib/daily-budget";
 import { billDueInMonth } from "@/lib/bills";
@@ -511,7 +512,19 @@ export default function DashboardPage() {
   // rate (zero when there is no discretionary room), never the actual month-to-date burn.
   // Extrapolating the burn multiplied a one-off or a late-synced past purchase across the rest of
   // the month, spiking the estimate. Real past spending still counts once via realSpendingTotal.
-  const monthExpensesEstimate = Math.round((realSpendingTotal + unpaidBillsAmount + (discretionaryTargetPerDay * daysLeft) + savingRate) * 100) / 100;
+  // Income and the month-end estimate come from the shared module, the same one /api/v1/dashboard
+  // answers with, so the card here and the card on a phone cannot disagree.
+  const status = monthStatus({
+    now,
+    transactions: data.transactions,
+    monthBudgetIncome: data.monthBudget.income,
+    incomes,
+    bills,
+    savingRate,
+    debtMonthly,
+    investmentMonthly,
+  });
+  const monthExpensesEstimate = status.expenses;
 
   // Spending chart: ALL spending with Vakaa talous target (income - savings) / days
   const totalTargetPerDay = combinedIncome > 0 && savingRate > 0
@@ -719,7 +732,7 @@ export default function DashboardPage() {
         projectedMonthEnd={projectedMonthEnd}
         todaySpentAll={todaySpentAll}
         todayRemaining={todayRemaining}
-        monthIncome={combinedIncome}
+        monthIncome={status.income}
         monthExpenses={monthExpensesEstimate}
         trendPercent={trendPercent}
         budgetBreakdown={budgetResult.tightestSegment}
