@@ -5,6 +5,25 @@ import { eventBus } from "@/lib/event-bus";
 import { localDateIso } from "@/lib/date-utils";
 import { cashFlowForMonth, localMonthCategories } from "@/lib/budget-math";
 
+type BalanceRow = { type: string; balance: number };
+
+/* One row per day, upserted. Lives here because both the YNAB pull and the plain read serve account
+   balances, and only the pull used to write it: after the move to local mode the pull stopped
+   running and the history froze. */
+function saveNetWorthSnapshot(db: import("better-sqlite3").Database, userId: number, accounts: BalanceRow[]) {
+  const sum = (type: string) => accounts.filter((a) => a.type === type).reduce((s, a) => s + a.balance, 0);
+  const checking = sum("checking");
+  const savings = sum("savings");
+  const investments = sum("otherAsset");
+  const debts = sum("otherDebt");
+
+  db.prepare(`
+    INSERT INTO net_worth_snapshots (user_id, date, checking, savings, investments, debts, net_worth)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, date) DO UPDATE SET checking=excluded.checking, savings=excluded.savings, investments=excluded.investments, debts=excluded.debts, net_worth=excluded.net_worth
+  `).run(userId, localDateIso(), checking, savings, investments, debts, checking + savings + investments + debts);
+}
+
 export async function GET() {
   try {
     const user = await getSession();
@@ -68,6 +87,12 @@ export async function GET() {
       },
       syncedAt,
     };
+
+    try {
+      saveNetWorthSnapshot(db, user.id, accounts);
+    } catch (err) {
+      console.error("[api/ynab/sync] Failed to save net worth snapshot:", err);
+    }
 
     console.debug("[api/ynab/sync] Serving from SQLite:", accounts.length, "accounts,", transactions.length, "transactions,", categories.length, "categories");
     return NextResponse.json({ success: true, data, cached: true });
@@ -160,23 +185,9 @@ export async function POST(request: Request) {
     // Update last sync time in household settings
     setHouseholdSetting("last_ynab_sync", new Date().toISOString());
 
-    // Auto-take net worth snapshot
     try {
       const { getDb } = await import("@/lib/db");
-      const db = getDb();
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      const checking = summary.accounts.filter((a: any) => a.type === "checking").reduce((s: number, a: any) => s + a.balance, 0);
-      const savings = summary.accounts.filter((a: any) => a.type === "savings").reduce((s: number, a: any) => s + a.balance, 0);
-      const investments = summary.accounts.filter((a: any) => a.type === "otherAsset").reduce((s: number, a: any) => s + a.balance, 0);
-      const debtTotal = summary.accounts.filter((a: any) => a.type === "otherDebt").reduce((s: number, a: any) => s + a.balance, 0);
-      const netWorth = checking + savings + investments + debtTotal;
-      const today = localDateIso();
-
-      db.prepare(`
-        INSERT INTO net_worth_snapshots (user_id, date, checking, savings, investments, debts, net_worth)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(user_id, date) DO UPDATE SET checking=excluded.checking, savings=excluded.savings, investments=excluded.investments, debts=excluded.debts, net_worth=excluded.net_worth
-      `).run(user.id, today, checking, savings, investments, debtTotal, netWorth);
+      saveNetWorthSnapshot(getDb(), user.id, summary.accounts);
       console.info("[api/ynab/sync] Net worth snapshot auto-saved");
     } catch (err) {
       console.error("[api/ynab/sync] Failed to save net worth snapshot:", err);

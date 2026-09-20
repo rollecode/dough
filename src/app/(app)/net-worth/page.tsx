@@ -190,7 +190,9 @@ export default function NetWorthPage() {
     net_worth: Math.round(liveAccounts.reduce((s, a) => s + a.balance, 0) * 100) / 100,
   } : null;
 
-  const latest = snapshots.length > 0 ? snapshots[snapshots.length - 1] : currentSnap;
+  // Live balances win over the newest stored snapshot: the snapshot is a daily record, the balances
+  // are the truth right now, and the dashboard shows the same figure.
+  const latest = currentSnap ?? (snapshots.length > 0 ? snapshots[snapshots.length - 1] : null);
 
   // Change since earliest available snapshot
   const compareSnapshot = snapshots.length >= 2 ? snapshots[0] : null;

@@ -2,6 +2,8 @@
 
 * Social share image, title and description
 * Logo replaces the wordmark on the login page
+* Net worth matches between dashboard and its own page
+* Record net worth daily again, not only on a YNAB sync
 
 ### 4.1.2: 2026-09-20
 
