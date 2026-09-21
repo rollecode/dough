@@ -203,9 +203,3 @@ export async function createTransaction(
   console.info("[ynab] Transaction created:", json.data?.transaction?.id);
   return json.data?.transaction;
 }
-
-// Keep for backwards compat with budgets route
-export function createYnabClient(token: string) {
-  const { api } = require("ynab");
-  return new api(token);
-}

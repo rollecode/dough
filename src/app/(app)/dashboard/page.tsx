@@ -72,7 +72,7 @@ export default function DashboardPage() {
   const [dashInfoOpen, setDashInfoOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [matchedBillIds, setMatchedBillIds] = useState<Set<number>>(new Set());
-  const [bills, setBills] = useState<{ id: number; name: string; amount: number; due_day: number; is_active: number; is_paid: boolean; cadence?: string; due_month?: number | null }[]>([]);
+  const [bills, setBills] = useState<{ id: number; name: string; amount: number; due_day: number; is_active: number; is_paid: boolean; cadence?: string; due_month?: number | null; is_priority?: number }[]>([]);
   const [investmentMonthly, setInvestmentMonthly] = useState(0);
   const [debtMonthly, setDebtMonthly] = useState(0);
   const [debtItems, setDebtItems] = useState<{ amount: number; dueDay: number; isPriority?: boolean; name?: string }[]>([]);
@@ -344,9 +344,9 @@ export default function DashboardPage() {
     resolveDay,
   };
   // Calculate with and without bills (priority items always included in both modes)
-  const priorityBills = bills.filter((b: any) => b.is_active && !b.is_paid && b.is_priority && billDueInMonth(b, curMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
-  const priorityDebts = debtItems.filter((d: any) => d.isPriority);
-  const allPriorityBills = bills.filter((b: any) => b.is_active && b.is_priority && billDueInMonth(b, nxtMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
+  const priorityBills = bills.filter((b) => b.is_active && !b.is_paid && b.is_priority && billDueInMonth(b, curMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
+  const priorityDebts = debtItems.filter((d) => d.isPriority);
+  const allPriorityBills = bills.filter((b) => b.is_active && b.is_priority && billDueInMonth(b, nxtMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day }));
   const budgetWithBills = calculateDailyBudget(budgetParams);
   const budgetWithoutBills = calculateDailyBudget({ ...budgetParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });
 

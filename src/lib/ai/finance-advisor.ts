@@ -74,7 +74,7 @@ Current financial snapshot:
 - MONEY TIMELINE: The household has ${ctx.totalBalance} euros NOW. The daily budget is based ONLY on current balance (no future income counted). ${ctx.incomeSources.filter(i => resolvedDay(i.expectedDay) > dayOfMonth).map(i => `${i.name} (${i.amount} euros) arrives ${dateOfDay(i.expectedDay)}`).join(". ") || "No more income this month"}. When income arrives, budget recalculates automatically. Until then, they must live within ${ctx.dailyBudget} euros/day from current balance. Be conservative.
 - Monthly expenses so far (excluding transfers): ${ctx.monthlyExpenses} euros
 - TODAY'S discretionary spending: ${ctx.todaySpent} euros. Remaining today: ${Math.max(0, ctx.dailyBudget - ctx.todaySpent).toFixed(2)} euros.
-- TODAY'S fixed costs paid (bills, debts, investments): ${(ctx as any).todayFixedCosts || 0} euros. These are already accounted for in the budget and should NOT be counted against the daily budget.
+- TODAY'S fixed costs paid (bills, debts, investments): ${ctx.todayFixedCosts || 0} euros. These are already accounted for in the budget and should NOT be counted against the daily budget.
 - Tomorrow's budget if no more spending today: ${ctx.tomorrowBudget} euros
 
 ${ctx.accounts.length > 0 ? `Accounts (ALWAYS consider ALL accounts when giving advice, even excluded ones have real money):
