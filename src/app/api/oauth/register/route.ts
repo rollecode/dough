@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { registerClient, isAcceptableRedirectUri } from "@/lib/oauth";
+import { createLimiter, clientIp } from "@/lib/rate-limit";
+
+const MAX_REGISTRATIONS = 10;
+const WINDOW_MS = 60 * 60 * 1000;
+const registrations = createLimiter(MAX_REGISTRATIONS, WINDOW_MS);
 
 // RFC 7591, open registration. A self-hoster should never have to paste a client id into an app, so
 // any client may register; what it gets is an identifier, not a credential, and it still cannot
 // receive a code anywhere except the redirect URI it registered.
 export async function POST(request: Request) {
+  const ip = clientIp(request);
+  if (registrations.isLimited(ip)) {
+    console.warn("[oauth] Throttled client registration from", ip);
+    return NextResponse.json({ error: "too_many_requests", error_description: "Too many registrations. Try again later." }, { status: 429 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const name = String(body.client_name || "").trim();
   const redirectUris: string[] = Array.isArray(body.redirect_uris) ? body.redirect_uris.map(String) : [];
@@ -25,6 +36,7 @@ export async function POST(request: Request) {
     }
   }
 
+  registrations.record(ip);
   const client = registerClient(name, redirectUris);
   return NextResponse.json(
     {

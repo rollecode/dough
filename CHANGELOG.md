@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Limit how often apps can register
 * Remove a private address from the README
 * Run the AI with no tools and none of the server secrets
 * Upgrade Next.js to 16.3.5 and patch dependency advisories
