@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "crypto";
 import { createUser } from "@/lib/auth";
-import { registerClient, issueCode, exchangeCode, refreshTokens, authenticateAccessToken, isAcceptableRedirectUri } from "@/lib/oauth";
+import { registerClient, issueCode, exchangeCode, refreshTokens, authenticateAccessToken, isAcceptableRedirectUri, isS256Challenge } from "@/lib/oauth";
 
 const REDIRECT = "com.example.app:/callback";
 const VERIFIER = "a".repeat(64);
@@ -50,4 +50,11 @@ test("redirect URIs are limited to app schemes and loopback", () => {
   assert.equal(isAcceptableRedirectUri("http://127.0.0.1:8080/cb"), true);
   assert.equal(isAcceptableRedirectUri("https://evil.example/cb"), false);
   assert.equal(isAcceptableRedirectUri("javascript:alert(1)"), false);
+});
+
+test("only an S256 challenge is accepted", () => {
+  assert.equal(isS256Challenge("S256", CHALLENGE), true);
+  assert.equal(isS256Challenge("plain", CHALLENGE), false);
+  assert.equal(isS256Challenge("S256", VERIFIER), false);
+  assert.equal(isS256Challenge("S256", ""), false);
 });

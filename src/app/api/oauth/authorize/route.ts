@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getClient, redirectUriAllowed, normaliseScopes, issueCode } from "@/lib/oauth";
+import { getClient, redirectUriAllowed, normaliseScopes, issueCode, isS256Challenge } from "@/lib/oauth";
 
 // The consent form posts here. The session cookie is what proves who is granting access, so this
 // only ever acts for the person currently signed in on this browser.
@@ -10,12 +10,13 @@ export async function POST(request: Request) {
   const redirectUri = String(form.get("redirect_uri") || "");
   const state = String(form.get("state") || "");
   const codeChallenge = String(form.get("code_challenge") || "");
+  const codeChallengeMethod = String(form.get("code_challenge_method") || "");
   const decision = String(form.get("decision") || "deny");
   const scopes = normaliseScopes(String(form.get("scope") || ""));
 
   const client = getClient(clientId);
-  if (!client || !redirectUriAllowed(client, redirectUri) || !codeChallenge) {
-    console.warn("[oauth] Consent posted with an unusable client or redirect URI");
+  if (!client || !redirectUriAllowed(client, redirectUri) || !isS256Challenge(codeChallengeMethod, codeChallenge)) {
+    console.warn("[oauth] Consent posted with an unusable client, redirect URI or PKCE challenge");
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 

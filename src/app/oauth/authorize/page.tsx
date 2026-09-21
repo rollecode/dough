@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { getClient, redirectUriAllowed, normaliseScopes } from "@/lib/oauth";
+import { getClient, redirectUriAllowed, normaliseScopes, isS256Challenge } from "@/lib/oauth";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -31,7 +31,7 @@ export default async function AuthorizePage({ searchParams }: Props) {
   if (responseType !== "code") {
     return <Problem title="Unsupported request" detail="Only the authorization code flow is supported." />;
   }
-  if (codeChallengeMethod !== "S256" || !codeChallenge) {
+  if (!isS256Challenge(codeChallengeMethod, codeChallenge)) {
     return <Problem title="Unsupported request" detail="This instance requires PKCE with S256." />;
   }
 
@@ -78,6 +78,7 @@ export default async function AuthorizePage({ searchParams }: Props) {
           <input type="hidden" name="scope" value={scopes.join(" ")} />
           <input type="hidden" name="state" value={state} />
           <input type="hidden" name="code_challenge" value={codeChallenge} />
+          <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />
           <button type="submit" name="decision" value="deny" className="button" data-variant="outline">
             Deny
           </button>

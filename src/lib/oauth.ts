@@ -88,6 +88,13 @@ export function isAcceptableRedirectUri(uri: string): boolean {
   }
 }
 
+// A SHA-256 digest in base64url is always 43 characters, so anything else is not an S256 challenge.
+const S256_CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
+
+export function isS256Challenge(method: string, challenge: string): boolean {
+  return method === "S256" && S256_CHALLENGE.test(challenge);
+}
+
 export function normaliseScopes(requested: string | null | undefined): string[] {
   const asked = (requested || "read")
     .split(/[\s,]+/)

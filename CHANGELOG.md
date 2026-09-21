@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Refuse app sign-ins without S256 PKCE
 * Limit how often apps can register
 * Remove a private address from the README
 * Run the AI with no tools and none of the server secrets
