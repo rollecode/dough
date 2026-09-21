@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Add a test runner with first tests
 * Fix lint errors
 * Fix setup of a fresh database
 * Keep a receipt's price when picking a payee
