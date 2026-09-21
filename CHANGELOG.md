@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Upgrade Next.js to 16.3.5 and patch dependency advisories
 * Check every push with CI, CodeQL and a secret scan
 * Add a test runner with first tests
 * Fix lint errors
