@@ -99,9 +99,6 @@ function initializeDb(db: Database.Database) {
     -- Category work (the budget's monthly walk, activity per category) filters on this, and
     -- without it every category cost a full scan of the ledger.
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
-    -- The activity predicate resolves a transfer's payee against this name on every row it
-    -- reads, which was a table scan per transaction before.
-    CREATE INDEX IF NOT EXISTS idx_ynab_accounts_name ON ynab_accounts(name);
 
     CREATE TABLE IF NOT EXISTS chat_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -282,6 +279,9 @@ function initializeDb(db: Database.Database) {
       closed INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- The activity predicate resolves a transfer's payee against this name on every row it
+    -- reads, which was a table scan per transaction before.
+    CREATE INDEX IF NOT EXISTS idx_ynab_accounts_name ON ynab_accounts(name);
 
     CREATE TABLE IF NOT EXISTS ynab_categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Fix setup of a fresh database
 * Keep a receipt's price when picking a payee
 * Give the consent buttons half the width each
 * Report ten top categories to a phone
