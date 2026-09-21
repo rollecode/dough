@@ -95,6 +95,9 @@ export interface DashboardInput {
   trends: { category: string; thisMonth: number; lastMonth: number }[];
   // Day of month to the discretionary target frozen on that day, from daily_budget_history.
   targetByDay: Record<number, number>;
+  // How many of the month's biggest spending categories to report. Six fills the browser's donut;
+  // a phone lists them, so it asks for more.
+  topCategories?: number;
 }
 
 export interface DashboardModel {
@@ -290,7 +293,7 @@ export function monthStatus(input: MonthStatusInput): MonthStatus {
 export function buildDashboard(input: DashboardInput): DashboardModel {
   const {
     now, displayName, accounts, transactions, monthBudget, bills, incomes, debts, savingRate,
-    debtMonthly, investmentMonthly, commitmentCategories,
+    debtMonthly, investmentMonthly, commitmentCategories, topCategories = 6,
     excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
     monthlyHistory, trends, targetByDay,
@@ -606,7 +609,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   const categories = monthBudget.categories
     .filter((c) => c.activity < 0 && c.name !== "Inflow: Ready to Assign")
     .sort((a, b) => a.activity - b.activity)
-    .slice(0, 6)
+    .slice(0, topCategories)
     .map((c) => ({ name: c.name, amount: round(Math.abs(c.activity)) }));
 
   // The streak counts back from yesterday: days that stayed within the budget, stopping at the

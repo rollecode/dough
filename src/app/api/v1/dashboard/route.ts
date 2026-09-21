@@ -194,6 +194,8 @@ export const GET = apiRoute("read", (_request, identity) => {
     debtMonthly: commitments.debtMonthly,
     investmentMonthly: commitments.investmentMonthly,
     commitmentCategories: commitments.categories,
+    // The phone lists the categories rather than drawing six slices, so it takes ten.
+    topCategories: 10,
     excludedAccountIds: parseJsonSetting("budget_excluded_accounts"),
     linkedAccountIds,
     personalBudgetShare,
