@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Check every push with CI, CodeQL and a secret scan
 * Add a test runner with first tests
 * Fix lint errors
 * Fix setup of a fresh database
