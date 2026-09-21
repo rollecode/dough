@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawnClaude } from "@/lib/ai/claude-cli";
 import { getHouseholdSetting } from "@/lib/household";
 import { getAiModel } from "./model";
 import { DEFAULT_CHAT_GUIDELINES } from "./default-prompts";
@@ -139,7 +139,6 @@ export async function getFinancialAdvice(
   imageMediaType?: string
 ): Promise<string> {
   const prompt = buildPrompt(messages, context);
-  const claudePath = process.env.CLAUDE_PATH || "claude";
 
   // If image attached, use stream-json format for multimodal
   if (image && imageMediaType) {
@@ -159,10 +158,7 @@ export async function getFinancialAdvice(
     const chatModel = getAiModel("chat");
     console.info("[ai] Chat model:", chatModel);
     const response = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", chatModel, "-"], {
-        env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: "cli" },
-        timeout: 120000,
-      });
+      const proc = spawnClaude(["-p", "--model", chatModel, "-"], 120000);
 
       let stdout = "";
       let stderr = "";

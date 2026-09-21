@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { dateForDayInMonth, formatDate } from "@/lib/date-utils";
-import { spawn } from "child_process";
+import { spawnClaude } from "@/lib/ai/claude-cli";
 
 export async function GET(request: Request) {
   try {
@@ -73,13 +73,9 @@ ${debts.join("\n")}
 
 Total debt: ${debtAccounts.reduce((s: number, a: any) => s + Math.abs(a.balance), 0).toFixed(0)} euros`;
 
-    const claudePath = process.env.CLAUDE_PATH || "claude";
 
     const suggestion = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", "opus", "-"], {
-        env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: "cli" },
-        timeout: 120000,
-      });
+      const proc = spawnClaude(["-p", "--model", "opus", "-"], 120000);
       let stdout = "";
       let stderr = "";
       proc.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });

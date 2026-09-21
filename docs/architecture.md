@@ -142,7 +142,7 @@ The budget page mirrors YNAB's category balances in local mode (`src/lib/budget-
 
 ### AI integration
 
-Claude CLI invoked via `spawn` with Opus model. Features:
+Claude CLI invoked through `src/lib/ai/claude-cli.ts` with Opus model. Every call runs with no tools, no MCP servers and only the environment the CLI needs (`HOME`, `PATH`, locale and `ANTHROPIC_*`/`CLAUDE_*` variables), since prompts carry bank-derived text. Features:
 
 1. **Dougie (chat advisor)** — full conversation with financial context, priority awareness, conservative advice
 2. **AI summary** — cached, shared across users, reads from local DB

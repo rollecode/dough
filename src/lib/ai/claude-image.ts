@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawnClaude } from "@/lib/ai/claude-cli";
 import { getAiModel } from "./model";
 
 interface ClaudeImageResult {
@@ -16,7 +16,6 @@ export async function queryClaudeWithImage(
   mediaType: string,
   timeoutMs = 60000
 ): Promise<ClaudeImageResult> {
-  const claudePath = process.env.CLAUDE_PATH || "claude";
 
   const isPdf = mediaType === "application/pdf";
   const message = JSON.stringify({
@@ -38,10 +37,7 @@ export async function queryClaudeWithImage(
   const visionModel = getAiModel("vision");
   console.debug("[claude-image] Vision model:", visionModel);
   return new Promise((resolve, reject) => {
-    const proc = spawn(claudePath, ["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"], {
-      env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: "cli" },
-      timeout: timeoutMs,
-    });
+    const proc = spawnClaude(["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"], timeoutMs);
 
     let stdout = "";
     let stderr = "";

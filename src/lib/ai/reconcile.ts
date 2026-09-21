@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawnClaude } from "@/lib/ai/claude-cli";
 import { getAiModel, isGeminiModel, getGeminiKey } from "./model";
 import { geminiText } from "./gemini";
 
@@ -45,13 +45,9 @@ Only include ids that appear in the list above. Use an empty array when nothing 
   let raw: string | null = null;
   const model = getAiModel("chat");
   const cliModel = isGeminiModel(model) ? "sonnet" : model;
-  const claudePath = process.env.CLAUDE_PATH || "claude";
   try {
     raw = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", cliModel, "-"], {
-        timeout: 60000,
-        env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: "cli" },
-      });
+      const proc = spawnClaude(["-p", "--model", cliModel, "-"], 60000);
       let stdout = "";
       let stderr = "";
       proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });

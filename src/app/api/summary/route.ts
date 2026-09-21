@@ -6,7 +6,7 @@ import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
 import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 import { billDueInMonth } from "@/lib/bills";
-import { spawn } from "child_process";
+import { spawnClaude } from "@/lib/ai/claude-cli";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -342,14 +342,10 @@ Pre-calculated analysis:
 - Previous months: ${historySnapshots.length > 0 ? historySnapshots.map((s) => `${s.month}: income ${Math.round(s.income)} euros, expenses ${Math.round(s.expenses)} euros, net ${Math.round(s.income - s.expenses)} euros`).join("; ") : "no historical data yet"}
 ${(() => { const goals = db.prepare("SELECT name, target_amount, saved_amount, target_date FROM savings_goals WHERE is_active = 1").all() as { name: string; target_amount: number; saved_amount: number; target_date: string | null }[]; return goals.length > 0 ? `- Savings goals: ${goals.map((g) => `${g.name}: ${g.saved_amount}/${g.target_amount} euros${g.target_date ? ` by ${g.target_date}` : ""}`).join(", ")}` : ""; })()}`;
 
-    const claudePath = process.env.CLAUDE_PATH || "claude";
     console.info("[summary] Calling claude CLI");
 
     const summaryText = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", "opus", "-"], {
-        env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: "cli" },
-        timeout: 120000,
-      });
+      const proc = spawnClaude(["-p", "--model", "opus", "-"], 120000);
 
       let stdout = "";
       let stderr = "";

@@ -1,6 +1,6 @@
 import { getAiModel, isGeminiModel, getGeminiKey } from "./model";
 import { geminiText } from "./gemini";
-import { spawn } from "child_process";
+import { spawnClaude } from "@/lib/ai/claude-cli";
 
 // Pick the best-fitting category for a payee from the given list, using the configured
 // per-task model: fast Gemini when a key is set, otherwise the Claude CLI (Haiku fallback).
@@ -20,10 +20,9 @@ export async function categorizePayee(payee: string, categories: string[]): Prom
   }
 
   const cliModel = isGeminiModel(model) ? "haiku" : model;
-  const claudePath = process.env.CLAUDE_PATH || "claude";
   try {
     const result = await new Promise<string>((resolve, reject) => {
-      const proc = spawn(claudePath, ["-p", "--model", cliModel, "-"], { timeout: 30000 });
+      const proc = spawnClaude(["-p", "--model", cliModel, "-"], 30000);
       let stdout = "";
       proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
       proc.on("close", (code: number) => { if (code === 0 && stdout.trim()) resolve(stdout.trim()); else reject(new Error("categorize failed")); });
