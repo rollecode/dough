@@ -43,6 +43,9 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [txType, setTxType] = useState<"expense" | "income" | "transfer">("expense");
   const [toAccountId, setToAccountId] = useState("");
   const [addAmount, setAddAmount] = useState("");
+  // Read by the async prefill, which would otherwise see the amount from the render it started in.
+  const amountRef = useRef("");
+  amountRef.current = addAmount;
   const [addPayee, setAddPayee] = useState("");
   const [addMemo, setAddMemo] = useState("");
   const [addCategory, setAddCategory] = useState("");
@@ -181,7 +184,9 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     try {
       const r = await fetch(`/api/categories/last?payee=${encodeURIComponent(p)}&category=${encodeURIComponent(c)}`);
       const d = await r.json();
-      if (typeof d.amount === "number" && !amountTouchedRef.current) { setAddAmount(String(d.amount)); setDupCandidates([]); }
+      // Only an empty field is filled. Typing is not the only way an amount arrives: a receipt fills it
+      // too, and a typed-only flag let the payee overwrite the receipt's price with an older one.
+      if (typeof d.amount === "number" && amountRef.current.trim() === "") { setAddAmount(String(d.amount)); setDupCandidates([]); }
       if (typeof d.memo === "string" && d.memo && !memoTouchedRef.current) setAddMemo(d.memo);
     } catch { /* prefill is a convenience; ignore failures */ }
   };
