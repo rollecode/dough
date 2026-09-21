@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Give the consent buttons half the width each
 * Report ten top categories to a phone
 * Serve ticker prices and sparklines over the API
 * Open the spending heatmap at today rather than part scrolled

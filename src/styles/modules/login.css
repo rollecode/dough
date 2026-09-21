@@ -166,5 +166,12 @@
 .oauth-consent-actions {
   display: flex;
   gap: 0.75rem;
-  justify-content: flex-end;
+}
+
+/* Half the width each, and tall enough for a thumb: this form is nearly always read inside the
+   app's sign-in sheet on a phone, where two small right-aligned buttons are a poor target. */
+.oauth-consent-actions .button {
+  flex: 1;
+  padding-block: 0.75rem;
+  height: auto;
 }
