@@ -8,7 +8,7 @@ const REDIRECT = "com.example.app:/callback";
 const VERIFIER = "a".repeat(64);
 const CHALLENGE = createHash("sha256").update(VERIFIER).digest("base64url");
 
-const userId = Number(createUser("test@example.com", "password1234", "Test").lastInsertRowid ?? 1);
+const userId = Number(createUser("test@example.com", "password1234", "Test"));
 
 function newCode(clientId: string) {
   return issueCode({ clientId, userId, redirectUri: REDIRECT, scopes: ["read"], codeChallenge: CHALLENGE });
