@@ -27,7 +27,7 @@ Dough was built to solve this:
 
 ### Dough has YNAB-like envelope budgeting
 
-<img width="3138" height="1736" alt="192 168 2 69_3030_budget" src="https://github.com/user-attachments/assets/6dbd278f-583a-429c-ad81-b66c7f2c1647" />
+<img width="3138" height="1736" alt="Dough budget view" src="https://github.com/user-attachments/assets/6dbd278f-583a-429c-ad81-b66c7f2c1647" />
 
 ## Features
 
