@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Let an app set the order accounts are listed in
 * Refuse app sign-ins without S256 PKCE
 * Limit how often apps can register
 * Remove a private address from the README

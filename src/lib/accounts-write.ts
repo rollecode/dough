@@ -101,3 +101,15 @@ export function deleteAccount(id: string): { found: boolean; closed?: boolean } 
   eventBus.emit("data:updated", { source: "accounts-deleted" });
   return { found: true, closed };
 }
+
+export function reorderAccounts(order: string[]): { ok: true } {
+  const db = getDb();
+  const stmt = db.prepare("UPDATE ynab_accounts SET sort_order = ?, updated_at = datetime('now') WHERE id = ?");
+  const batch = db.transaction(() => {
+    for (let i = 0; i < order.length; i++) stmt.run(i, order[i]);
+  });
+  batch();
+  console.info("[accounts] Saved order for", order.length, "accounts");
+  eventBus.emit("data:updated", { source: "account-reordered" });
+  return { ok: true };
+}

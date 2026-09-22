@@ -118,6 +118,13 @@ export const SECTIONS: Section[] = [
         summary: "Manual accounts are removed. Synced accounts are closed instead, because their history is not ours to drop.",
         body: [{ name: "id", type: "string", required: true, description: "Account id." }],
       },
+      {
+        method: "POST",
+        path: "/accounts/reorder",
+        scope: "write",
+        summary: "Set the order accounts are listed in.",
+        body: [{ name: "order", type: "string[]", required: true, description: "Account ids, in the order wanted." }],
+      },
     ],
   },
   {
