@@ -5,6 +5,7 @@ import { NOT_BUDGET_EXCLUDED, cashFlowHistory } from "@/lib/budget-math";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
 import { buildDashboard, type DashBill, type DashDebt, type DashIncome } from "@/lib/dashboard-model";
 import { monthCommitments } from "@/lib/commitments";
+import { localDateIso } from "@/lib/date-utils";
 
 // GET /api/v1/dashboard - everything the dashboard shows, in one call: the daily budget and why it
 // is what it is, today's spending, the obligations ahead, the charts and the month's figures. The
@@ -169,13 +170,13 @@ export const GET = apiRoute("read", (_request, identity) => {
       | { share: number }
       | undefined)?.share ?? 0;
 
-  // The target each past day was actually given, so the pace line matches the web's.
-  const targetByDay: Record<number, number> = {};
+  // The daily budget each past day was actually given: the pace line is read against these.
+  const budgetByDay: Record<number, number> = {};
   for (const row of db
-    .prepare("SELECT date, discretionary_target FROM daily_budget_history WHERE date >= ? AND date <= ?")
-    .all(`${month}-01`, `${month}-31`) as { date: string; discretionary_target: number }[]) {
-    if (row.discretionary_target > 0) {
-      targetByDay[parseInt(row.date.slice(8, 10), 10)] = row.discretionary_target;
+    .prepare("SELECT date, budget FROM daily_budget_history WHERE date >= ? AND date <= ?")
+    .all(`${month}-01`, `${month}-31`) as { date: string; budget: number }[]) {
+    if (row.budget > 0) {
+      budgetByDay[parseInt(row.date.slice(8, 10), 10)] = row.budget;
     }
   }
 
@@ -212,8 +213,15 @@ export const GET = apiRoute("read", (_request, identity) => {
     lastReservationMonth: settings.last_reservation_month || "",
     monthlyHistory: monthlyHistory.reverse(),
     trends,
-    targetByDay,
+    budgetByDay,
   });
+
+  // Record today's figures as the web's savings streak does, so a day spent only in the app still
+  // leaves the history the pace line reads. The web's own discretionary target is left as it is.
+  db.prepare(
+    "INSERT INTO daily_budget_history (date, budget, spent) VALUES (?, ?, ?) " +
+      "ON CONFLICT(date) DO UPDATE SET budget = excluded.budget, spent = excluded.spent"
+  ).run(localDateIso(), model.daily_budget.amount, model.today.spent);
 
   console.info("[v1/dashboard] Daily budget", model.daily_budget.amount, "for", model.month);
   return model;

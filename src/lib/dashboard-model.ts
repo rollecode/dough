@@ -1,4 +1,5 @@
 import { calculateDailyBudget, type DailyBudgetResult } from "./daily-budget";
+import { spendingFlow } from "./spending-flow";
 import { billDueInMonth } from "./bills";
 import { isTransfer } from "./transaction-utils";
 
@@ -93,8 +94,8 @@ export interface DashboardInput {
   lastReservationMonth: string;
   monthlyHistory: { month: string; income: number; expenses: number }[];
   trends: { category: string; thisMonth: number; lastMonth: number }[];
-  // Day of month to the discretionary target frozen on that day, from daily_budget_history.
-  targetByDay: Record<number, number>;
+  // Day of month to the daily budget recorded on that day, from daily_budget_history.
+  budgetByDay: Record<number, number>;
   // How many of the month's biggest spending categories to report. Six fills the browser's donut;
   // a phone lists them, so it asks for more.
   topCategories?: number;
@@ -296,7 +297,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     debtMonthly, investmentMonthly, commitmentCategories, topCategories = 6,
     excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
-    monthlyHistory, trends, targetByDay,
+    monthlyHistory, trends, budgetByDay,
   } = input;
 
   const month = ym(now);
@@ -533,13 +534,6 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     monthBudget.income,
     round(activeIncomes.reduce((s, i) => s + i.amount, 0))
   );
-  const totalBillsFull = round(activeBills.reduce((s, b) => s + b.amount, 0));
-  const discretionaryBudget = Math.max(
-    0,
-    combinedIncome - savingRate - totalBillsFull - debtMonthly - investmentMonthly
-  );
-  const targetPerDay = discretionaryBudget > 0 ? discretionaryBudget / daysInMonth : 0;
-
   // Remaining days are projected at the planned rate, never at the month-to-date burn: one late
   // purchase should not be multiplied across the rest of the month. Shared with the web page.
   const monthExpensesEstimate = monthStatus({
@@ -551,40 +545,22 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     .filter((t) => t.date >= monthStart && isSpending(t))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const flowByDay: DashboardModel["spending_flow"]["by_day"] = [];
-  let discCumulative = 0;
   const discretionaryPerDay: Record<number, number> = {};
+  let discCumulative = 0;
   for (const t of sortedSpending) {
     if (isFixedCost(t.payee, t.category)) continue;
     const day = parseInt(t.date.split("-")[2], 10);
     discCumulative += Math.abs(t.amount);
     discretionaryPerDay[day] = round(discCumulative);
   }
-  // Past days keep the target they were given at the time; today and anything after use the live
-  // one. Same rule as the web's spending flow, so both draw the same line.
-  let carried = 0;
-  let cumulativeTarget = 0;
-  let projected = 0;
-  for (let day = 1; day <= daysInMonth; day++) {
-    const frozen = day < today ? targetByDay[day] : undefined;
-    cumulativeTarget += frozen && frozen > 0 ? frozen : targetPerDay;
-
-    if (day <= today) {
-      carried = discretionaryPerDay[day] ?? carried;
-      projected = carried;
-      // The projection starts where the real line ends, so the two meet instead of jumping.
-      flowByDay.push({
-        day,
-        spent: carried,
-        projected: day === today ? carried : null,
-        target: round(cumulativeTarget),
-      });
-      continue;
-    }
-
-    projected += dailyDiscretionary;
-    flowByDay.push({ day, spent: null, projected: round(projected), target: round(cumulativeTarget) });
-  }
+  const flowByDay = spendingFlow({
+    daysInMonth,
+    today,
+    spentByDay: discretionaryPerDay,
+    dailyDiscretionary,
+    dailyBudget,
+    budgetByDay,
+  });
 
   const totalTargetPerDay =
     combinedIncome > 0 && savingRate > 0 ? (combinedIncome - savingRate) / daysInMonth : 0;
@@ -736,7 +712,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     next_income: nextIncome,
     spending_flow: {
       daily_discretionary: dailyDiscretionary,
-      target_per_day: round(targetPerDay),
+      target_per_day: round(dailyBudget),
       by_day: flowByDay,
     },
     spending_chart: spendingChart,

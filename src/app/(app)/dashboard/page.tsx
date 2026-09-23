@@ -639,11 +639,9 @@ export default function DashboardPage() {
 
       <SpendingFlow
         spendingByDay={discretionaryByDay}
-        paidBillsAmount={0}
         daysInMonth={daysInMonth}
         daysPassed={daysPassed}
         dailyDiscretionary={dailyDiscretionaryTrue}
-        targetPerDay={discretionaryTargetPerDay}
         dailyBudget={dailyBudget}
       />
 
