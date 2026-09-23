@@ -90,6 +90,12 @@ export const GET = apiRoute("read", (request) => {
     };
   });
 
+  // The categories the budget page lists under "Hidden categories", so a client can unhide them.
+  const hiddenCategories = sortByGroupOrder(db
+    .prepare("SELECT id, name, group_name FROM categories WHERE is_active = 0 ORDER BY group_name, sort_order, name")
+    .all() as { id: number; name: string; group_name: string | null }[], savedGroupOrder())
+    .map((c) => ({ id: c.id, name: c.name, group: c.group_name || "" }));
+
   const totalBudgeted = Math.round(categories.reduce((s, c) => s + c.budgeted, 0) * 100) / 100;
   const { income, readyToAssign } = monthBudgetNumbers(db, month, totalBudgeted);
   const { ageOfMoney } = ageOfMoneyData(db, month);
@@ -102,5 +108,6 @@ export const GET = apiRoute("read", (request) => {
     ready_to_assign: readyToAssign,
     age_of_money: ageOfMoney,
     categories,
+    hidden_categories: hiddenCategories,
   };
 });

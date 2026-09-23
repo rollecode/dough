@@ -1,5 +1,6 @@
 ### Unreleased
 
+* List hidden categories in the budget API
 * Return budget categories in their saved order
 * Count uncategorised spending as spending, not as a bill
 * Leave a yearly bill out of overdue until its month

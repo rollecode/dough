@@ -249,7 +249,7 @@ export const SECTIONS: Section[] = [
         path: "/budget",
         scope: "read",
         summary:
-          "The month's income, total budgeted, Ready to Assign, age of money, and every active category's budgeted, activity and available.",
+          "The month's income, total budgeted, Ready to Assign, age of money, every active category's budgeted, activity and available, and the hidden categories.",
         params: [MONTH],
       },
       {
