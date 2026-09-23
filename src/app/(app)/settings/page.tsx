@@ -793,8 +793,8 @@ export default function SettingsPage() {
             <div className="form-field">
               <p className="settings-help">
                 {locale === "fi"
-                  ? "Päiväbudjetti lasketaan liukuvalla 14 päivän ikkunalla. Huomioi nykyisen saldon, tulevat tulot ja velvoitteet ikkunan sisällä. Pakolliseksi merkityt laskut ja velat vähennetään aina."
-                  : "Daily budget uses a rolling 14-day window. Considers current balance, upcoming income and obligations within the window. Must-pay bills and debts are always subtracted."}
+                  ? "Päiväbudjetti jakaa nykyisen saldon 14 päivälle, tai palkkapäivään asti ja yhden varapäivän päälle, jos palkka tulee aiemmin. Tulevia tuloja ei lasketa etukäteen. Pakolliseksi merkityt laskut ja velat vähennetään aina."
+                  : "Daily budget spreads your current balance over 14 days, or until payday plus one spare day when the salary comes sooner. Future income is not counted in advance. Must-pay bills and debts are always subtracted."}
               </p>
             </div>
             <div className="form-field">

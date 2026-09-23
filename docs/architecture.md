@@ -120,13 +120,13 @@ docs/                     # Documentation
 
 ### Budget calculation
 
-Segment-based cash flow simulation (`src/lib/daily-budget.ts`):
+Rolling window over the current balance (`src/lib/daily-budget.ts`):
 
-1. Spans from today to next income event (wraps across month boundary)
-2. Builds segments between income events
-3. Subtracts obligations (bills, debts) due in each segment
-4. Savings goal deducted from last segment
-5. Daily budget = tightest segment's pool / days
+1. The window is 14 days, or the days until the next salary plus one spare day when that comes sooner. An income counts as salary only when it is at least half the largest income, so a small one does not end the window
+2. Only the current balance is spent; future income is never counted in advance
+3. Bills and debts due in the window are reserved, except those an income arriving before them covers
+4. The saving goal is reserved in proportion to the window's days
+5. Daily budget = (balance - reserved obligations - saving) / window days
 6. Must-pay priority items always subtracted regardless of auto mode
 7. Non-priority items optionally included based on settings
 

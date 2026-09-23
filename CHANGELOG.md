@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Spread the daily budget only until payday when it is sooner
 * Count the savings streak the same way in the API
 * List hidden categories in the budget API
 * Return budget categories in their saved order

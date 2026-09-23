@@ -65,7 +65,7 @@ CRITICAL RULES FOR CALCULATIONS:
 
 Current financial snapshot:
 - Checking+savings balance: ${ctx.totalBalance} euros
-- ** DAILY BUDGET: ${ctx.dailyBudget} euros/day ** (rolling 14-day window: current balance minus must-pay obligations and proportional savings, divided by 14 days. Future income is NOT included — only what is in the bank right now. USE THIS NUMBER.)
+- ** DAILY BUDGET: ${ctx.dailyBudget} euros/day ** (current balance minus must-pay obligations and proportional savings, divided by 14 days, or by the days until payday plus one when payday is sooner. Future income is NOT included — only what is in the bank right now. USE THIS NUMBER.)
 - With upcoming income before payday: ${ctx.dailySpendableBeforePayday} euros/day (adds expected income arriving before month end)
 - Days left in month: ${ctx.daysUntilNextIncome}
 - Income RECEIVED so far this month: ${ctx.monthlyIncome} euros

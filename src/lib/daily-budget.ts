@@ -1,14 +1,19 @@
 /**
  * Calculate daily budget using a rolling window approach.
  *
- * Looks ahead from today to find a sustainable daily spend rate.
- * Considers all income arriving and all obligations due within the window.
- * The window extends to the next major income (or 14 days minimum)
- * to prevent short-sighted budgeting around small income events.
+ * Spreads the current balance over 14 days, or only until the next salary plus one spare day
+ * when that comes sooner. Future income is never spent in advance; it only offsets obligations
+ * due after it arrives.
  */
 
 // Rolling window length used by the budget engine.
 export const BUDGET_WINDOW_DAYS = 14;
+// When the salary is closer than the window, the money only has to last until then, plus a
+// spare day so the budget never spends down to the last cent.
+const PAYDAY_SPARE_DAYS = 1;
+// An income counts as payday only when it is at least this share of the largest income, so a
+// small refund or side income does not end the window early.
+const SALARY_SHARE = 0.5;
 
 interface BudgetIncome {
   amount: number;
@@ -82,8 +87,13 @@ export function calculateDailyBudget(params: {
   }
   incomeEvents.sort((a, b) => a.absDay - b.absDay);
 
-  // Fixed 14-day window — no extension since we don't count future income
-  const endAbsDay = today + minWindowDays;
+  const largestIncome = Math.max(0, ...(allIncomes ?? unreceivedIncomes).map((i) => i.amount));
+  const payday = incomeEvents.find((e) => e.absDay > today && e.amount >= largestIncome * SALARY_SHARE);
+  const windowDays = payday ? Math.min(minWindowDays, payday.absDay - today + PAYDAY_SPARE_DAYS) : minWindowDays;
+  if (payday) {
+    console.debug("[daily-budget] Next payday on abs day", payday.absDay, "window", windowDays, "days");
+  }
+  const endAbsDay = today + windowDays;
 
   const totalDays = endAbsDay - today;
   if (totalDays <= 0) return { dailyBudget: 0, tightestSegment: null, segmentCount: 0 };
