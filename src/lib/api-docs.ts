@@ -128,6 +128,35 @@ export const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "budget-links",
+    title: "Budget links",
+    intro:
+      "Which budget category a bill, subscription, savings goal, debt or investment is linked to. Linking is set from the item's side, as the web's editors do.",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/budget-links",
+        scope: "read",
+        summary: "The category an item is linked to, or null.",
+        params: [
+          { name: "type", type: "string", required: true, description: "bill, subscription, savings_goal, debt_account or investment_account." },
+          { name: "id", type: "string", required: true, description: "The item's id." },
+        ],
+      },
+      {
+        method: "POST",
+        path: "/budget-links",
+        scope: "write",
+        summary: "Link an item to a category, or unlink it.",
+        body: [
+          { name: "type", type: "string", required: true, description: "As above." },
+          { name: "id", type: "string", required: true, description: "The item's id." },
+          { name: "category_id", type: "number | null", required: true, description: "The category, or null to unlink." },
+        ],
+      },
+    ],
+  },
+  {
     id: "transactions",
     title: "Transactions",
     intro:
