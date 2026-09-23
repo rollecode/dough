@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Add an AI assistants card to settings
 * Serve MCP at /mcp on every instance
 * Let web clients like claude.ai sign in
 * Let an app set the order accounts are listed in

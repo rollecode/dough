@@ -272,8 +272,7 @@ ingress:
 If an instance already lives on a name starting with `api.`, set `DOUGH_DOCS_HOST` to the exact host
 that should serve the reference instead.
 
-The Dough MCP server is a separate repo that wraps this API as MCP tools, so an assistant can query
-your finances. See [Public API](docs/public-api.md) for auth, scopes and the MCP pointer.
+Every instance is also an MCP server at `/mcp`, with a tool for each API endpoint, so Claude or any other MCP client can read and update your finances. Each person signs in with their own Dough account. Settings has a card with a one-click Claude install, the Claude Code command and a JSON configuration with a fresh key. See [Public API](docs/public-api.md) for details.
 
 ## Backups
 

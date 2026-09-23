@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { KeyRound, Copy, Check } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { formatDate } from "@/lib/date-utils";
+import { API_KEYS_CHANGED } from "./mcp-connect";
 
 interface ApiKey {
   id: number;
@@ -33,10 +34,15 @@ export function ApiKeysCard() {
   const [fresh, setFresh] = useState("");
 
   useEffect(() => {
-    fetch("/api/api-keys")
-      .then((response) => response.json())
-      .then((data) => setKeys(data.keys ?? []))
-      .catch(() => setKeys([]));
+    const load = () =>
+      fetch("/api/api-keys")
+        .then((response) => response.json())
+        .then((data) => setKeys(data.keys ?? []))
+        .catch(() => setKeys([]));
+    load();
+    // The MCP card mints keys too, and they belong in this list straight away.
+    window.addEventListener(API_KEYS_CHANGED, load);
+    return () => window.removeEventListener(API_KEYS_CHANGED, load);
   }, []);
 
   async function createKey() {
@@ -85,7 +91,7 @@ export function ApiKeysCard() {
       <CardContent className="form-stack">
         <p className="settings-help">
           {locale === "fi"
-            ? "Avaimella oma sovellus, kuten Dough iOS tai MCP-palvelin, pääsee talouteesi ilman selainkirjautumista. Kirjoitusoikeus sallii myös menojen lisäämisen."
+            ? "Avaimella oma sovellus, kuten Dough iOS tai MCP-asiakas, pääsee talouteesi ilman selainkirjautumista. Kirjoitusoikeus sallii myös menojen lisäämisen."
             : "A key lets your own app, such as Dough for iOS or the MCP server, reach your finances without a browser session. Write access also allows adding expenses."}
         </p>
 

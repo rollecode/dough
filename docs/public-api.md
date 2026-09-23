@@ -91,6 +91,14 @@ curl -s https://your-domain.example.com/api/v1/summary \
 
 ### MCP server
 
-The Dough MCP server (separate repo) is a thin client of this API: it reads `DOUGH_API_URL` and
-`DOUGH_API_KEY` from its environment and exposes each endpoint as an MCP tool, so an assistant can
-query your finances. See that repo's README for install and client configuration.
+Every instance serves MCP at `/mcp` (Streamable HTTP, stateless, POST only). Each of its 43 tools maps one v1 endpoint and runs the route in the same process with the caller's own token, so a tool can never do more than that token can through the API: a read-only key reads, and a write tool answers with the 403.
+
+A request without a token gets a 401 whose `WWW-Authenticate` header points at `/.well-known/oauth-protected-resource/mcp`. From there a client finds the instance's own OAuth server, registers itself, and sends the person to sign in and approve read or read and write. Web clients such as claude.ai return to an `https` address, native apps to their own scheme or loopback; the consent screen names where the code goes.
+
+Ways to connect, all shown in Settings under AI assistants:
+
+* claude.ai: the Install link opens Claude's add-connector dialog with the name and `https://your-domain.example.com/mcp` filled in
+* Claude Code: `claude mcp add --transport http dough https://your-domain.example.com/mcp`, then `/mcp` to sign in
+* any other client: an MCP configuration with `"type": "http"`, the `/mcp` address and an `Authorization: Bearer` header holding an API key made in Settings
+
+The separate `dough-mcp` repo still works as a stdio server for clients that cannot speak HTTP.

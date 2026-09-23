@@ -37,6 +37,7 @@
 @import "./modules/chat.css";
 @import "./modules/login.css";
 @import "./modules/api-docs.css";
+@import "./modules/mcp-connect.css";
 @import "./modules/ai-summary.css";
 @import "./modules/entry-reminder.css";
 @import "./modules/personal-greeting.css";
