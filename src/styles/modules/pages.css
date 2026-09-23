@@ -697,6 +697,9 @@
 @media (max-width: 767px) {
   .budget-topbar {
     top: calc(var(--app-topbar-h) + 0.5rem);
+    /* The page's own top padding plus the card's reads as a gap under the app bar; sit close to
+       where the bar keeps it while scrolling. */
+    margin-top: -0.75rem;
   }
 }
 

@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Tighten the gap above the budget header on phones
 * Colour budget pills yellow short of target, green funded, grey without a target
 * Fix a doubled euro sign in the target progress text
 * Show still needed, total targets and income left after targets on the budget
