@@ -387,7 +387,8 @@ export const SECTIONS: Section[] = [
           { name: "due_day", type: "number", required: true, description: "1 to 31." },
           { name: "category", type: "string", description: "" },
           { name: "cadence", type: "string", description: "monthly or yearly." },
-          { name: "due_month", type: "number", description: "1 to 12, for a yearly bill." },
+          { name: "interval_months", type: "number", description: "Every how many months: 1 monthly, 12 yearly." },
+          { name: "due_month", type: "number", description: "1 to 12, the month it next falls in when the interval is over one." },
         ],
       },
       {

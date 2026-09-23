@@ -1,6 +1,7 @@
 import { apiRoute, resolveMonth } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { getBrandConfig, brandImagePath } from "@/lib/brand-table";
+import { billDueInYearMonth } from "@/lib/bills";
 
 // GET /api/v1/bills?month=YYYY-MM - recurring bills with amount, due day of month, cadence
 // (monthly, or yearly on due_month/due_day) and whether the month's charge has been paid, resolved
@@ -30,13 +31,20 @@ export const GET = apiRoute("read", (request) => {
   const rows = db
     .prepare("SELECT id, name, amount, due_day, category, is_active, is_priority, COALESCE(cadence, 'monthly') AS cadence, due_month, COALESCE(interval_months, 1) AS interval_months FROM recurring_bills ORDER BY due_day ASC")
     .all() as { id: number; name: string; amount: number; due_day: number; category: string; is_active: number; is_priority: number; cadence: string; due_month: number | null; interval_months: number }[];
+  // A bill that does not fall every month is only overdue inside its due month, as the web's own
+  // bills route decides it; the other months it is dormant.
   const bills = rows.map((b) => ({
     id: b.id,
     is_paid: manual.has(b.id) ? manual.get(b.id)! : matched.has(b.id),
     brand_color: getBrandConfig(b.name).color,
     brand_logo: getBrandConfig(b.name).logo,
     brand_image: brandImagePath(b.name),
-    is_overdue: !(manual.has(b.id) ? manual.get(b.id)! : matched.has(b.id)) && !!b.is_active && b.due_day < today,
+    due_this_month: billDueInYearMonth(b, month),
+    is_overdue:
+      !(manual.has(b.id) ? manual.get(b.id)! : matched.has(b.id)) &&
+      !!b.is_active &&
+      billDueInYearMonth(b, month) &&
+      b.due_day < today,
     patterns: patternsById.get(b.id) ?? [],
     name: b.name,
     amount: b.amount,

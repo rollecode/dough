@@ -3,7 +3,8 @@ import { apiRoute } from "@/lib/api-v1";
 import { createBill } from "@/lib/bills-write";
 
 // POST /api/v1/bills/create (write) - add a recurring bill.
-// Body: { name, amount, due_day, category?, cadence? ("monthly"|"yearly"), due_month? (1-12, yearly) }
+// Body: { name, amount, due_day, category?, interval_months? (1 monthly, 12 yearly, any 1-120),
+// due_month? (1-12, the month it next falls in when interval_months is over 1) }
 export const POST = apiRoute("write", async (request, identity) => {
   const body = await request.json().catch(() => ({}));
   const result = createBill(identity.userId, body);

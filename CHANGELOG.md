@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Leave a yearly bill out of overdue until its month
 * Keep payoff figures whole on a narrow phone
 * Let an app link items to budget categories
 * Read the pace line against each day's own budget

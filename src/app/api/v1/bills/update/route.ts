@@ -3,7 +3,7 @@ import { apiRoute } from "@/lib/api-v1";
 import { updateBill } from "@/lib/bills-write";
 
 // POST /api/v1/bills/update (write) - edit a bill by id. Only provided fields change.
-// Body: { id, name?, amount?, due_day?, category?, cadence?, due_month?, is_priority?, is_active?, mark_paid?, paid_amount? }
+// Body: { id, name?, amount?, due_day?, category?, interval_months?, due_month?, is_priority?, is_active?, mark_paid?, paid_amount? }
 export const POST = apiRoute("write", async (request) => {
   const body = await request.json().catch(() => ({}));
   if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
