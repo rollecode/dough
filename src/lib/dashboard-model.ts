@@ -127,6 +127,7 @@ export interface DashboardModel {
     bills_delay_needed: boolean;
     thresholds: DashThresholds;
     breakdown: DailyBudgetResult["tightestSegment"];
+    average_spent_last_month: number;
     notice: {
       obligation_name: string;
       obligation_amount: number;
@@ -222,6 +223,18 @@ export interface MonthStatus {
   projectedRest: number;
   savingRate: number;
   commitmentsLeft: number;
+}
+
+// What the household spent per day last calendar month, quiet days counted as zero, from the same
+// discretionary spending the daily budget measures itself against.
+export function averageDailySpend(spentByDate: Record<string, number>, now: Date): number {
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const days = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  const prefix = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-`;
+  const total = Object.entries(spentByDate)
+    .filter(([date]) => date.startsWith(prefix))
+    .reduce((sum, [, amount]) => sum + amount, 0);
+  return round(total / days);
 }
 
 export function monthStatus(input: MonthStatusInput): MonthStatus {
@@ -659,6 +672,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
       bills_delay_needed: !useBills && withBills.dailyBudget < withoutBills.dailyBudget,
       thresholds,
       breakdown: budgetResult.tightestSegment,
+      average_spent_last_month: averageDailySpend(spentByDate, now),
       notice,
     },
     balances: {

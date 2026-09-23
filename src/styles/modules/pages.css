@@ -3169,6 +3169,36 @@
   color: var(--muted-foreground);
 }
 
+/* Daily budget settings: today's budget beside last month's real daily spend */
+.settings-pace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.settings-pace-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: calc(var(--radius) - 0.375rem);
+  border: 1px solid var(--glass-border, var(--border));
+  background-color: var(--glass-bg, var(--secondary));
+}
+
+.settings-pace-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-pace-label {
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  color: var(--muted-foreground);
+}
+
 .settings-help {
   font-size: 0.8125rem;
   line-height: 1rem;

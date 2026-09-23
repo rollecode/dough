@@ -92,6 +92,17 @@ export default function SettingsPage() {
   const [synciTestOk, setSynciTestOk] = useState(false);
   const { t, locale, setLocale, setDecimals, setDateFormat, setTimeFormat, fmtDate } = useLocale();
 
+  // Today's budget beside what was really spent per day last month, from the dashboard model.
+  const [spendPace, setSpendPace] = useState<{ budget: number; average: number } | null>(null);
+  useEffect(() => {
+    fetch("/api/dashboard-model")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.daily_budget) setSpendPace({ budget: d.daily_budget.amount, average: d.daily_budget.average_spent_last_month });
+      })
+      .catch((err) => console.warn("[settings] Could not load the spending pace:", err));
+  }, []);
+
   useEffect(() => {
     console.debug("[settings] Loading settings");
     Promise.all([
@@ -797,6 +808,18 @@ export default function SettingsPage() {
                   : "Daily budget spreads your current balance over 14 days, or until payday plus one spare day when the salary comes sooner. Future income is not counted in advance. Must-pay bills and debts are always subtracted."}
               </p>
             </div>
+            {spendPace && (
+              <div className="settings-pace">
+                <div className="settings-pace-item">
+                  <span className="settings-pace-value"><F v={spendPace.budget} s={locale === "fi" ? " €/pv" : " €/day"} /></span>
+                  <span className="settings-pace-label">{locale === "fi" ? "Päiväbudjetti nyt" : "Daily budget now"}</span>
+                </div>
+                <div className="settings-pace-item">
+                  <span className="settings-pace-value"><F v={spendPace.average} s={locale === "fi" ? " €/pv" : " €/day"} /></span>
+                  <span className="settings-pace-label">{locale === "fi" ? "Käytetty päivässä viime kuussa" : "Spent per day last month"}</span>
+                </div>
+              </div>
+            )}
             <div className="form-field">
               <Label>{locale === "fi" ? "Laskut päiväbudjetissa" : "Bills in daily budget"}</Label>
               <div className="settings-row">

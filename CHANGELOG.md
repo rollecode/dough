@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Show last month's daily spend next to the daily budget in settings
 * Tighten the gap above the budget header on phones
 * Colour budget pills yellow short of target, green funded, grey without a target
 * Fix a doubled euro sign in the target progress text
