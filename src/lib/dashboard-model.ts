@@ -3,6 +3,7 @@ import { fixedCostMatcher } from "./fixed-costs";
 import { spendingFlow } from "./spending-flow";
 import { billDueInMonth } from "./bills";
 import { isTransfer } from "./transaction-utils";
+import { streakWeek, type StreakDay, type StreakRecord } from "./savings-streak";
 
 // The dashboard's figures, in one place. The web page used to derive all of this in the browser,
 // which left the API with no way to answer "what does the dashboard say" and no way for another
@@ -97,6 +98,8 @@ export interface DashboardInput {
   trends: { category: string; thisMonth: number; lastMonth: number }[];
   // Day of month to the daily budget recorded on that day, from daily_budget_history.
   budgetByDay: Record<number, number>;
+  // The last week of daily_budget_history rows, which the savings streak judges each day against.
+  streakHistory: StreakRecord[];
   // How many of the month's biggest spending categories to report. Six fills the browser's donut;
   // a phone lists them, so it asks for more.
   topCategories?: number;
@@ -163,7 +166,8 @@ export interface DashboardModel {
   };
   spending_chart: { day: number; spent: number; savings_target: number | null }[];
   categories: { name: string; amount: number }[];
-  streak: { days: number; spent_by_date: Record<string, number> };
+  // week is the card's seven bars, oldest first, each judged against its own day's budget.
+  streak: { days: number; spent_by_date: Record<string, number>; week: StreakDay[] };
   heatmap: Record<string, number>;
   cash_flow: { month: string; income: number; expenses: number; upcoming_income: number }[];
   trends: { category: string; this_month: number; last_month: number }[];
@@ -278,7 +282,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     debtMonthly, investmentMonthly, commitmentCategories, topCategories = 6,
     excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
-    monthlyHistory, trends, budgetByDay,
+    monthlyHistory, trends, budgetByDay, streakHistory,
   } = input;
 
   const month = ym(now);
@@ -572,22 +576,8 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     .slice(0, topCategories)
     .map((c) => ({ name: c.name, amount: round(Math.abs(c.activity)) }));
 
-  // The streak counts back from yesterday: days that stayed within the budget, stopping at the
-  // first day that did not. Today is still open, so it never breaks a streak.
-  const streakDays = (() => {
-    if (dailyBudget <= 0) return 0;
-    const earliest = transactions.reduce((min, t) => (t.date < min ? t.date : min), todayIso);
-    let days = 0;
-    for (let back = 1; back <= 365; back++) {
-      const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
-      const key = isoDay(date);
-      if (key < earliest) break;
-      // A day with no spending at all is a day under budget, not a missing day.
-      if ((spentByDate[key] ?? 0) > dailyBudget) break;
-      days++;
-    }
-    return days;
-  })();
+  // The same streak the web card shows, from the same rows.
+  const streak = streakWeek({ now, history: streakHistory, spentByDate, dailyBudget, todaySpent });
 
   const personalShare = (() => {
     if (personalBudgetShare > 0) return personalBudgetShare / 100;
@@ -701,7 +691,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     },
     spending_chart: spendingChart,
     categories,
-    streak: { days: streakDays, spent_by_date: spentByDate },
+    streak: { days: streak.current, spent_by_date: spentByDate, week: streak.days },
     heatmap,
     // The months that have a snapshot, then this one from the live ledger. A snapshot for the
     // current month may not exist yet, and when it does it is already stale, so it is replaced

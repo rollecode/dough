@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Count the savings streak the same way in the API
 * List hidden categories in the budget API
 * Return budget categories in their saved order
 * Count uncategorised spending as spending, not as a bill

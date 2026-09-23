@@ -180,6 +180,12 @@ export function dashboardFor(userId: number) {
     }
   }
 
+  // The week the savings streak reads, which can reach back into last month.
+  const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+  const streakHistory = db
+    .prepare("SELECT date, budget, spent FROM daily_budget_history WHERE date >= ? AND date < ?")
+    .all(localDateIso(weekAgo), localDateIso(now)) as { date: string; budget: number; spent: number }[];
+
   // The month status this answers with is the same figure lib/month-status assembles for the web
   // page, from the same rows. Change one and change the other.
   const model = buildDashboard({
@@ -214,6 +220,7 @@ export function dashboardFor(userId: number) {
     monthlyHistory: monthlyHistory.reverse(),
     trends,
     budgetByDay,
+    streakHistory,
   });
 
   // Record today's figures as the web's savings streak does, so a day spent only in the app still

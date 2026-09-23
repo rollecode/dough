@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Flame } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useDailyHistory } from "@/lib/use-daily-history";
+import { streakWeek } from "@/lib/savings-streak";
 
 interface SavingsStreakProps {
   dailyBudget: number;
@@ -34,48 +35,9 @@ export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget, sp
     }).catch(() => {});
   }, [dailyBudget, todaySpent, discretionaryTarget]);
 
-  // Last 7 days from history
-  const days: { day: number; month: number; status: "fire" | "fail" | "today" | "nodata"; budget: number; spent: number }[] = [];
-  let currentStreak = 0;
-
-  for (let d = 6; d >= 0; d--) {
-    const date = new Date(now);
-    date.setDate(today - d);
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    const entry = history.find((h) => h.date === dateStr);
-    const dayNum = date.getDate();
-    const monthNum = date.getMonth() + 1;
-
-    if (d === 0) {
-      days.push({ day: dayNum, month: monthNum, status: "today", budget: dailyBudget, spent: todaySpent });
-      continue;
-    }
-
-    if (!entry) {
-      currentStreak = 0;
-      days.push({ day: dayNum, month: monthNum, status: "nodata", budget: 0, spent: 0 });
-      continue;
-    }
-
-    // The stored row is a snapshot taken whenever the dashboard was last open that day, so it can
-    // sit at zero for a day that had spending. Transactions are the record; fall back to the
-    // snapshot only for days they do not reach.
-    const spent = spentByDate?.[dateStr] ?? entry.spent;
-
-    if (entry.budget > 0 && spent <= entry.budget) {
-      currentStreak++;
-      days.push({ day: dayNum, month: monthNum, status: "fire", budget: entry.budget, spent });
-    } else {
-      currentStreak = 0;
-      days.push({ day: dayNum, month: monthNum, status: "fail", budget: entry.budget, spent });
-    }
-  }
-
-  // Check if today is under budget too
-  const todayEntry = days[days.length - 1];
-  if (todayEntry && dailyBudget > 0 && todayEntry.spent <= dailyBudget) {
-    currentStreak++;
-  }
+  const { days, current: currentStreak } = streakWeek({
+    now, history, spentByDate: spentByDate ?? {}, dailyBudget, todaySpent,
+  });
 
   // Bar height is the day's spending against that day's budget, so the row reads as a chart of
   // how close each day ran rather than as a row of pass/fail badges.
