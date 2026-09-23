@@ -7,6 +7,7 @@ import {
   walkCategory,
   CATEGORY_ACTIVITY_PREDICATE,
 } from "@/lib/budget-math";
+import { savedGroupOrder, sortByGroupOrder } from "@/lib/category-order";
 
 interface CategoryRow {
   id: number;
@@ -29,13 +30,14 @@ export const GET = apiRoute("read", (request) => {
   const db = getDb();
   const month = resolveMonth(request);
 
-  const cats = db
+  // In the order the budget page shows them, which is the order the reorder endpoint saves.
+  const cats = sortByGroupOrder(db
     .prepare(
       "SELECT id, name, group_name, COALESCE(description, '') AS description, budget_excluded, " +
         "subscription_id, bill_id, debt_account_id, savings_goal_id, investment_account_id " +
-        "FROM categories WHERE is_active = 1 ORDER BY group_name, name"
+        "FROM categories WHERE is_active = 1 ORDER BY group_name, sort_order, name"
     )
-    .all() as CategoryRow[];
+    .all() as CategoryRow[], savedGroupOrder());
   const budgetedRows = db
     .prepare("SELECT category_id, budgeted FROM monthly_category_budgets WHERE month = ?")
     .all(month) as { category_id: number; budgeted: number }[];

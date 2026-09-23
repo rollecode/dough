@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { getHouseholdSetting } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
+import { savedGroupOrder, sortByGroupOrder } from "@/lib/category-order";
 import { monthBudgetNumbers, makeTargetResolver, ageOfMoneyData, walkCategory, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
 
 interface CategoryRow {
@@ -76,20 +76,9 @@ export async function GET(request: Request) {
     const month = url.searchParams.get("month") || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
     const db = getDb();
-    const cats = db
+    const cats = sortByGroupOrder(db
       .prepare("SELECT id, name, group_name, COALESCE(description, '') AS description, sort_order, is_active, budget_excluded, subscription_id, bill_id, debt_account_id, savings_goal_id, investment_account_id FROM categories ORDER BY group_name, sort_order, name")
-      .all() as CategoryRow[];
-
-    // Apply saved group ordering (stable sort keeps within-group sort_order from the query)
-    let groupOrder: string[] = [];
-    try { groupOrder = JSON.parse(getHouseholdSetting("budget_group_order") || "[]"); } catch {}
-    if (Array.isArray(groupOrder) && groupOrder.length > 0) {
-      const gi = (name: string) => {
-        const i = groupOrder.indexOf(name || "");
-        return i === -1 ? Number.MAX_SAFE_INTEGER : i;
-      };
-      cats.sort((a, b) => gi(a.group_name) - gi(b.group_name));
-    }
+      .all() as CategoryRow[], savedGroupOrder());
 
     const budgeted = budgetedForMonth(db, month);
     const activity = activityForMonth(db, month);
