@@ -13,6 +13,12 @@ function first(value: string | string[] | undefined): string {
 // The consent screen. Everything is validated before anything is shown, and a request that fails
 // validation is explained here rather than redirected: sending a person onward to an address we
 // have not verified is how codes end up in the wrong hands.
+// Where the code goes, named plainly, so a web client cannot pass itself off as another app.
+function returnsTo(redirectUri: string): string {
+  const url = new URL(redirectUri);
+  return url.protocol === "https:" || url.protocol === "http:" ? url.host : url.protocol.replace(/:$/, "");
+}
+
 export default async function AuthorizePage({ searchParams }: Props) {
   const params = await searchParams;
   const clientId = first(params.client_id);
@@ -69,7 +75,8 @@ export default async function AuthorizePage({ searchParams }: Props) {
         </ul>
 
         <p className="oauth-consent-note">
-          Signed in as {user.email}. You can revoke this from Settings at any time.
+          Signed in as {user.email}. After you allow it, you return to <strong>{returnsTo(redirectUri)}</strong>. You
+          can revoke this from Settings at any time.
         </p>
 
         <form method="post" action="/api/oauth/authorize" className="oauth-consent-actions">

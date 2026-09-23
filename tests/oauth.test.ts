@@ -45,11 +45,14 @@ test("refresh tokens rotate and work only once", () => {
   assert.deepEqual(refreshTokens(tokens.refresh_token, client.client_id), { error: "invalid_grant" });
 });
 
-test("redirect URIs are limited to app schemes and loopback", () => {
+test("redirect URIs are app schemes, loopback or https", () => {
   assert.equal(isAcceptableRedirectUri(REDIRECT), true);
   assert.equal(isAcceptableRedirectUri("http://127.0.0.1:8080/cb"), true);
-  assert.equal(isAcceptableRedirectUri("https://evil.example/cb"), false);
+  assert.equal(isAcceptableRedirectUri("https://claude.ai/api/mcp/auth_callback"), true);
+  assert.equal(isAcceptableRedirectUri("http://example.com/cb"), false);
   assert.equal(isAcceptableRedirectUri("javascript:alert(1)"), false);
+  assert.equal(isAcceptableRedirectUri("data:text/html,x"), false);
+  assert.equal(isAcceptableRedirectUri("file:///etc/passwd"), false);
 });
 
 test("only an S256 challenge is accepted", () => {

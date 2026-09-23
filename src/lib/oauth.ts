@@ -73,16 +73,20 @@ export function redirectUriAllowed(client: OAuthClient, redirectUri: string): bo
   return client.redirect_uris.includes(redirectUri);
 }
 
-// A redirect target has to be either the app's own scheme or loopback. Anything else would let a
-// code land on a web page belonging to somebody else.
+// Native apps return to their own scheme or loopback; web clients such as claude.ai to an https
+// page of their own. Plain http off loopback, and schemes that run or read content, never.
+const BLOCKED_SCHEMES = new Set(["javascript:", "data:", "file:", "vbscript:", "blob:"]);
+
 export function isAcceptableRedirectUri(uri: string): boolean {
   try {
     const url = new URL(uri);
-    if (url.protocol === "http:" || url.protocol === "https:") {
+    if (url.protocol === "https:") {
+      return true;
+    }
+    if (url.protocol === "http:") {
       return url.hostname === "127.0.0.1" || url.hostname === "localhost" || url.hostname === "[::1]";
     }
-    // A custom scheme needs a dot in it, per the native app guidance: com.example.app:/callback.
-    return url.protocol.length > 1 && !url.protocol.startsWith("javascript");
+    return url.protocol.length > 1 && !BLOCKED_SCHEMES.has(url.protocol);
   } catch {
     return false;
   }

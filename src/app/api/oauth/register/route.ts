@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (!isAcceptableRedirectUri(uri)) {
       console.warn("[oauth] Refused registration for redirect URI", uri);
       return NextResponse.json(
-        { error: "invalid_redirect_uri", error_description: "redirect URIs must be a private scheme or loopback" },
+        { error: "invalid_redirect_uri", error_description: "redirect URIs must be https, an app scheme or loopback" },
         { status: 400 }
       );
     }

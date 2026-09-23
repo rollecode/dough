@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Serve MCP at /mcp on every instance
+* Let web clients like claude.ai sign in
 * Let an app set the order accounts are listed in
 * Refuse app sign-ins without S256 PKCE
 * Limit how often apps can register

@@ -67,9 +67,11 @@ export async function middleware(request: NextRequest) {
   // The public v1 API authenticates with an API key inside each route (see lib/api-auth), not the
   // session cookie, so it must bypass this cookie gate and never be redirected to /login.
   const isApiV1 = request.nextUrl.pathname.startsWith("/api/v1");
+  // The MCP endpoint authenticates each request itself, like the v1 API it wraps.
+  const isMcp = request.nextUrl.pathname === "/mcp";
 
   // Allow auth API, the key-authed public API, SSE events, cron endpoints, and static assets
-  if (isApiAuth || isApiV1 || isApiDocs || isOAuthPublic || isEvents || isSynciSync) {
+  if (isApiAuth || isApiV1 || isMcp || isApiDocs || isOAuthPublic || isEvents || isSynciSync) {
     return NextResponse.next();
   }
 
