@@ -5,7 +5,6 @@ import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { bubbleWidth, BUBBLE_FONT_SIZE } from "@/lib/chart-bubble";
 import { useTouchTooltip } from "@/components/charts/use-touch-tooltip";
-import { spendingFlow } from "@/lib/spending-flow";
 import {
   AreaChart,
   Area,
@@ -16,19 +15,11 @@ import {
   ReferenceDot,
 } from "recharts";
 
-interface SpendingFlowProps {
-  spendingByDay: Record<number, number>;
-  daysInMonth: number;
-  daysPassed: number;
-  dailyDiscretionary: number;
-  dailyBudget: number;
-}
-
-interface SnapshotEntry {
-  date: string;
-  budget: number;
-  spent: number;
-  discretionary_target: number;
+// The slice of the dashboard model this chart draws: the same object /api/v1/dashboard gives the app.
+interface FlowModel {
+  today: { day: number };
+  daily_budget: { amount: number };
+  spending_flow: { by_day: { day: number; spent: number | null; projected: number | null; target: number }[] };
 }
 
 function ratioToColor(r: number): string {
@@ -51,43 +42,24 @@ function ratioToColor(r: number): string {
   return `rgb(${red.join(",")})`;
 }
 
-export function SpendingFlow({
-  spendingByDay,
-  daysInMonth,
-  daysPassed,
-  dailyDiscretionary,
-  dailyBudget,
-}: SpendingFlowProps) {
+export function SpendingFlow() {
   const { locale, fmt } = useLocale();
   const tooltipTrigger = useTooltipTrigger();
-  const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
+  const [model, setModel] = useState<FlowModel | null>(null);
 
+  // Drawn from the server's model rather than recomputed here: the page used to build this line
+  // from its own copy of bills, accounts and transactions, and the phone read a different total.
   useEffect(() => {
-    fetch("/api/daily-budget-history")
-      .then((r) => r.json())
-      .then((data) => { if (data.history) setSnapshots(data.history); })
-      .catch(() => {});
+    fetch("/api/dashboard-model")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.spending_flow) setModel(d); })
+      .catch((err) => console.error("[spending-flow] Load error:", err));
   }, []);
 
-  // The line is built by lib/spending-flow, the same code /api/v1/dashboard answers the app with,
-  // so the browser and the phone draw one line. The snapshots only supply each past day's budget.
-  const now = new Date();
-  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const budgetByDay: Record<number, number> = {};
-  for (const s of snapshots) {
-    if (s.date.startsWith(monthPrefix) && s.budget > 0) {
-      budgetByDay[parseInt(s.date.split("-")[2], 10)] = s.budget;
-    }
-  }
-
-  const flow = spendingFlow({
-    daysInMonth,
-    today: daysPassed,
-    spentByDay: spendingByDay,
-    dailyDiscretionary,
-    dailyBudget,
-    budgetByDay,
-  });
+  const flow = model?.spending_flow.by_day ?? [];
+  const daysInMonth = flow.length;
+  const daysPassed = model?.today.day ?? 0;
+  const dailyBudget = model?.daily_budget.amount ?? 0;
 
   const data = flow.map((d) => ({
     day: d.day,

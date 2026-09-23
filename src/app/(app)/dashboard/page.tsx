@@ -15,6 +15,7 @@ import { EntryReminder } from "@/components/dashboard/entry-reminder";
 import { SynciStatus } from "@/components/dashboard/synci-status";
 import { PersonalGreeting } from "@/components/dashboard/personal-greeting";
 import { SpendingFlow } from "@/components/dashboard/spending-flow";
+import { fixedCostMatcher } from "@/lib/fixed-costs";
 import { AddExpenseDialog } from "@/components/shared/add-expense-dialog";
 
 // Below-the-fold sections load lazily (client-side) behind a skeleton, so the top of the
@@ -273,19 +274,7 @@ export default function DashboardPage() {
       .filter((a) => a.type === "otherDebt")
       .map((a) => a.name.toLowerCase())
   );
-  const isFixedCost = (payee: string, category: string) => {
-    const p = payee.toLowerCase();
-    const c = category.toLowerCase();
-    // Bill or subscription payment (check both payee and category against bill names)
-    if (billNames.has(p) || [...billNames].some((bn) => p.includes(bn) || bn.includes(p))) return true;
-    if ([...billNames].some((bn) => c.includes(bn) || bn.includes(c))) return true;
-    // Debt payment (check both payee and category against debt account names)
-    if (debtAccountNames.has(p) || [...debtAccountNames].some((dn) => p.includes(dn) || dn.includes(p))) return true;
-    if (debtAccountNames.has(c) || [...debtAccountNames].some((dn) => c.includes(dn) || dn.includes(c))) return true;
-    // Investment payment
-    if (c.includes("sijoittaminen") || c.includes("investing") || c.includes("investment")) return true;
-    return false;
-  };
+  const isFixedCost = fixedCostMatcher([...billNames], [...debtAccountNames]);
   const todaySpentAll = data.transactions
     .filter((t) => t.date === todayStr && t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
     .reduce((s, t) => s + Math.abs(t.amount), 0);
@@ -482,22 +471,6 @@ export default function DashboardPage() {
     spendingByDay[day] = Math.round(cumulative);
   }
 
-  // Discretionary-only cumulative: the same fixed costs the daily budget excludes (bills, debts,
-  // investments) are left out here too. The spending-flow "over/under pace" bubble used total
-  // spending minus only matched paid bills, which counted debts/investments/unmatched bills as
-  // discretionary and inflated the "over" figure.
-  const discretionaryByDay: Record<number, number> = {};
-  let discCumulative = 0;
-  for (const tx of sortedTx) {
-    if (isFixedCost(tx.payee, tx.category)) continue;
-    const day = parseInt(tx.date.split("-")[2], 10);
-    discCumulative += Math.abs(tx.amount);
-    discretionaryByDay[day] = Math.round(discCumulative);
-  }
-  const discretionarySpendingTrue = monthToDate
-    .filter((t) => t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category) && !isFixedCost(t.payee, t.category))
-    .reduce((s, t) => s + Math.abs(t.amount), 0);
-  const dailyDiscretionaryTrue = daysPassed > 0 ? Math.round((discretionarySpendingTrue / daysPassed) * 100) / 100 : 0;
 
   // Combined income for charts
   const totalExpectedIncome = incomes
@@ -637,13 +610,7 @@ export default function DashboardPage() {
         suggestedForYou={suggestedForYou}
       />
 
-      <SpendingFlow
-        spendingByDay={discretionaryByDay}
-        daysInMonth={daysInMonth}
-        daysPassed={daysPassed}
-        dailyDiscretionary={dailyDiscretionaryTrue}
-        dailyBudget={dailyBudget}
-      />
+      <SpendingFlow />
 
       <AiSummary />
 

@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Count uncategorised spending as spending, not as a bill
 * Leave a yearly bill out of overdue until its month
 * Keep payoff figures whole on a narrow phone
 * Let an app link items to budget categories

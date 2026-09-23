@@ -1,4 +1,5 @@
 import { calculateDailyBudget, type DailyBudgetResult } from "./daily-budget";
+import { fixedCostMatcher } from "./fixed-costs";
 import { spendingFlow } from "./spending-flow";
 import { billDueInMonth } from "./bills";
 import { isTransfer } from "./transaction-utils";
@@ -192,26 +193,6 @@ function isoDay(date: Date): string {
   return `${ym(date)}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-// Bills, debt payments and investment transfers are not discretionary spending: the daily budget
-// reserves them separately, so counting them again as day-to-day spending would double-count.
-function fixedCostMatcher(bills: DashBill[], accounts: DashAccount[]) {
-  const billNames = new Set(bills.map((b) => b.name?.toLowerCase()).filter(Boolean));
-  const debtNames = new Set(
-    accounts.filter((a) => a.type === "otherDebt").map((a) => a.name.toLowerCase())
-  );
-
-  return (payee: string, category: string): boolean => {
-    const p = (payee || "").toLowerCase();
-    const c = (category || "").toLowerCase();
-    if (billNames.has(p) || [...billNames].some((bn) => p.includes(bn) || bn.includes(p))) return true;
-    if ([...billNames].some((bn) => c.includes(bn) || bn.includes(c))) return true;
-    if (debtNames.has(p) || [...debtNames].some((dn) => p.includes(dn) || dn.includes(p))) return true;
-    if (debtNames.has(c) || [...debtNames].some((dn) => c.includes(dn) || dn.includes(c))) return true;
-    if (c.includes("sijoittaminen") || c.includes("investing") || c.includes("investment")) return true;
-    return false;
-  };
-}
-
 // The month's income against what it will have cost by the end: what has been spent so far, the
 // bills still to pay, the rest of the month at the planned discretionary rate, and the saving goal.
 // Exported because the dashboard page draws the same card; two copies of this drifted apart once.
@@ -316,7 +297,10 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   );
   const availableBalance = round(spendable.reduce((s, a) => s + a.balance, 0));
 
-  const isFixedCost = fixedCostMatcher(bills, accounts);
+  const isFixedCost = fixedCostMatcher(
+    bills.map((b) => b.name ?? ""),
+    accounts.filter((a) => a.type === "otherDebt").map((a) => a.name)
+  );
   const monthTx = transactions.filter((t) => t.date >= monthStart && t.date <= todayIso);
   const isSpending = (t: DashTransaction) =>
     t.amount < 0 && !t.excluded && !isTransfer(t.payee, t.category);
