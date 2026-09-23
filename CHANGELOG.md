@@ -1,5 +1,7 @@
 ### Unreleased
 
+* Colour budget pills yellow short of target, green funded, grey without a target
+* Fix a doubled euro sign in the target progress text
 * Show still needed, total targets and income left after targets on the budget
 * Spread the daily budget only until payday when it is sooner
 * Count the savings streak the same way in the API

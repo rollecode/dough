@@ -1703,9 +1703,12 @@
   white-space: nowrap;
 }
 
-.budget-target-text.is-snoozed,
-.budget-target-text.is-underfunded {
+.budget-target-text.is-snoozed {
   color: var(--chart-3);
+}
+
+.budget-target-text.is-underfunded {
+  color: var(--warning);
 }
 
 .budget-assigned-cell {
@@ -1834,7 +1837,7 @@
   color: var(--primary-foreground);
 }
 
-/* Available pill — green funded, red overspent, neutral zero */
+/* Available pill: red overspent, yellow target still short, green target funded, grey no target */
 .budget-pill {
   display: inline-block;
   min-width: 2rem;
@@ -1858,8 +1861,8 @@
 }
 
 .budget-pill.is-underfunded {
-  background: color-mix(in srgb, var(--chart-3) 18%, transparent);
-  color: var(--chart-3);
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: var(--warning);
 }
 
 .budget-pill.is-zero {
