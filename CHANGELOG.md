@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Keep payoff figures whole on a narrow phone
 * Let an app link items to budget categories
 * Read the pace line against each day's own budget
 * Draw the same pace line in the app and the browser

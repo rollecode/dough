@@ -2904,7 +2904,8 @@
 .payoff-stats {
   margin-bottom: 1rem;
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
@@ -2913,9 +2914,11 @@
   color: var(--muted-foreground);
 }
 
+/* A duration or a sum read in one piece: on a narrow phone the pair wraps, not "4 / years". */
 .payoff-stats-value {
   font-weight: 600;
   color: var(--foreground);
+  white-space: nowrap;
 }
 
 .payoff-stats-value[data-color="negative"] {
