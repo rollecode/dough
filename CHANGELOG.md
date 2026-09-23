@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Show still needed, total targets and income left after targets on the budget
 * Spread the daily budget only until payday when it is sooner
 * Count the savings streak the same way in the API
 * List hidden categories in the budget API

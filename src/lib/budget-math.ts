@@ -202,6 +202,38 @@ function budgetExcludedAccountIds(db: ReturnType<typeof getDb>): string[] {
   }
 }
 
+// What the household's active income sources bring in a month, received or not.
+export function expectedMonthlyIncome(db: ReturnType<typeof getDb>): number {
+  return (db.prepare("SELECT COALESCE(SUM(amount), 0) AS v FROM income_sources WHERE is_active = 1").get() as { v: number }).v || 0;
+}
+
+export interface TargetSummary {
+  total: number;
+  funded: number;
+  stillNeeded: number;
+  expectedIncome: number;
+  leftAfterTargets: number;
+}
+
+// The month's targets against what is assigned and what comes in. Assigning past a target does not
+// count as funding another, so funded plus still needed always equals the total.
+export function targetSummary(
+  categories: { target_active: boolean | number; target_monthly: number; budgeted: number }[],
+  expectedIncome: number
+): TargetSummary {
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const targeted = categories.filter((c) => c.target_active && c.target_monthly > 0);
+  const total = round(targeted.reduce((s, c) => s + c.target_monthly, 0));
+  const funded = round(targeted.reduce((s, c) => s + Math.min(Math.max(c.budgeted, 0), c.target_monthly), 0));
+  return {
+    total,
+    funded,
+    stillNeeded: round(total - funded),
+    expectedIncome: round(expectedIncome),
+    leftAfterTargets: round(expectedIncome - total),
+  };
+}
+
 export function monthBudgetNumbers(
   db: ReturnType<typeof getDb>,
   month: string,
@@ -250,8 +282,7 @@ export function monthBudgetNumbers(
       base = rta;
     } else {
       const txIncome = incomeInflowForMonth(db, month);
-      const expected = (db.prepare("SELECT COALESCE(SUM(amount), 0) AS v FROM income_sources WHERE is_active = 1").get() as { v: number }).v || 0;
-      income = round(Math.max(txIncome, expected));
+      income = round(Math.max(txIncome, expectedMonthlyIncome(db)));
       base = income - totalBudgetedThisMonth;
     }
   }

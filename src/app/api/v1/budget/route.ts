@@ -6,6 +6,8 @@ import {
   ageOfMoneyData,
   walkCategory,
   CATEGORY_ACTIVITY_PREDICATE,
+  targetSummary,
+  expectedMonthlyIncome,
 } from "@/lib/budget-math";
 import { savedGroupOrder, sortByGroupOrder } from "@/lib/category-order";
 
@@ -107,6 +109,13 @@ export const GET = apiRoute("read", (request) => {
     budgeted: totalBudgeted,
     ready_to_assign: readyToAssign,
     age_of_money: ageOfMoney,
+    targets: (({ total, funded, stillNeeded, expectedIncome, leftAfterTargets }) => ({
+      total,
+      funded,
+      still_needed: stillNeeded,
+      expected_income: expectedIncome,
+      left_after_targets: leftAfterTargets,
+    }))(targetSummary(categories, expectedMonthlyIncome(db))),
     categories,
     hidden_categories: hiddenCategories,
   };

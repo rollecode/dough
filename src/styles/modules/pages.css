@@ -859,6 +859,12 @@
   color: var(--muted-foreground);
 }
 
+/* Targets still waiting for money: amber, a to-do rather than a problem */
+.budget-ready-box.is-attention {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: var(--warning);
+}
+
 /* The uncovered box doubles as a shortcut to the overspent filter */
 .budget-ready-box.is-clickable {
   cursor: pointer;
@@ -1027,6 +1033,50 @@
   font-size: 0.8125rem;
   color: var(--muted-foreground);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* Targets menu: the month's targets against what is assigned and what comes in */
+.budget-targets-menu {
+  min-width: 17rem;
+}
+
+.budget-targets-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.budget-targets-row.is-separated {
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.budget-targets-row.is-attention .budget-autoassign-amt {
+  color: var(--warning);
+}
+
+.budget-targets-row.is-positive .budget-autoassign-amt {
+  color: var(--positive);
+}
+
+.budget-targets-row.is-negative .budget-autoassign-amt {
+  color: var(--negative);
+}
+
+.budget-targets-explain {
+  max-width: 17rem;
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.625rem 0.375rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  color: var(--muted-foreground);
+  white-space: normal;
 }
 
 /* Cover-overspending popout anchored to the red available amount */
@@ -1299,6 +1349,8 @@
   .budget-center .budget-ready-value { font-size: 1rem; }
   .budget-center .budget-ready-label { font-size: 0.8125rem; margin-top: 0.125rem; }
   .budget-assign-trigger { padding: 0.4rem 0.4rem; font-size: 0.8125rem; }
+  /* Three boxes' worth of labels do not fit a phone; the targets trigger keeps only its arrow. */
+  .budget-trigger-text { display: none; }
   .budget-monthnav-label {
     width: auto;
     min-width: 0;

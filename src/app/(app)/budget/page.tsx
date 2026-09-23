@@ -71,6 +71,7 @@ interface BudgetData {
   readyToAssign: number;
   ageOfMoney: number | null;
   ageOfMoneyHistory: { month: string; age: number }[];
+  targets?: { total: number; funded: number; stillNeeded: number; expectedIncome: number; leftAfterTargets: number };
 }
 
 // Safe expression evaluator: only allows digits, decimal/comma separators and basic operators
@@ -228,6 +229,8 @@ export default function BudgetPage() {
   const addCatRef = useRef<HTMLFormElement>(null);
   const autoWrapRef = useRef<HTMLDivElement>(null);
   const coverWrapRef = useRef<HTMLDivElement>(null);
+  const [targetsOpen, setTargetsOpen] = useState(false);
+  const targetsWrapRef = useRef<HTMLDivElement>(null);
 
   const inspectorCat = inspectorId !== null ? (data?.categories.find((c) => c.id === inspectorId) ?? null) : null;
   const closeInspector = () => {
@@ -295,15 +298,16 @@ export default function BudgetPage() {
   // not work here because the topbar's backdrop-filter makes it the containing block, trapping
   // the backdrop inside the bar; a document listener closes reliably regardless of stacking.
   useEffect(() => {
-    if (!autoOpen && !coverAllOpen) return;
+    if (!autoOpen && !coverAllOpen && !targetsOpen) return;
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (autoOpen && autoWrapRef.current && !autoWrapRef.current.contains(t)) setAutoOpen(false);
       if (coverAllOpen && coverWrapRef.current && !coverWrapRef.current.contains(t)) setCoverAllOpen(false);
+      if (targetsOpen && targetsWrapRef.current && !targetsWrapRef.current.contains(t)) setTargetsOpen(false);
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
-  }, [autoOpen, coverAllOpen]);
+  }, [autoOpen, coverAllOpen, targetsOpen]);
 
   // Build the grouped, ordered structure the budget view renders (and drags)
   useEffect(() => {
@@ -814,6 +818,12 @@ export default function BudgetPage() {
           const overspentR = Math.round((data?.categories || []).reduce((s, c) => s + (c.available < -eps ? -c.available : 0), 0) * 100) / 100;
           // Total still needed to fully fund every active target this month (uncapped by RTA).
           const remainingToTarget = Math.round((data?.categories || []).reduce((s, c) => s + (c.target_active && c.target_monthly > c.budgeted ? c.target_monthly - c.budgeted : 0), 0) * 100) / 100;
+          // The third slot: uncovered overspending wins; otherwise the month's targets, showing what
+          // they still need or, once funded, how the income compares with them.
+          const targets = data?.targets;
+          const showTargets = overspentR <= eps && !!targets && targets.total > eps;
+          const targetsNeed = !!targets && targets.stillNeeded > eps;
+          const targetsOver = !!targets && targets.leftAfterTargets < -eps;
           return (
             <div className="budget-center">
               <div className="budget-ready-wrap" ref={autoWrapRef}>
@@ -863,7 +873,7 @@ export default function BudgetPage() {
                 )}
               </div>
               {data?.ageOfMoney != null && (
-                <div className={`budget-aom-box ${overspentR > eps ? "is-hide-mobile" : ""}`} title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
+                <div className={`budget-aom-box ${overspentR > eps || showTargets ? "is-hide-mobile" : ""}`} title={locale === "fi" ? "Kauanko rahasi riittää nykyisellä kulutuksella" : "How long your money lasts at the current spending rate"}>
                   <span className="budget-ready-value">{data.ageOfMoney} {locale === "fi" ? "pv" : "days"}</span>
                   <span className="budget-ready-label">{locale === "fi" ? "Rahan ikä" : "Age of money"}</span>
                 </div>
@@ -911,6 +921,82 @@ export default function BudgetPage() {
                       <button type="button" onClick={() => { setFilter("overspent"); setCoverAllOpen(false); }}>
                         <span>{locale === "fi" ? "Erikseen" : "Separately"}</span>
                       </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {showTargets && targets && (
+                <div className="budget-ready-wrap" ref={targetsWrapRef}>
+                  <div
+                    className={`budget-ready-box is-clickable ${targetsNeed ? "is-attention" : targetsOver ? "is-negative" : "is-positive"}`}
+                    role="button"
+                    tabIndex={0}
+                    title={targetsNeed ? (locale === "fi" ? "Näytä budjetoimattomat" : "Show unfunded") : (locale === "fi" ? "Tavoitteet ja tulot" : "Targets and income")}
+                    onClick={() => (targetsNeed ? setFilter("underfunded") : setTargetsOpen((o) => !o))}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      if (targetsNeed) setFilter("underfunded");
+                      else setTargetsOpen((o) => !o);
+                    }}
+                  >
+                    <span className="budget-ready-col">
+                      <span className="budget-ready-value">
+                        <F v={targetsNeed ? targets.stillNeeded : Math.abs(targets.leftAfterTargets)} s=" €" />
+                      </span>
+                      <span className="budget-ready-label">
+                        {targetsNeed
+                          ? (locale === "fi" ? "Tarvitaan vielä" : "Still needed")
+                          : targetsOver
+                          ? (locale === "fi" ? "Tavoitteet yli tulojen" : "Targets over income")
+                          : (locale === "fi" ? "Jää tavoitteista" : "Left after targets")}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="budget-assign-trigger"
+                      onClick={(e) => { e.stopPropagation(); setTargetsOpen((o) => !o); }}
+                      aria-haspopup="menu"
+                      aria-expanded={targetsOpen}
+                      aria-label={locale === "fi" ? "Tavoitteet" : "Targets"}
+                    >
+                      <span className="budget-trigger-text">{locale === "fi" ? "Tavoitteet" : "Targets"}</span>
+                      <ChevronDown className="icon-xs" />
+                    </button>
+                  </div>
+                  {targetsOpen && (
+                    <div className="budget-autoassign-menu budget-assign-menu budget-targets-menu">
+                      <div className="budget-assign-menu-title">{locale === "fi" ? "Kuukauden tavoitteet" : "This month's targets"}</div>
+                      {([
+                        [locale === "fi" ? "Tavoitteet yhteensä" : "Total targets", targets.total, ""],
+                        [locale === "fi" ? "Budjetoitu tavoitteisiin" : "Funded", targets.funded, ""],
+                        [locale === "fi" ? "Tarvitaan vielä" : "Still needed", targets.stillNeeded, targetsNeed ? "is-attention" : ""],
+                        [locale === "fi" ? "Odotetut tulot kuussa" : "Expected monthly income", targets.expectedIncome, "is-separated"],
+                        [
+                          targetsOver ? (locale === "fi" ? "Tavoitteet yli tulojen" : "Targets over income") : (locale === "fi" ? "Jää tavoitteista" : "Left after targets"),
+                          Math.abs(targets.leftAfterTargets),
+                          targetsOver ? "is-negative" : "is-positive",
+                        ],
+                      ] as const).map(([label, value, tone]) => (
+                        <div key={label} className={`budget-targets-row ${tone}`}>
+                          <span>{label}</span>
+                          <span className="budget-autoassign-amt"><F v={value} s=" €" /></span>
+                        </div>
+                      ))}
+                      <p className="budget-targets-explain">
+                        {targetsOver
+                          ? (locale === "fi"
+                              ? <>Tavoitteet vaativat <F v={Math.abs(targets.leftAfterTargets)} s=" €" /> enemmän kuin kuukausitulosi, joten osa jää joka kuussa vajaaksi, ellei tavoitteita pienennetä.</>
+                              : <>Targets need <F v={Math.abs(targets.leftAfterTargets)} s=" €" /> more than your monthly income, so some stay underfunded every month unless they are lowered.</>)
+                          : (locale === "fi"
+                              ? <><F v={targets.leftAfterTargets} s=" €" /> kuukauden tuloista ei ole sidottu yhteenkään tavoitteeseen.</>
+                              : <><F v={targets.leftAfterTargets} s=" €" /> of the month&apos;s income is not tied to any target.</>)}
+                      </p>
+                      {targetsNeed && (
+                        <button type="button" onClick={() => { setFilter("underfunded"); setTargetsOpen(false); }}>
+                          <span>{locale === "fi" ? "Näytä budjetoimattomat" : "Show unfunded"}</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

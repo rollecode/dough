@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { eventBus } from "@/lib/event-bus";
 import { savedGroupOrder, sortByGroupOrder } from "@/lib/category-order";
-import { monthBudgetNumbers, makeTargetResolver, ageOfMoneyData, walkCategory, CATEGORY_ACTIVITY_PREDICATE } from "@/lib/budget-math";
+import { monthBudgetNumbers, makeTargetResolver, ageOfMoneyData, walkCategory, CATEGORY_ACTIVITY_PREDICATE, targetSummary, expectedMonthlyIncome } from "@/lib/budget-math";
 
 interface CategoryRow {
   id: number;
@@ -148,6 +148,7 @@ export async function GET(request: Request) {
       readyToAssign,
       ageOfMoney,
       ageOfMoneyHistory,
+      targets: targetSummary(rows, expectedMonthlyIncome(db)),
     });
   } catch (error) {
     console.error("[budget] GET error:", error);
