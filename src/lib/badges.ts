@@ -49,9 +49,11 @@ export function transactionsUnread(db: Db, userId: number): number {
 
 export function markTransactionsSeen(db: Db, userId: number) {
   ensureTables(db);
+  // To the millisecond, as the added time is: to the second, an entry made in the same second
+  // as the look read as newer and the dot never cleared.
   db.prepare(
-    "INSERT INTO transactions_last_seen (user_id, seen_at) VALUES (?, datetime('now')) " +
-      "ON CONFLICT(user_id) DO UPDATE SET seen_at = datetime('now')"
+    "INSERT INTO transactions_last_seen (user_id, seen_at) VALUES (?, strftime('%Y-%m-%d %H:%M:%f', 'now')) " +
+      "ON CONFLICT(user_id) DO UPDATE SET seen_at = excluded.seen_at"
   ).run(userId);
 }
 
