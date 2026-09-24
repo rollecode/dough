@@ -282,6 +282,14 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
+        method: "POST",
+        path: "/budget/unassign",
+        scope: "write",
+        summary:
+          "Clear over-assigning: take back unspent money from this month's assignments until Ready to Assign is zero, first what sits beyond a target, then categories without a target, then targeted ones. Nothing already spent is undone.",
+        body: [{ name: "month", type: "string", description: "YYYY-MM, default this month." }],
+      },
+      {
         method: "GET",
         path: "/budget/auto-assign",
         scope: "read",

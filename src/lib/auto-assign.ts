@@ -4,6 +4,8 @@ import {
   assignedForMonth,
   makeTargetResolver,
   walkCategory,
+  walkTables,
+  walkFromTables,
   CATEGORY_ACTIVITY_PREDICATE,
 } from "./budget-math";
 
@@ -115,4 +117,67 @@ export function applyAutoAssign(
   });
   run();
   return { assigned: total, count: plan.length, plan };
+}
+
+// Over-assigned: more assigned than there is money. Taking it back only ever touches this month's
+// assignments and never more than a category still holds, so nothing already spent is undone.
+// Order: what sits beyond a target, then categories without a target, then targeted ones, each
+// pass taking from whichever has the most room first.
+export interface UnassignRow {
+  id: number;
+  name: string;
+  budgeted: number;
+  available: number;
+  target: number;
+  targetActive: boolean;
+}
+
+export function planUnassign(overage: number, rows: UnassignRow[]): { id: number; name: string; take: number }[] {
+  let left = round(overage);
+  const room = new Map(rows.map((r) => [r.id, round(Math.max(0, Math.min(r.budgeted, r.available)))]));
+  const takes = new Map<number, { id: number; name: string; take: number }>();
+
+  const take = (r: UnassignRow, wanted: number) => {
+    const amount = round(Math.min(wanted, room.get(r.id) ?? 0, left));
+    if (amount <= 0.005) return;
+    room.set(r.id, round((room.get(r.id) ?? 0) - amount));
+    const prior = takes.get(r.id);
+    takes.set(r.id, { id: r.id, name: r.name, take: round((prior?.take ?? 0) + amount) });
+    left = round(left - amount);
+  };
+  const mostRoom = (list: UnassignRow[]) => [...list].sort((a, b) => (room.get(b.id) ?? 0) - (room.get(a.id) ?? 0));
+
+  const targeted = rows.filter((r) => r.targetActive);
+  for (const r of mostRoom(targeted)) take(r, r.budgeted - r.target);
+  for (const r of mostRoom(rows.filter((r) => !r.targetActive))) take(r, Infinity);
+  for (const r of mostRoom(targeted)) take(r, Infinity);
+  return [...takes.values()];
+}
+
+export function applyUnassign(db: ReturnType<typeof getDb>, month: string): { unassigned: number; plan: { id: number; name: string; take: number }[] } {
+  const rta = monthBudgetNumbers(db, month, assignedForMonth(db, month)).readyToAssign;
+  if (rta >= -0.005) return { unassigned: 0, plan: [] };
+
+  const cats = db
+    .prepare("SELECT id, name, subscription_id, bill_id, debt_account_id, investment_account_id, savings_goal_id FROM categories WHERE is_active = 1 AND COALESCE(budget_excluded, 0) = 0")
+    .all() as { id: number; name: string; subscription_id: number | null; bill_id: number | null; debt_account_id: string | null; investment_account_id: string | null; savings_goal_id: number | null }[];
+  const budgeted = new Map((db.prepare("SELECT category_id, budgeted FROM monthly_category_budgets WHERE month = ?").all(month) as { category_id: number; budgeted: number }[]).map((r) => [r.category_id, r.budgeted]));
+  const tables = walkTables(db);
+  const resolve = makeTargetResolver(db, month);
+  const rows: UnassignRow[] = cats
+    .filter((c) => (budgeted.get(c.id) ?? 0) > 0.005)
+    .map((c) => {
+      const walk = walkFromTables(tables, c.id, c.name, month);
+      const target = resolve(c, walk.carryInto);
+      return { id: c.id, name: c.name, budgeted: budgeted.get(c.id) ?? 0, available: walk.availableAt, target: target.target_monthly || 0, targetActive: !!target.target_active };
+    });
+
+  const plan = planUnassign(-rta, rows);
+  const set = db.prepare("UPDATE monthly_category_budgets SET budgeted = ?, updated_at = datetime('now') WHERE month = ? AND category_id = ?");
+  db.transaction(() => {
+    for (const p of plan) set.run(round((budgeted.get(p.id) ?? 0) - p.take), month, p.id);
+  })();
+  const unassigned = round(plan.reduce((sum, p) => sum + p.take, 0));
+  console.info("[auto-assign] Took back", unassigned, "from", plan.length, "categories to clear over-assigning in", month);
+  return { unassigned, plan };
 }

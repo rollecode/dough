@@ -763,6 +763,20 @@ export default function BudgetPage() {
     }
   };
 
+  // Over-assigned: take back unspent money from this month's assignments until nothing is over.
+  const unassign = async () => {
+    try {
+      await fetch("/api/budget/unassign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month }),
+      });
+      load(month);
+    } catch (err) {
+      console.error("[budget] Unassign error:", err);
+    }
+  };
+
   // Open the add-category dialog pre-filled with a group, so the "+" on a group header drops a new
   // category straight into that group.
   const openAddCategory = (groupKey: string) => {
@@ -828,10 +842,23 @@ export default function BudgetPage() {
             <div className="budget-center">
               <div className="budget-ready-wrap" ref={autoWrapRef}>
                 <div className={`budget-ready-box ${state}`}>
-                  <span className="budget-ready-col">
-                    <span className="budget-ready-value"><F v={rta} s=" €" /></span>
-                    <span className="budget-ready-label">{label}</span>
-                  </span>
+                  {state === "is-negative" ? (
+                    // Over-assigned is one click from fixed: the server takes back unspent money.
+                    <button
+                      type="button"
+                      className="budget-ready-col budget-ready-fix"
+                      onClick={unassign}
+                      title={locale === "fi" ? "Palauta ylimääräinen" : "Take back the excess"}
+                    >
+                      <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+                      <span className="budget-ready-label">{label}</span>
+                    </button>
+                  ) : (
+                    <span className="budget-ready-col">
+                      <span className="budget-ready-value"><F v={rta} s=" €" /></span>
+                      <span className="budget-ready-label">{label}</span>
+                    </span>
+                  )}
                   <button
                     type="button"
                     className="budget-assign-trigger"
