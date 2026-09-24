@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Rename and merge payees, with AI merge suggestions
 * Show last month's daily spend next to the daily budget in settings
 * Tighten the gap above the budget header on phones
 * Colour budget pills yellow short of target, green funded, grey without a target

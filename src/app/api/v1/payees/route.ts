@@ -1,5 +1,6 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
+import { NOT_MACHINE_PAYEE, payeeUsage } from "@/lib/payees";
 
 // GET /api/v1/payees - the payees this household actually uses, most used first, each with the
 // category it is usually filed under, the account it is usually paid from and what it last cost.
@@ -9,12 +10,6 @@ import { getDb } from "@/lib/db";
 // The category is only stated when the history agrees: a payee filed inconsistently gets none
 // rather than a misleading guess. Same rule as the web app's own history categorisation.
 const MAJORITY = 0.6;
-
-interface PayeeRow {
-  payee: string;
-  uses: number;
-  last_used: string;
-}
 
 interface UsageRow {
   payee: string;
@@ -29,16 +24,7 @@ export const GET = apiRoute("read", (request) => {
   const limitRaw = parseInt(new URL(request.url).searchParams.get("limit") || "300", 10);
   const limit = Math.min(1000, Math.max(1, isNaN(limitRaw) ? 300 : limitRaw));
 
-  const NOT_MACHINE_PAYEE =
-    "COALESCE(payee, '') <> '' AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Starting%' " +
-    "AND payee NOT LIKE 'Reconciliation%'";
-
-  const payees = db
-    .prepare(
-      `SELECT payee, COUNT(*) AS uses, MAX(date) AS last_used FROM transactions ` +
-        `WHERE ${NOT_MACHINE_PAYEE} GROUP BY payee ORDER BY uses DESC, last_used DESC LIMIT ?`
-    )
-    .all(limit) as PayeeRow[];
+  const payees = payeeUsage(limit);
 
   if (payees.length === 0) return { payees: [], count: 0 };
 

@@ -172,6 +172,23 @@ export const SECTIONS: Section[] = [
       },
       {
         method: "GET",
+        path: "/payees/merge-suggestions",
+        scope: "read",
+        summary:
+          "Payees that look like one merchant written several ways, as groups of { into, from }, proposed by the quick AI model from the 300 most used payees. Asking merges nothing.",
+      },
+      {
+        method: "POST",
+        path: "/payees/merge",
+        scope: "write",
+        summary: "Rename every transaction under the names in from to into. A rename is a merge of one name. Local mode only.",
+        body: [
+          { name: "from", type: "string[]", required: true, description: "The payee names to replace." },
+          { name: "into", type: "string", required: true, description: "The name they all take." },
+        ],
+      },
+      {
+        method: "GET",
         path: "/transactions",
         scope: "read",
         summary: "Transactions newest first.",

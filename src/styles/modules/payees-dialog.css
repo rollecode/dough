@@ -1,0 +1,112 @@
+/* Module: payees-dialog - rename and merge payees from the transactions page */
+
+.payees-dialog {
+  max-width: 34rem;
+}
+
+.payees-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.payees-toolbar input {
+  flex: 1;
+}
+
+.payees-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--glass-border, var(--border));
+  border-radius: calc(var(--radius) - 0.5rem);
+}
+
+.payees-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--glass-border, var(--border));
+}
+
+.payees-row:last-child {
+  border-bottom: none;
+}
+
+.payees-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.payees-uses {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.payees-edit {
+  display: inline-flex;
+  padding: 0.25rem;
+  color: var(--muted-foreground);
+  background: none;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.payees-edit:hover {
+  color: var(--foreground);
+}
+
+.payees-edit svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.payees-rename {
+  flex: 1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.payees-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.payees-suggestion,
+.payees-merge-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: calc(var(--radius) - 0.5rem);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.payees-suggestion-text,
+.payees-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.payees-suggestion-text strong,
+.payees-note strong {
+  color: var(--foreground);
+}
+
+.payees-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--destructive);
+}

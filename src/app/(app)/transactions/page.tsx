@@ -29,8 +29,10 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import { AddExpenseDialog } from "@/components/shared/add-expense-dialog";
+import { PayeesDialog } from "@/components/shared/payees-dialog";
 import { PayeeInput } from "@/components/shared/payee-input";
 import { CategoryPicker } from "@/components/shared/category-picker";
 import { F } from "@/components/ui/f";
@@ -89,6 +91,7 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [payeesOpen, setPayeesOpen] = useState(false);
   const [addDayDate, setAddDayDate] = useState("");
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
   const [excludedAccountIds, setExcludedAccountIds] = useState<string[]>([]);
@@ -370,6 +373,11 @@ export default function TransactionsPage() {
               <RefreshCw className={loading ? "icon-sm animate-spin" : "icon-sm"} />
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={() => setPayeesOpen(true)}>
+            <Users className="icon-sm" />
+            {locale === "fi" ? "Saajat" : "Payees"}
+          </Button>
+          <PayeesDialog open={payeesOpen} onOpenChange={setPayeesOpen} />
           <Button size="sm" onClick={() => { setAddDayDate(""); setAddOpen(true); }}>
             <Plus className="icon-sm" />
             {locale === "fi" ? "Lisää tilitapahtuma" : "Add transaction"}
