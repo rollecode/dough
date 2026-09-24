@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Serve the navigation's notice dots over the API
 * Click Over-assigned to take the excess back
 * Rename and merge payees, with AI merge suggestions
 * Show last month's daily spend next to the daily budget in settings

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiRoute } from "@/lib/api-v1";
-import { getBudgetMode } from "@/lib/household";
+import { getBudgetMode, setHouseholdSetting } from "@/lib/household";
 import { createLocalTransaction } from "@/lib/local-transactions";
 
 // POST /api/v1/transactions/create (write scope) - add a new transaction to Dough's local ledger and
@@ -41,5 +41,7 @@ export const POST = apiRoute("write", async (request, identity) => {
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  // Added by hand from another client, so it lights the transactions dot as a web entry does.
+  setHouseholdSetting("last_transaction_added", new Date().toISOString());
   return { success: true, transaction_id: result.id };
 });

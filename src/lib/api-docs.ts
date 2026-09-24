@@ -263,6 +263,20 @@ export const SECTIONS: Section[] = [
     endpoints: [
       {
         method: "GET",
+        path: "/badges",
+        scope: "read",
+        summary:
+          "The navigation's notice dots: budget_overspent (categories overspent this month), transactions_unread (1 when an expense was added by hand since this key's user last looked) and chat_unread (messages from others since then).",
+      },
+      {
+        method: "POST",
+        path: "/badges",
+        scope: "write",
+        summary: "Clear a dot when its screen is opened. The budget dot clears only when nothing is overspent.",
+        body: [{ name: "seen", type: "string", required: true, description: "transactions or chat." }],
+      },
+      {
+        method: "GET",
         path: "/budget",
         scope: "read",
         summary:
