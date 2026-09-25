@@ -196,7 +196,7 @@ export const SECTIONS: Section[] = [
           MONTH,
           { name: "account_id", type: "string", description: "One account." },
           { name: "category", type: "string", description: "Exact category name." },
-          { name: "q", type: "string", description: "Search payee and memo." },
+          { name: "q", type: "string", description: "Search payee, category, memo, account name, or the amount when a number (12,50 or 12.50)." },
           { name: "limit", type: "number", description: "1 to 500, default 50." },
         ],
       },

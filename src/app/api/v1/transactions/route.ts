@@ -1,5 +1,6 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
+import { transactionSearch } from "@/lib/transaction-search";
 
 interface TxRow {
   id: string;
@@ -15,7 +16,8 @@ interface TxRow {
 }
 
 // GET /api/v1/transactions - transactions newest first. Filters (all optional):
-//   month=YYYY-MM, account_id=<id>, category=<name>, q=<search payee/memo>, limit=<1..500, default 50>
+//   month=YYYY-MM, account_id=<id>, category=<name>, q=<payee, category, memo, account or amount>,
+//   limit=<1..500, default 50>
 export const GET = apiRoute("read", (request) => {
   const params = new URL(request.url).searchParams;
   const where: string[] = [];
@@ -36,10 +38,11 @@ export const GET = apiRoute("read", (request) => {
     where.push("t.category = ?");
     args.push(category);
   }
-  const q = params.get("q");
+  const q = params.get("q")?.trim();
   if (q) {
-    where.push("(t.payee LIKE ? OR t.memo LIKE ?)");
-    args.push(`%${q}%`, `%${q}%`);
+    const search = transactionSearch(q);
+    where.push(search.clause);
+    args.push(...search.args);
   }
 
   const limitRaw = parseInt(params.get("limit") || "50", 10);

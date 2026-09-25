@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Search the API ledger by any field, amount included
 * Serve the navigation's notice dots over the API
 * Click Over-assigned to take the excess back
 * Rename and merge payees, with AI merge suggestions
