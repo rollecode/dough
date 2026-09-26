@@ -5,6 +5,7 @@
  *
  *   npx tsx scripts/seed-demo.ts                  -> data/dough-demo.db
  *   npx tsx scripts/seed-demo.ts --out other.db   -> somewhere else
+ *   npx tsx scripts/seed-demo.ts --lang en        -> English names, for the App Store
  *
  * Run the app against it with DOUGH_DB_PATH=data/dough-demo.db npm run dev
  */
@@ -27,6 +28,9 @@ for (const suffix of ["", "-wal", "-shm"]) {
 }
 
 process.env.DOUGH_DB_PATH = OUT;
+
+const langArg = process.argv.indexOf("--lang");
+const LANG = langArg > -1 ? process.argv[langArg + 1] : "fi";
 
 const DEMO_EMAIL = "demo@example.com";
 const DEMO_PASSWORD = "demo1234";
@@ -54,9 +58,38 @@ const ACCOUNTS = [
   { id: "acc-loan", name: "Opintolaina", type: "otherDebt", balance: -4200.0, on_budget: 0 },
 ];
 
+const EN: Record<string, string> = {
+  Käyttötili: "Checking", Säästötili: "Savings", Luottokortti: "Credit Card", Puskuritili: "Emergency Fund",
+  Indeksirahasto: "Index Fund", Korkorahasto: "Bond Fund", Opintolaina: "Student Loan",
+  Ruokakauppa: "Groceries", "Ravintolat ja kahvilat": "Dining Out", Liikenne: "Transportation",
+  "Koti ja tarvikkeet": "Home & Supplies", Terveys: "Health", "Vapaa-aika": "Fun", Vaatteet: "Clothing",
+  Lemmikit: "Pets", Lahjat: "Gifts", "Muut kulut": "Miscellaneous", Asuminen: "Housing",
+  Vakuutukset: "Insurance", Tietoliikenne: "Phone & Internet", Tilaukset: "Subscriptions",
+  Kiinteät: "Fixed Costs", Arki: "Everyday", Vapaa: "Fun Money",
+  Lähikauppa: "Corner Market", Marketti: "Supermarket", Torikauppa: "Farmers Market", Leipomo: "Bakery",
+  Kahvila: "Coffee Shop", Lounasravintola: "Lunch Spot", Pizzeria: "Pizza Place",
+  Huoltoasema: "Gas Station", Matkakortti: "Transit Pass", Pysäköinti: "Parking",
+  Rautakauppa: "Hardware Store", Sisustusliike: "Home Goods", Verkkokauppa: "Online Store",
+  Apteekki: "Pharmacy", Hammaslääkäri: "Dentist", Työterveys: "Urgent Care",
+  Elokuvateatteri: "Movie Theater", Kirjakauppa: "Bookstore", Kuntosali: "Gym", Uimahalli: "Pool",
+  Vaateliike: "Clothing Store", Kenkäkauppa: "Shoe Store", Kirpputori: "Thrift Store",
+  Lemmikkikauppa: "Pet Store", Eläinlääkäri: "Vet", Kukkakauppa: "Florist", Lahjatavaraliike: "Gift Shop",
+  Kioski: "Convenience Store", "Postin palvelupiste": "Post Office", Pesula: "Dry Cleaner",
+  Vuokra: "Rent", Sähkö: "Electric", Vesi: "Water", Kotivakuutus: "Renters Insurance",
+  Puhelinliittymä: "Phone Plan", Laajakaista: "Internet", Autovakuutus: "Car Insurance", Jätehuolto: "Trash Pickup",
+  Suoratoistopalvelu: "Streaming Service", Musiikkipalvelu: "Music Service", Pilvitallennus: "Cloud Storage",
+  Sanomalehti: "Newspaper", Kuntosalijäsenyys: "Gym Membership", Verkkolehti: "Online Magazine",
+  Salasanaholvi: "Password Manager", Varmuuskopiointi: "Backup Service",
+  Palkka: "Paycheck", Sivutoimi: "Side Gig", Puskuri: "Emergency Fund", Kesäloma: "Summer Vacation",
+  "Uusi tietokone": "New Laptop", "Kolmen kuukauden menot": "Three months of expenses", "Matka kahdelle": "Trip for two",
+};
+
+// Tables stay Finnish as internal keys; names are translated where they are written.
+const t = (name: string) => (LANG === "en" ? EN[name] ?? name : name);
+
 // Category, its share of everyday spending, and the payees that post to it.
 const SPEND = [
-  { cat: "Ruokakauppa", weight: 30, lo: 4, hi: 38, payees: ["Lähikauppa", "Ruokakauppa", "Torikauppa", "Leipomo"] },
+  { cat: "Ruokakauppa", weight: 30, lo: 4, hi: 38, payees: ["Lähikauppa", "Marketti", "Torikauppa", "Leipomo"] },
   { cat: "Ravintolat ja kahvilat", weight: 12, lo: 3, hi: 19, payees: ["Kahvila", "Lounasravintola", "Pizzeria"] },
   { cat: "Liikenne", weight: 10, lo: 2, hi: 24, payees: ["Huoltoasema", "Matkakortti", "Pysäköinti"] },
   { cat: "Koti ja tarvikkeet", weight: 8, lo: 4, hi: 42, payees: ["Rautakauppa", "Sisustusliike", "Verkkokauppa"] },
@@ -148,9 +181,9 @@ async function main() {
 
   const userId = db
     .prepare(
-      "INSERT INTO users (email, password_hash, display_name, locale) VALUES (?, ?, ?, 'fi')"
+      "INSERT INTO users (email, password_hash, display_name, locale) VALUES (?, ?, ?, ?)"
     )
-    .run(DEMO_EMAIL, bcrypt.hashSync(DEMO_PASSWORD, 10), "Demo").lastInsertRowid as number;
+    .run(DEMO_EMAIL, bcrypt.hashSync(DEMO_PASSWORD, 10), "Demo", LANG).lastInsertRowid as number;
 
   const settings: [string, string][] = [
     ["household_size", "2"],
@@ -169,7 +202,7 @@ async function main() {
   const putAccount = db.prepare(
     "INSERT INTO ynab_accounts (id, name, type, balance, cleared_balance, on_budget, closed, source, sort_order) VALUES (?, ?, ?, ?, ?, ?, 0, 'demo', ?)"
   );
-  ACCOUNTS.forEach((a, i) => putAccount.run(a.id, a.name, a.type, a.balance, a.balance, a.on_budget, i));
+  ACCOUNTS.forEach((a, i) => putAccount.run(a.id, t(a.name), a.type, a.balance, a.balance, a.on_budget, i));
 
   const categoryNames = [...new Set([...SPEND.map((s) => s.cat), ...BILLS.map((b) => b.category), "Tilaukset"])];
   const putCategory = db.prepare(
@@ -177,28 +210,28 @@ async function main() {
   );
   const categoryIds = new Map<string, number>();
   categoryNames.forEach((name, i) => {
-    const id = putCategory.run(name, BUDGET_GROUPS[name] ?? "Arki", i).lastInsertRowid as number;
+    const id = putCategory.run(t(name), t(BUDGET_GROUPS[name] ?? "Arki"), i).lastInsertRowid as number;
     categoryIds.set(name, id);
   });
 
   const putIncome = db.prepare(
     "INSERT INTO income_sources (user_id, name, amount, expected_day, is_recurring, is_active, target_account_id) VALUES (?, ?, ?, ?, 1, 1, 'acc-checking')"
   );
-  for (const i of INCOMES) putIncome.run(userId, i.name, i.amount, i.expected_day);
+  for (const i of INCOMES) putIncome.run(userId, t(i.name), i.amount, i.expected_day);
 
   const putBill = db.prepare(
     "INSERT INTO recurring_bills (user_id, name, amount, due_day, category, is_active, is_priority, cadence, interval_months) VALUES (?, ?, ?, ?, ?, 1, ?, 'monthly', 1)"
   );
-  for (const b of BILLS) putBill.run(userId, b.name, b.amount, b.due_day, b.category, b.priority);
+  for (const b of BILLS) putBill.run(userId, t(b.name), b.amount, b.due_day, t(b.category), b.priority);
 
   const putSub = db.prepare(
     "INSERT INTO subscriptions (name, amount, due_day, brand_color, is_active) VALUES (?, ?, ?, ?, 1)"
   );
-  for (const s of SUBSCRIPTIONS) putSub.run(s.name, s.amount, s.due_day, s.color);
+  for (const s of SUBSCRIPTIONS) putSub.run(t(s.name), s.amount, s.due_day, s.color);
 
   db.prepare(
-    "INSERT INTO debts (user_id, name, total_amount, remaining_amount, interest_rate, minimum_payment, due_day) VALUES (?, 'Opintolaina', 9000, 4200, 1.4, 95, 10)"
-  ).run(userId);
+    "INSERT INTO debts (user_id, name, total_amount, remaining_amount, interest_rate, minimum_payment, due_day) VALUES (?, ?, 9000, 4200, 1.4, 95, 10)"
+  ).run(userId, t("Opintolaina"));
 
   // Investments are read from the otherAsset accounts, with contribution and return per account.
   const putOverride = db.prepare(
@@ -210,9 +243,9 @@ async function main() {
   const putGoal = db.prepare(
     "INSERT INTO savings_goals (name, target_amount, saved_amount, priority, target_date, is_active, description) VALUES (?, ?, ?, ?, ?, 1, ?)"
   );
-  putGoal.run("Puskuri", 6000, 4820, "must", `${now.getFullYear() + 1}-06-30`, "Kolmen kuukauden menot");
-  putGoal.run("Kesäloma", 1800, 940, "want", `${now.getFullYear() + 1}-05-31`, "Matka kahdelle");
-  putGoal.run("Uusi tietokone", 1500, 310, "want", `${now.getFullYear() + 1}-11-30`, "");
+  putGoal.run(t("Puskuri"), 6000, 4820, "must", `${now.getFullYear() + 1}-06-30`, t("Kolmen kuukauden menot"));
+  putGoal.run(t("Kesäloma"), 1800, 940, "want", `${now.getFullYear() + 1}-05-31`, t("Matka kahdelle"));
+  putGoal.run(t("Uusi tietokone"), 1500, 310, "want", `${now.getFullYear() + 1}-11-30`, "");
 
   // Transactions: everyday spending, bills, subscriptions and income, day by day.
   const putTx = db.prepare(
@@ -246,27 +279,27 @@ async function main() {
       let roll = rnd() * totalWeight;
       const bucket = SPEND.find((c) => (roll -= c.weight) <= 0) ?? SPEND[0];
       const amount = -round2(between(bucket.lo, bucket.hi) * pace);
-      putTx.run(userId, nextId(), date, amount, pick(bucket.payees), bucket.cat, 0, pick(["acc-checking", "acc-card"]));
+      putTx.run(userId, nextId(), date, amount, t(pick(bucket.payees)), t(bucket.cat), 0, pick(["acc-checking", "acc-card"]));
       bump(month, 0, -amount, bucket.cat, -amount);
     }
 
     for (const b of BILLS) {
       if (b.due_day !== day) continue;
       const amount = -round2(b.amount * between(0.97, 1.06));
-      putTx.run(userId, nextId(), date, amount, b.name, b.category, 1, "acc-checking");
+      putTx.run(userId, nextId(), date, amount, t(b.name), t(b.category), 1, "acc-checking");
       bump(month, 0, -amount, b.category, -amount);
     }
 
     for (const s of SUBSCRIPTIONS) {
       if (s.due_day !== day) continue;
-      putTx.run(userId, nextId(), date, -s.amount, s.name, "Tilaukset", 1, "acc-card");
+      putTx.run(userId, nextId(), date, -s.amount, t(s.name), t("Tilaukset"), 1, "acc-card");
       bump(month, 0, s.amount, "Tilaukset", s.amount);
     }
 
     for (const inc of INCOMES) {
       if (inc.expected_day !== day) continue;
       const amount = round2(inc.amount * between(0.98, 1.05));
-      putTx.run(userId, nextId(), date, amount, inc.name, "Inflow: Ready to Assign", 1, "acc-checking");
+      putTx.run(userId, nextId(), date, amount, t(inc.name), "Inflow: Ready to Assign", 1, "acc-checking");
       bump(month, amount, 0);
     }
   }
@@ -280,7 +313,7 @@ async function main() {
   );
   for (const [month, totals] of monthTotals) {
     const categories = [...totals.byCat.entries()]
-      .map(([name, amount]) => ({ name, amount: round2(amount) }))
+      .map(([name, amount]) => ({ name: t(name), amount: round2(amount) }))
       .sort((a, b) => b.amount - a.amount);
     putSnapshot.run(month, round2(totals.income), round2(totals.expenses), JSON.stringify(categories));
 
@@ -328,10 +361,10 @@ async function main() {
   const cache = {
     summary: {
       totalBalance: round2(ACCOUNTS.filter((a) => a.on_budget).reduce((s, a) => s + a.balance, 0)),
-      accounts: ACCOUNTS.map((a) => ({ id: a.id, name: a.name, type: a.type, balance: a.balance, clearedBalance: a.balance })),
-      allAccounts: ACCOUNTS.map((a) => ({ id: a.id, name: a.name, type: a.type, balance: a.balance, clearedBalance: a.balance })),
+      accounts: ACCOUNTS.map((a) => ({ id: a.id, name: t(a.name), type: a.type, balance: a.balance, clearedBalance: a.balance })),
+      allAccounts: ACCOUNTS.map((a) => ({ id: a.id, name: t(a.name), type: a.type, balance: a.balance, clearedBalance: a.balance })),
       closedAccountIds: [],
-      categories: categoryNames.map((name) => ({ name, budgeted: 0, activity: 0, balance: 0 })),
+      categories: categoryNames.map((name) => ({ name: t(name), budgeted: 0, activity: 0, balance: 0 })),
     },
     transactions: txForCache,
     monthBudget: { month: ym(now), toBeBudgeted: 0 },
