@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
-import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, getBudgetMode } from "@/lib/household";
+import { recordTransactionAdded } from "@/lib/badges";
 import { eventBus } from "@/lib/event-bus";
 import { categorizePayee } from "@/lib/ai/categorize";
 import { localDateIso } from "@/lib/date-utils";
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       `).run(user.id, id, txDate, signed, payee_name, categoryName, memo || "", account_id);
       db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(signed, account_id);
 
-      setHouseholdSetting("last_transaction_added", new Date().toISOString());
+      recordTransactionAdded(user.id);
       eventBus.emit("data:updated", { source: "transaction-added", userId: user.id });
       console.info("[ynab/transaction] Local transaction created:", payee_name, signed, "cat:", categoryName || "uncategorized");
       return NextResponse.json({ success: true, id, category: categoryName ? "auto" : "uncategorized" });
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
       }
     }
 
-    setHouseholdSetting("last_transaction_added", new Date().toISOString());
+    recordTransactionAdded(user.id);
     eventBus.emit("data:updated", { source: "transaction-added", userId: user.id });
 
     return NextResponse.json({

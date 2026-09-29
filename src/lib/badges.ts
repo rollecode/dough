@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { availableForCategory } from "./budget-math";
-import { getHouseholdSetting } from "./household";
+import { setHouseholdSetting } from "./household";
 
 // The notice dots on the navigation, shared by the web sidebar and the API so both clients light
 // up for the same reasons.
@@ -33,8 +33,14 @@ export function overspentCategories(db: Db, month: string): number {
   return overspent;
 }
 
-// Transactions: 1 when an expense was added by hand after this person last looked. The first
-// check only starts the clock.
+// An entry is news to everyone else in the household, never to the person who made it, so the time
+// is kept per author.
+export function recordTransactionAdded(userId: number) {
+  setHouseholdSetting(`last_transaction_added:${userId}`, new Date().toISOString());
+}
+
+// Transactions: 1 when someone else added an expense by hand after this person last looked. The
+// first check only starts the clock.
 export function transactionsUnread(db: Db, userId: number): number {
   ensureTables(db);
   const lastSeen = db.prepare("SELECT seen_at FROM transactions_last_seen WHERE user_id = ?").get(userId) as { seen_at: string } | undefined;
@@ -42,7 +48,10 @@ export function transactionsUnread(db: Db, userId: number): number {
     db.prepare("INSERT INTO transactions_last_seen (user_id) VALUES (?)").run(userId);
     return 0;
   }
-  const lastAdded = getHouseholdSetting("last_transaction_added");
+  // ISO times sort as text, so the newest entry by anyone else is the largest value.
+  const { lastAdded } = db
+    .prepare("SELECT MAX(value) AS lastAdded FROM household_settings WHERE key LIKE 'last_transaction_added:%' AND key != ?")
+    .get(`last_transaction_added:${userId}`) as { lastAdded: string | null };
   if (!lastAdded) return 0;
   return new Date(lastAdded).getTime() > new Date(lastSeen.seen_at + "Z").getTime() ? 1 : 0;
 }

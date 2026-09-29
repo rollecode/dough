@@ -1,8 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { getDb } from "@/lib/db";
-import { setHouseholdSetting } from "@/lib/household";
-import { transactionsUnread, markTransactionsSeen, chatUnread, markChatSeen } from "@/lib/badges";
+import { recordTransactionAdded, transactionsUnread, markTransactionsSeen, chatUnread, markChatSeen } from "@/lib/badges";
 
 function users() {
   const db = getDb();
@@ -11,11 +10,16 @@ function users() {
   return db;
 }
 
-test("a hand-added expense lights transactions until they are seen", () => {
+test("someone else's hand-added expense lights transactions until they are seen", () => {
   const db = users();
   assert.equal(transactionsUnread(db, 1), 0);
   db.prepare("UPDATE transactions_last_seen SET seen_at = datetime('now', '-1 hour') WHERE user_id = 1").run();
-  setHouseholdSetting("last_transaction_added", new Date().toISOString());
+  recordTransactionAdded(1);
+  assert.equal(transactionsUnread(db, 1), 0, "your own entry is not news");
+  recordTransactionAdded(2);
+  assert.equal(transactionsUnread(db, 1), 1);
+  // Adding your own afterwards does not hide the other person's.
+  recordTransactionAdded(1);
   assert.equal(transactionsUnread(db, 1), 1);
   markTransactionsSeen(db, 1);
   assert.equal(transactionsUnread(db, 1), 0);
