@@ -1684,12 +1684,12 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
   const progress = hasTarget ? Math.min(1, cat.budgeted / cat.target_monthly) : 0;
   const underfunded = cat.target_active && cat.budgeted < cat.target_monthly - 0.005;
   const stillNeeded = underfunded ? Math.round((cat.target_monthly - cat.budgeted) * 100) / 100 : 0;
-  // Red overspent, yellow a target still short, green a funded target, grey everything else.
+  // Red overspent, yellow a target still short, green a funded target or money left, grey empty.
   const pillClass = cat.available < -eps
     ? "is-negative"
     : underfunded
     ? "is-underfunded"
-    : cat.target_active && hasTarget
+    : (cat.target_active && hasTarget) || cat.available > eps
     ? "is-positive"
     : "is-zero";
 

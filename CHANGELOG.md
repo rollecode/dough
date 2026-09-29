@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Colour money left in a category green
 * Light the transactions dot only for someone else's entry
 * Search the API ledger by any field, amount included
 * Serve the navigation's notice dots over the API
