@@ -311,7 +311,7 @@ export const SECTIONS: Section[] = [
           "Preview funding targets from Ready to Assign. Without mode, the total each mode would assign; with mode, the full per-category plan. Writes nothing.",
         params: [
           MONTH,
-          { name: "mode", type: "string", description: "underfunded, last_assigned or last_spent." },
+          { name: "mode", type: "string", description: "underfunded, last_assigned, last_spent, or smart (overspending first, then targets, most-used categories first)." },
         ],
       },
       {
@@ -321,7 +321,7 @@ export const SECTIONS: Section[] = [
         summary: "Apply a plan. Capped so it never overbudgets.",
         body: [
           MONTH,
-          { name: "mode", type: "string", required: true, description: "underfunded, last_assigned or last_spent." },
+          { name: "mode", type: "string", required: true, description: "underfunded, last_assigned, last_spent, or smart (overspending first, then targets, most-used categories first)." },
         ],
       },
       {

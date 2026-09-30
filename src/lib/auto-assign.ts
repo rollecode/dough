@@ -22,7 +22,7 @@ function ym(monthYM: string, offset: number): string {
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
-export const AUTO_ASSIGN_MODES = ["underfunded", "last_assigned", "last_spent"] as const;
+export const AUTO_ASSIGN_MODES = ["underfunded", "last_assigned", "last_spent", "smart"] as const;
 export type AutoAssignMode = (typeof AUTO_ASSIGN_MODES)[number];
 
 // Build the assignment plan for a mode, capped at Ready to Assign so it never overbudgets (unlike
@@ -32,29 +32,17 @@ export function computeAutoAssign(
   month: string,
   mode: AutoAssignMode
 ): { total: number; plan: { id: number; name: string; add: number }[] } {
-  const cats = db.prepare("SELECT id, name, subscription_id, bill_id, debt_account_id, investment_account_id, savings_goal_id FROM categories WHERE is_active = 1 ORDER BY group_name, sort_order, name").all() as { id: number; name: string; subscription_id: number | null; bill_id: number | null; debt_account_id: string | null; investment_account_id: string | null; savings_goal_id: number | null }[];
+  const cats = db.prepare("SELECT id, name, subscription_id, bill_id, debt_account_id, investment_account_id, savings_goal_id FROM categories WHERE is_active = 1 ORDER BY group_name, sort_order, name").all() as Cat[];
   const prev = ym(month, -1);
   let rta = monthBudgetNumbers(db, month, assignedForMonth(db, month)).readyToAssign;
 
-  // Per-mode "desired" amount each category should receive this month
-  const desired = new Map<number, number>();
+  // Per-mode "desired" amount each category should receive this month, in the order to fund it
+  let desired = new Map<number, number>();
+  let queue: { id: number; want: number }[] | null = null;
   if (mode === "underfunded") {
-    // Resolve each category's effective target exactly like the budget row (manual targets AND
-    // links to subscriptions/bills/debts/investments/savings goals), then top this month's
-    // assignment up to that target. Matching the row's own underfunded test (budgeted < target)
-    // means "fund to targets" fills precisely the yellow shortfalls the user sees and turns them
-    // green, and never silently skips a link-derived target the way the old category_targets-only
-    // pass did.
-    const resolve = makeTargetResolver(db, month);
-    const budgetedThis = new Map((db.prepare("SELECT category_id, budgeted FROM monthly_category_budgets WHERE month = ?").all(month) as { category_id: number; budgeted: number }[]).map((r) => [r.category_id, r.budgeted]));
-    for (const c of cats) {
-      const carry = walkCategory(db, c.id, c.name, month).carryInto;
-      const t = resolve(c, carry);
-      if (!t.target_active) continue;
-      const budgeted = budgetedThis.get(c.id) || 0;
-      const need = round(t.target_monthly - budgeted);
-      if (need > 0.005) desired.set(c.id, need);
-    }
+    desired = targetNeeds(db, month, cats);
+  } else if (mode === "smart") {
+    queue = smartQueue(db, month, cats);
   } else {
     const start = `${prev}-01`;
     const [py, pm] = prev.split("-").map(Number);
@@ -80,20 +68,67 @@ export function computeAutoAssign(
     }
   }
 
-  // Greedily fund in category order, never exceeding Ready to Assign
+  // Greedily fund in order, never exceeding Ready to Assign
+  queue ??= cats.filter((c) => desired.has(c.id)).map((c) => ({ id: c.id, want: desired.get(c.id)! }));
+  const names = new Map(cats.map((c) => [c.id, c.name]));
   const plan: { id: number; name: string; add: number }[] = [];
   let total = 0;
-  for (const c of cats) {
+  for (const q of queue) {
     if (rta <= 0.005) break;
-    const want = desired.get(c.id);
-    if (!want) continue;
-    const add = round(Math.min(want, rta));
+    const add = round(Math.min(q.want, rta));
     if (add <= 0) continue;
-    plan.push({ id: c.id, name: c.name, add });
+    const prior = plan.find((p) => p.id === q.id);
+    if (prior) prior.add = round(prior.add + add);
+    else plan.push({ id: q.id, name: names.get(q.id) ?? "", add });
     rta = round(rta - add);
     total = round(total + add);
   }
   return { total, plan };
+}
+
+type Cat = { id: number; name: string; subscription_id: number | null; bill_id: number | null; debt_account_id: string | null; investment_account_id: string | null; savings_goal_id: number | null };
+
+// What each targeted category still needs this month, resolved exactly like the budget row (manual
+// targets and links), so funding it turns precisely the yellow rows green.
+function targetNeeds(db: ReturnType<typeof getDb>, month: string, cats: Cat[]): Map<number, number> {
+  const resolve = makeTargetResolver(db, month);
+  const budgetedThis = new Map((db.prepare("SELECT category_id, budgeted FROM monthly_category_budgets WHERE month = ?").all(month) as { category_id: number; budgeted: number }[]).map((r) => [r.category_id, r.budgeted]));
+  const needs = new Map<number, number>();
+  for (const c of cats) {
+    const carry = walkCategory(db, c.id, c.name, month).carryInto;
+    const t = resolve(c, carry);
+    if (!t.target_active) continue;
+    const need = round(t.target_monthly - (budgetedThis.get(c.id) || 0));
+    if (need > 0.005) needs.set(c.id, need);
+  }
+  return needs;
+}
+
+// Overspending covered first, then targets topped up. Within each pass the categories spent on
+// most often in the last three months come first, so everyday needs such as food lead.
+export function smartQueue(db: ReturnType<typeof getDb>, month: string, cats: Cat[]): { id: number; want: number }[] {
+  const uses = new Map((db.prepare(
+    "SELECT category, COUNT(*) AS n FROM transactions WHERE date >= ? AND date < ? AND amount < 0 AND " + CATEGORY_ACTIVITY_PREDICATE + " GROUP BY category"
+  ).all(`${ym(month, -3)}-01`, `${ym(month, 1)}-01`) as { category: string; n: number }[]).map((r) => [r.category, r.n]));
+  const byUse = (list: Cat[]) => [...list].sort((a, b) => (uses.get(b.name) ?? 0) - (uses.get(a.name) ?? 0));
+
+  const tables = walkTables(db);
+  const cover = new Map<number, number>();
+  for (const c of cats) {
+    if (c.name.startsWith("Inflow:")) continue;
+    const available = walkFromTables(tables, c.id, c.name, month).availableAt;
+    if (available < -0.005) cover.set(c.id, round(-available));
+  }
+  const needs = targetNeeds(db, month, cats);
+
+  const queue: { id: number; want: number }[] = [];
+  for (const c of byUse(cats.filter((c) => cover.has(c.id)))) queue.push({ id: c.id, want: cover.get(c.id)! });
+  for (const c of byUse(cats.filter((c) => needs.has(c.id)))) {
+    // Covering an overspend already counts towards the month's target.
+    const want = round(needs.get(c.id)! - (cover.get(c.id) ?? 0));
+    if (want > 0.005) queue.push({ id: c.id, want });
+  }
+  return queue;
 }
 
 // Apply an auto-assign plan: add each plan item on top of what is already budgeted this month.

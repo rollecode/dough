@@ -1,3 +1,7 @@
+### 4.5.0: 2026-09-30
+
+* Add a smart auto-assign that covers overspending first
+
 ### 4.4.0: 2026-09-30
 
 * Add the Revolut brand icon
