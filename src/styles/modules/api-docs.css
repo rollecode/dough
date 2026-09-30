@@ -224,7 +224,7 @@
 }
 
 .api-fields h4 {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted-foreground);
@@ -249,7 +249,7 @@
 }
 
 .api-field-type {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--chart-3);
 }
 

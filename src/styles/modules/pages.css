@@ -1086,7 +1086,7 @@
   margin: 0.25rem 0 0;
   padding: 0.5rem 0.625rem 0.375rem;
   border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.125rem;
   color: var(--muted-foreground);
   white-space: normal;
@@ -3910,7 +3910,7 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
@@ -3943,7 +3943,7 @@
 }
 
 .row-table th {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--muted-foreground);
   text-align: left;

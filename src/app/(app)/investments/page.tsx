@@ -507,8 +507,8 @@ export default function InvestmentsPage() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                    <XAxis dataKey="year" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}${locale === "fi" ? "v" : "y"}`} />
-                    <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={64} />
+                    <XAxis dataKey="year" tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}${locale === "fi" ? "v" : "y"}`} />
+                    <YAxis tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={60} />
                     <Tooltip
                       trigger={tooltipTrigger}
                       content={({ active, payload, label }) =>
@@ -564,8 +564,8 @@ export default function InvestmentsPage() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => { const p = String(v).split("-"); return `${Number(p[2])}.${Number(p[1])}.`; }} interval="preserveStartEnd" />
-                      <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={64} />
+                      <XAxis dataKey="date" tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} tickFormatter={(v) => { const p = String(v).split("-"); return `${Number(p[2])}.${Number(p[1])}.`; }} interval="preserveStartEnd" />
+                      <YAxis tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={60} />
                       <Tooltip
                         trigger={tooltipTrigger}
                         content={({ active, payload, label }) =>

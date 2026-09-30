@@ -98,8 +98,8 @@ export function CashFlowChart({ data }: CashFlowProps) {
               </pattern>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-            <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={58} />
+            <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={54} />
             {tt.reporter}
             <Tooltip {...tt.tooltipProps} content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} trigger={tooltipTrigger} />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />

@@ -428,7 +428,7 @@
 }
 
 .month-bar-label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
 }
 
@@ -454,7 +454,7 @@
 }
 
 .month-bar-value {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }

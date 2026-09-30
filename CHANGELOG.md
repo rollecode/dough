@@ -1,7 +1,7 @@
 ### 4.6.1: 2026-09-30
 
 * Stop the debt and investment tables jumping on hover
-* Raise 11 and 12 px text to 13 and 14 px
+* Set all small text to one size, 13 px
 
 ### 4.6.0: 2026-09-30
 

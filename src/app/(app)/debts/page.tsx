@@ -81,8 +81,8 @@ function DebtSparkline({ data, uid, height = 56, detailed = false, tooltip = tru
           {detailed && (
             <>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v / 1000).toFixed(1)}k €` : `${Math.round(v)} €`)} width={65} />
+              <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v / 1000).toFixed(1)}k €` : `${Math.round(v)} €`)} width={61} />
             </>
           )}
           {tooltip && (
@@ -639,8 +639,8 @@ export default function DebtsPage() {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                          <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                          <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={58} />
+                          <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                          <YAxis tick={{ fill: "#71717a", fontSize: 13 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={54} />
                           <Tooltip
                             trigger={tooltipTrigger}
                             content={({ active, payload, label }) =>
