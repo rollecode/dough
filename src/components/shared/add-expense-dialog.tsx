@@ -45,7 +45,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [addAmount, setAddAmount] = useState("");
   // Read by the async prefill, which would otherwise see the amount from the render it started in.
   const amountRef = useRef("");
-  amountRef.current = addAmount;
+  useEffect(() => { amountRef.current = addAmount; }, [addAmount]);
   const [addPayee, setAddPayee] = useState("");
   const [addMemo, setAddMemo] = useState("");
   const [addCategory, setAddCategory] = useState("");
@@ -53,6 +53,7 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   // Preselect a day when opened from a day heading's + button.
   useEffect(() => { if (open && initialDate) setAddDate(initialDate); }, [open, initialDate]);
 
+  const [catSuggestions, setCatSuggestions] = useState<string[]>([]);
   // Rank likely categories for the typed payee/description so they appear first in the picker.
   useEffect(() => {
     if (!open) return;
@@ -73,7 +74,6 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [catSource, setCatSource] = useState<"" | "ai" | "manual">("");
   const catSourceRef = useRef<"" | "ai" | "manual">("");
   const [budgetCats, setBudgetCats] = useState<{ name: string; group_name: string; available: number }[]>([]);
-  const [catSuggestions, setCatSuggestions] = useState<string[]>([]);
   const [addLoading, setAddLoading] = useState(false);
   const [linkedAccountId, setLinkedAccountId] = useState("");
   const [linkedAccountName, setLinkedAccountName] = useState("");

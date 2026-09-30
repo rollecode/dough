@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useLayoutEffect } from "react";
 
 type EventType = "chat:message" | "chat:typing" | "chat:reaction" | "sync:complete" | "data:updated";
 type EventHandler = (data: unknown) => void;
@@ -56,7 +56,7 @@ function disconnect() {
 
 export function useEvent(type: EventType, handler: EventHandler) {
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+  useLayoutEffect(() => { handlerRef.current = handler; });
 
   const stableHandler = useCallback((data: unknown) => {
     handlerRef.current(data);
