@@ -5,6 +5,7 @@
 * Give the API the debt-free month at minimum payments
 * Update Next.js to 16.3.8 for a security fix
 * Update React, charts, icons and the database driver
+* Restart the server without waiting on open live updates
 
 ### 4.6.0: 2026-09-30
 
