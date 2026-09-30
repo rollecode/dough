@@ -1,7 +1,7 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { localMonthCategories } from "@/lib/budget-math";
-import { snowball, avalanche } from "@/lib/debt-payoff";
+import { snowball, avalanche, HORIZON_MONTHS } from "@/lib/debt-payoff";
 
 interface DebtRow {
   id: string; name: string; balance: number;
@@ -100,6 +100,9 @@ export const GET = apiRoute("read", (request) => {
     minimumPayment: d.minimum_payment,
   }));
   const bySnowball = snowball(forPayoff, extra);
+  // At the minimums alone, which is what "debt-free around" means on the debts page; none when
+  // the minimums never clear the debts.
+  const atMinimums = snowball(forPayoff, 0).months;
   const byAvalanche = avalanche(forPayoff, extra);
 
   return {
@@ -109,6 +112,7 @@ export const GET = apiRoute("read", (request) => {
     monthly_payments: Math.round(monthlyPayments * 100) / 100,
     paid_this_month: Math.round(debts.reduce((s, d) => s + d.paid_this_month, 0) * 100) / 100,
     months_to_debt_free: bySnowball.months > 0 ? bySnowball.months : null,
+    months_to_debt_free_at_minimums: atMinimums > 0 && atMinimums < HORIZON_MONTHS ? atMinimums : null,
     extra_payment: extra,
     payoff: {
       snowball: bySnowball,

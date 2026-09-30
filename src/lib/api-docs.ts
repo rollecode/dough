@@ -599,7 +599,7 @@ export const SECTIONS: Section[] = [
     title: "Debts",
     intro: "Open otherDebt accounts with the interest rate, minimum payment and due day kept beside them.",
     endpoints: [
-      { method: "GET", path: "/debts", scope: "read", summary: "Every open debt with its override fields." },
+      { method: "GET", path: "/debts", scope: "read", summary: "Every open debt with its override fields, the payoff plans for an extra monthly payment (extra=), and months_to_debt_free_at_minimums: when the minimums alone clear everything, or null when they never do." },
       {
         method: "POST",
         path: "/debts/update",

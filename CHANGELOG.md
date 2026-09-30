@@ -2,6 +2,7 @@
 
 * Stop the debt and investment tables jumping on hover
 * Set all small text to one size, 13 px
+* Give the API the debt-free month at minimum payments
 
 ### 4.6.0: 2026-09-30
 
