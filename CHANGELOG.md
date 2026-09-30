@@ -1,5 +1,6 @@
-### Unreleased
+### 4.4.0: 2026-09-30
 
+* Add the Revolut brand icon
 * Colour money left in a category green
 * Light the transactions dot only for someone else's entry
 * Search the API ledger by any field, amount included
