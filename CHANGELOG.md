@@ -1,3 +1,8 @@
+### Unreleased
+
+* Suggest categories over the API
+* Create a category while adding a transaction
+
 ### 4.5.0: 2026-09-30
 
 * Add a smart auto-assign that covers overspending first

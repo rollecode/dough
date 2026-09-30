@@ -364,6 +364,18 @@ export const SECTIONS: Section[] = [
     intro: "The envelopes themselves, and the targets that decide what auto-assign funds.",
     endpoints: [
       {
+        method: "GET",
+        path: "/categories/suggest",
+        scope: "read",
+        summary:
+          "The categories a picker should offer first for an entry: guess is the single best pick (a payee and amount always filed the same way, else the AI's), ranked the categories this payee or description is most often filed under.",
+        params: [
+          { name: "payee", type: "string", description: "The payee as typed." },
+          { name: "memo", type: "string", description: "The description, which often tells a generic payee apart." },
+          { name: "amount", type: "number", description: "The amount, for the payee and amount history." },
+        ],
+      },
+      {
         method: "POST",
         path: "/categories/create",
         scope: "write",
