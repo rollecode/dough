@@ -1,6 +1,6 @@
 "use client";
 
-import { calculatePayoff } from "@/lib/debt-payoff";
+import { calculatePayoff, HORIZON_MONTHS } from "@/lib/debt-payoff";
 import { Fragment, useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
@@ -44,7 +44,7 @@ import { ChartContainer } from "@/components/ui/chart-container";
 import { formatDuration } from "@/lib/date-utils";
 import { F } from "@/components/ui/f";
 import { BudgetLinkControl } from "@/components/shared/budget-link-control";
-import { DebtDonut } from "@/components/debts/debt-donut";
+import { DebtBreakdown } from "@/components/debts/debt-breakdown";
 
 interface DebtData {
   id: string;
@@ -329,6 +329,7 @@ export default function DebtsPage() {
   const totalMonthly = debts.reduce((s, d) => s + (d.minimumPayment || d.monthlyTarget), 0);
 
   const snowball = calculatePayoff(debts, extraPayment, (a, b) => a.balance - b.balance);
+  const atCurrentPayments = calculatePayoff(debts, 0, (a, b) => a.balance - b.balance);
   const avalanche = calculatePayoff(debts, extraPayment, (a, b) => b.interestRate - a.interestRate);
 
   if (loading) {
@@ -416,18 +417,18 @@ export default function DebtsPage() {
         </Card>
       </div>
 
-      {/* Debt breakdown donut */}
+      {/* Debt breakdown */}
       {debts.length > 0 && (
-        <DebtDonut
+        <DebtBreakdown
           debts={debts.map((d) => ({
             id: d.id,
             name: d.name,
             balance: d.balance,
             paidThisMonth: d.monthlyPayment || 0,
-            paidTotal: d.paidTotal || 0,
             percentPaid: d.percentPaid || 0,
             effectiveOriginal: d.originalAmount > 0 ? d.originalAmount : d.suggestedOriginal,
           }))}
+          debtFreeMonths={atCurrentPayments.months < HORIZON_MONTHS ? atCurrentPayments.months : 0}
         />
       )}
 

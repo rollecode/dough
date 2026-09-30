@@ -19,7 +19,7 @@ export interface Payoff {
 const ASSUMED_MINIMUM = 50;
 
 // Ten years. Past that the answer is "not on these payments", not a longer number.
-const HORIZON_MONTHS = 120;
+export const HORIZON_MONTHS = 120;
 
 export function calculatePayoff(
   debts: PayoffDebt[],
