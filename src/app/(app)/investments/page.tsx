@@ -71,7 +71,7 @@ interface TickerData {
 
 let tickerChartId = 0;
 
-function TickerChart({ data, dataMax, currency, fmt: fmtFn, range, height = 100 }: { data: SparkPoint[]; dataMax?: SparkPoint[]; currency: string; fmt: (v: number) => string; range: "1W" | "6M" | "MAX"; height?: number }) {
+function TickerChart({ data, dataMax, currency, fmt: fmtFn, range, height = 100, tooltip = true }: { data: SparkPoint[]; dataMax?: SparkPoint[]; currency: string; fmt: (v: number) => string; range: "1W" | "6M" | "MAX"; height?: number; tooltip?: boolean }) {
   const tooltipTrigger = useTooltipTrigger();
   const now = Date.now() / 1000;
   const cutoff = range === "1W" ? now - 7 * 86400 : range === "6M" ? now - 183 * 86400 : 0;
@@ -95,20 +95,22 @@ function TickerChart({ data, dataMax, currency, fmt: fmtFn, range, height = 100 
           </linearGradient>
         </defs>
         <YAxis hide domain={["dataMin", "dataMax"]} />
-        <Tooltip
-          trigger={tooltipTrigger}
-          content={({ active, payload }) => {
-            if (!active || !payload?.length) return null;
-            const val = Number(payload[0].value);
-            const label = String(payload[0].payload?.date || "");
-            return (
-              <div className="chart-tooltip">
-                <p className="chart-tooltip-label">{label}</p>
-                <p className="chart-tooltip-value" style={{ color, fontSize: "0.8125rem" }}>{fmtFn(val)} {currency}</p>
-              </div>
-            );
-          }}
-        />
+        {tooltip && (
+          <Tooltip
+            trigger={tooltipTrigger}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const val = Number(payload[0].value);
+              const label = String(payload[0].payload?.date || "");
+              return (
+                <div className="chart-tooltip">
+                  <p className="chart-tooltip-label">{label}</p>
+                  <p className="chart-tooltip-value" style={{ color, fontSize: "0.8125rem" }}>{fmtFn(val)} {currency}</p>
+                </div>
+              );
+            }}
+          />
+        )}
         <Area type="monotone" dataKey="price" stroke={color} strokeWidth={2} fill={`url(#${uid})`} dot={false} />
       </AreaChart>
     </ResponsiveContainer>
@@ -505,8 +507,8 @@ export default function InvestmentsPage() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                    <XAxis dataKey="year" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}${locale === "fi" ? "v" : "y"}`} />
-                    <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={55} />
+                    <XAxis dataKey="year" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}${locale === "fi" ? "v" : "y"}`} />
+                    <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={64} />
                     <Tooltip
                       trigger={tooltipTrigger}
                       content={({ active, payload, label }) =>
@@ -562,8 +564,8 @@ export default function InvestmentsPage() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => { const p = String(v).split("-"); return `${Number(p[2])}.${Number(p[1])}.`; }} interval="preserveStartEnd" />
-                      <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={55} />
+                      <XAxis dataKey="date" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => { const p = String(v).split("-"); return `${Number(p[2])}.${Number(p[1])}.`; }} interval="preserveStartEnd" />
+                      <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000000 ? `${(v / 1000000).toFixed(1)}M €` : v >= 1000 ? `${(v / 1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={64} />
                       <Tooltip
                         trigger={tooltipTrigger}
                         content={({ active, payload, label }) =>
@@ -645,6 +647,7 @@ export default function InvestmentsPage() {
       {/* Desktop: one line per holding; the arrow opens its price chart, range switch and fields */}
       {investments.length > 0 && (
         <Card className="list-card row-table-card">
+          <div className="row-table-scroll">
           <table className="row-table">
             <thead>
               <tr>
@@ -690,7 +693,7 @@ export default function InvestmentsPage() {
                         ) : "–"}
                       </td>
                       <td className="row-cell-trend">
-                        {td && <TickerChart data={td.sparkline || []} dataMax={td.sparklineMax} currency={td.currency} fmt={fmt} range="6M" height={32} />}
+                        {td && <TickerChart data={td.sparkline || []} dataMax={td.sparklineMax} currency={td.currency} fmt={fmt} range="6M" height={32} tooltip={false} />}
                       </td>
                       <td className="row-cell-toggle">
                         <button type="button" className="row-expand" aria-expanded={isOpen} aria-label={locale === "fi" ? (isOpen ? "Piilota kaavio ja tiedot" : "Näytä kaavio ja tiedot") : (isOpen ? "Hide chart and details" : "Show chart and details")} onClick={(e) => { e.stopPropagation(); toggle(); }}>
@@ -734,6 +737,7 @@ export default function InvestmentsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
     </div>

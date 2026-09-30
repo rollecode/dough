@@ -1086,7 +1086,7 @@
   margin: 0.25rem 0 0;
   padding: 0.5rem 0.625rem 0.375rem;
   border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.125rem;
   color: var(--muted-foreground);
   white-space: normal;
@@ -3910,7 +3910,7 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--muted-foreground);
 }
 
@@ -3918,7 +3918,13 @@
 .row-table-card {
   display: none;
   padding: 0;
+}
+
+/* The table scrolls inside its own box: the card's hover glow shifts itself by a few pixels, and on
+   a scrolling card that shift brought the scrollbars in and out as the mouse moved. */
+.row-table-scroll {
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 @media (min-width: 1024px) {
@@ -3937,7 +3943,7 @@
 }
 
 .row-table th {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--muted-foreground);
   text-align: left;

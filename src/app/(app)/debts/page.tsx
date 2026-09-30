@@ -65,7 +65,7 @@ interface DebtData {
 }
 
 // One debt's actual balance history: a sparkline, or with axes when a row is opened.
-function DebtSparkline({ data, uid, height = 56, detailed = false }: { data: { month: string; balance: number }[]; uid: string; height?: number; detailed?: boolean }) {
+function DebtSparkline({ data, uid, height = 56, detailed = false, tooltip = true }: { data: { month: string; balance: number }[]; uid: string; height?: number; detailed?: boolean; tooltip?: boolean }) {
   const { fmt, mask } = useLocale();
   const tooltipTrigger = useTooltipTrigger();
   return (
@@ -81,21 +81,23 @@ function DebtSparkline({ data, uid, height = 56, detailed = false }: { data: { m
           {detailed && (
             <>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v / 1000).toFixed(1)}k €` : `${Math.round(v)} €`)} width={56} />
+              <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v / 1000).toFixed(1)}k €` : `${Math.round(v)} €`)} width={65} />
             </>
           )}
-          <Tooltip
-            trigger={tooltipTrigger}
-            content={({ active, payload, label }) =>
-              active && payload?.length ? (
-                <div className="chart-tooltip">
-                  <p className="chart-tooltip-label">{String(label)}</p>
-                  <p className="chart-tooltip-value text-foreground">{fmt(Number(payload[0].value))} €</p>
-                </div>
-              ) : null
-            }
-          />
+          {tooltip && (
+            <Tooltip
+              trigger={tooltipTrigger}
+              content={({ active, payload, label }) =>
+                active && payload?.length ? (
+                  <div className="chart-tooltip">
+                    <p className="chart-tooltip-label">{String(label)}</p>
+                    <p className="chart-tooltip-value text-foreground">{fmt(Number(payload[0].value))} €</p>
+                  </div>
+                ) : null
+              }
+            />
+          )}
           <Area type="monotone" dataKey="balance" stroke="#f87171" strokeWidth={1.5} fill={`url(#debt-${uid})`} dot={false} />
         </AreaChart>
       </ResponsiveContainer>
@@ -500,6 +502,7 @@ export default function DebtsPage() {
       {/* Desktop: one line per debt; the arrow opens the row's chart and fields */}
       {debts.length > 0 && (
         <Card className="list-card row-table-card">
+          <div className="row-table-scroll">
           <table className="row-table">
             <thead>
               <tr>
@@ -547,7 +550,7 @@ export default function DebtsPage() {
                       <td className="is-num">{mask(`${debt.interestRate || 0} %`)}</td>
                       <td className="row-cell-trend">
                         {debt.history && debt.history.length > 1 && (
-                          <DebtSparkline data={debt.history} uid={`row-${debt.id.replace(/[^a-zA-Z0-9]/g, "")}`} height={32} />
+                          <DebtSparkline data={debt.history} uid={`row-${debt.id.replace(/[^a-zA-Z0-9]/g, "")}`} height={32} tooltip={false} />
                         )}
                       </td>
                       <td className="row-cell-toggle">
@@ -576,6 +579,7 @@ export default function DebtsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
 
@@ -635,8 +639,8 @@ export default function DebtsPage() {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                          <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                          <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={50} />
+                          <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                          <YAxis tick={{ fill: "#71717a", fontSize: 14 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${Math.round(v)} €`)} width={58} />
                           <Tooltip
                             trigger={tooltipTrigger}
                             content={({ active, payload, label }) =>

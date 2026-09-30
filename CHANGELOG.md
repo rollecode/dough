@@ -1,3 +1,7 @@
+### 4.6.1: 2026-09-30
+
+* Stop the debt and investment tables jumping on hover
+
 ### 4.6.0: 2026-09-30
 
 * Show debts as a table on desktop, opening to a large chart
