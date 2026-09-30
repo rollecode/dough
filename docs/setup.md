@@ -115,6 +115,7 @@ Restart=on-failure
 RestartSec=2
 TimeoutStopSec=5
 KillMode=mixed
+SuccessExitStatus=143
 Environment=NODE_ENV=production
 
 [Install]
