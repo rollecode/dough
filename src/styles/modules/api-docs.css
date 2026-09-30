@@ -181,7 +181,7 @@
 }
 
 .api-method {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 0.125rem 0.375rem;
@@ -200,7 +200,7 @@
 
 .api-scope,
 .api-note {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   border: 1px solid var(--glass-border, var(--border));
@@ -224,7 +224,7 @@
 }
 
 .api-fields h4 {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted-foreground);
@@ -249,12 +249,12 @@
 }
 
 .api-field-type {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--chart-3);
 }
 
 .api-field-required {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: var(--warning);
 }
 
