@@ -457,7 +457,7 @@ export default function DebtsPage() {
 
       {/* Debt list with editable fields */}
       {debts.length > 0 && (
-        <Card className="list-card debt-edit-grid debt-cards">
+        <Card className="list-card debt-edit-grid row-cards">
           {debts.map((debt, idx) => (
             <div key={debt.id} className="edit-item" draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDragEnd={handleDragEnd}>
               <div className="edit-item-header">
@@ -499,8 +499,8 @@ export default function DebtsPage() {
 
       {/* Desktop: one line per debt; the arrow opens the row's chart and fields */}
       {debts.length > 0 && (
-        <Card className="list-card debt-table-card">
-          <table className="debt-table">
+        <Card className="list-card row-table-card">
+          <table className="row-table">
             <thead>
               <tr>
                 <th aria-hidden="true" />
@@ -510,7 +510,7 @@ export default function DebtsPage() {
                 <th className="is-num">{locale === "fi" ? "Kk-maksu" : "Monthly"}</th>
                 <th>{locale === "fi" ? "Eräpv" : "Due day"}</th>
                 <th className="is-num">{locale === "fi" ? "Korko" : "Interest"}</th>
-                <th className="debt-cell-trend">{locale === "fi" ? "Kehitys" : "Trend"}</th>
+                <th className="row-cell-trend">{locale === "fi" ? "Kehitys" : "Trend"}</th>
                 <th aria-hidden="true" />
               </tr>
             </thead>
@@ -520,11 +520,11 @@ export default function DebtsPage() {
                 const toggle = () => setOpenDebt(isOpen ? null : debt.id);
                 return (
                   <Fragment key={debt.id}>
-                    <tr className={`debt-row ${isOpen ? "is-open" : ""}`} draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDragEnd={handleDragEnd} onClick={toggle}>
-                      <td className="debt-cell-grip"><GripVertical className="drag-handle" /></td>
+                    <tr className={`row-table-row ${isOpen ? "is-open" : ""}`} draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDragEnd={handleDragEnd} onClick={toggle}>
+                      <td className="row-cell-grip"><GripVertical className="drag-handle" /></td>
                       <td>
                         <div className="list-item-name-row">
-                          <span className="debt-table-name">{debt.name}</span>
+                          <span className="row-table-name">{debt.name}</span>
                           <button type="button" className={`priority-toggle ${debt.isPriority ? "is-priority" : ""}`} onClick={async (e) => { e.stopPropagation(); await fetch("/api/debts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ynab_account_id: debt.id, is_priority: debt.isPriority ? 0 : 1 }) }); setDebts((prev) => prev.map((d) => d.id === debt.id ? { ...d, isPriority: debt.isPriority ? 0 : 1 } : d)); }} title={locale === "fi" ? (debt.isPriority ? "Pakollinen" : "Merkitse pakolliseksi") : (debt.isPriority ? "Must-pay" : "Mark as must-pay")}>
                             <AlertCircle />
                           </button>
@@ -533,7 +533,7 @@ export default function DebtsPage() {
                           <p className="edit-item-meta">{locale === "fi" ? "Maksettu tässä kuussa" : "Paid this month"}: <F v={debt.monthlyPayment} /></p>
                         )}
                       </td>
-                      <td className="is-num debt-cell-balance"><F v={debt.balance} /></td>
+                      <td className="is-num row-cell-amount"><F v={debt.balance} /></td>
                       <td className="debt-cell-paid">
                         {debt.percentPaid > 0 && (
                           <>
@@ -545,25 +545,25 @@ export default function DebtsPage() {
                       <td className="is-num">{debt.minimumPayment > 0 ? <F v={debt.minimumPayment} /> : "–"}</td>
                       <td>{debt.dueDay > 0 ? `${debt.dueDay}.` : "–"}</td>
                       <td className="is-num">{mask(`${debt.interestRate || 0} %`)}</td>
-                      <td className="debt-cell-trend">
+                      <td className="row-cell-trend">
                         {debt.history && debt.history.length > 1 && (
                           <DebtSparkline data={debt.history} uid={`row-${debt.id.replace(/[^a-zA-Z0-9]/g, "")}`} height={32} />
                         )}
                       </td>
-                      <td className="debt-cell-toggle">
-                        <button type="button" className="debt-expand" aria-expanded={isOpen} aria-label={locale === "fi" ? (isOpen ? "Piilota kaavio ja tiedot" : "Näytä kaavio ja tiedot") : (isOpen ? "Hide chart and details" : "Show chart and details")} onClick={(e) => { e.stopPropagation(); toggle(); }}>
+                      <td className="row-cell-toggle">
+                        <button type="button" className="row-expand" aria-expanded={isOpen} aria-label={locale === "fi" ? (isOpen ? "Piilota kaavio ja tiedot" : "Näytä kaavio ja tiedot") : (isOpen ? "Hide chart and details" : "Show chart and details")} onClick={(e) => { e.stopPropagation(); toggle(); }}>
                           <ChevronDown />
                         </button>
                       </td>
                     </tr>
                     {isOpen && (
-                      <tr className="debt-row-detail">
+                      <tr className="row-table-detail">
                         <td colSpan={9}>
-                          <div className="debt-detail">
+                          <div className="row-detail">
                             {debt.history && debt.history.length > 1 && (
                               <DebtSparkline data={debt.history} uid={`big-${debt.id.replace(/[^a-zA-Z0-9]/g, "")}`} height={220} detailed />
                             )}
-                            <div className="debt-detail-edit">
+                            <div className="row-detail-edit">
                               <DebtFields debt={debt} saving={saving === debt.id} onChange={(f, v) => updateDebt(debt.id, f, v)} onSave={() => saveOverride(debt)} />
                               <BudgetLinkControl linkType="debt_account" targetId={debt.id} />
                             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { Card } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
   Check,
   GripVertical,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import {
   AreaChart,
@@ -70,7 +71,7 @@ interface TickerData {
 
 let tickerChartId = 0;
 
-function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: { data: SparkPoint[]; dataMax?: SparkPoint[]; positive: boolean; currency: string; fmt: (v: number) => string; range: "1W" | "6M" | "MAX" }) {
+function TickerChart({ data, dataMax, currency, fmt: fmtFn, range, height = 100 }: { data: SparkPoint[]; dataMax?: SparkPoint[]; currency: string; fmt: (v: number) => string; range: "1W" | "6M" | "MAX"; height?: number }) {
   const tooltipTrigger = useTooltipTrigger();
   const now = Date.now() / 1000;
   const cutoff = range === "1W" ? now - 7 * 86400 : range === "6M" ? now - 183 * 86400 : 0;
@@ -78,13 +79,14 @@ function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: {
   const filtered = cutoff > 0 ? source.filter((p) => p.t >= cutoff) : source;
   if (filtered.length < 2) return null;
   const uid = `tc-${++tickerChartId}`;
-  const color = positive ? "#4ade80" : "#f87171";
+  // Coloured by where the shown range went, not by today's move.
+  const color = filtered[filtered.length - 1].c >= filtered[0].c ? "#4ade80" : "#f87171";
   const chartData = filtered.map((p) => {
     const d = new Date(p.t * 1000);
     return { date: `${d.getDate()}.${d.getMonth() + 1}.${range === "MAX" ? d.getFullYear() : ""}`, price: p.c };
   });
   return (
-    <ResponsiveContainer width="100%" height={100}>
+    <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={chartData} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
@@ -92,7 +94,7 @@ function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: {
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <YAxis hide />
+        <YAxis hide domain={["dataMin", "dataMax"]} />
         <Tooltip
           trigger={tooltipTrigger}
           content={({ active, payload }) => {
@@ -113,6 +115,119 @@ function TickerChart({ data, dataMax, positive, currency, fmt: fmtFn, range }: {
   );
 }
 
+// What the ticker's own history made over the chart's span, which replaces the expected return
+// once there is a ticker; null without enough history.
+function tickerYearReturn(td: TickerData | null | undefined): number | null {
+  if (!td || !td.sparkline || td.sparkline.length < 2) return null;
+  const first = td.sparkline[0].c;
+  const last = td.sparkline[td.sparkline.length - 1].c;
+  return first > 0 ? Math.round(((last - first) / first) * 1000) / 10 : 0;
+}
+
+// One holding's figures and their save button, shared by the phone's cards and the desktop
+// table's opened row.
+function InvestmentFields({ inv, ticker, saving, onChange, onTicker, onSave }: { inv: InvestmentData; ticker: TickerData | null; saving: boolean; onChange: (field: keyof InvestmentData, value: number) => void; onTicker: (value: string) => void; onSave: () => void }) {
+  const { locale } = useLocale();
+  return (
+    <div className="list-edit-row">
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Arvo €" : "Value €"}</Label>
+        <Input
+          type="number"
+          step="1"
+          value={inv.balance || ""}
+          onChange={(e) => onChange("balance", parseFloat(e.target.value) || 0)}
+          placeholder="0"
+          className="list-edit-input"
+        />
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Lisätty nyt €" : "Added now €"}</Label>
+        <Input
+          type="number"
+          step="1"
+          value={inv.added || ""}
+          onChange={(e) => onChange("added", parseFloat(e.target.value) || 0)}
+          placeholder="0"
+          className="list-edit-input"
+        />
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Kk-sijoitus €" : "Monthly €"}</Label>
+        <Input
+          type="number"
+          step="1"
+          value={inv.monthlyContribution || ""}
+          onChange={(e) => onChange("monthlyContribution", parseFloat(e.target.value) || 0)}
+          placeholder="0"
+          className="list-edit-input"
+        />
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Tuotto %" : "Return %"}</Label>
+        {(() => {
+          const yearReturn = tickerYearReturn(ticker);
+          if (yearReturn !== null) {
+            return (
+              <Input
+                type="text"
+                value={`${yearReturn > 0 ? "+" : ""}${yearReturn}%`}
+                readOnly
+                className="list-edit-input"
+              />
+            );
+          }
+          return (
+            <Input
+              type="number"
+              step="0.1"
+              value={inv.expectedReturn || ""}
+              onChange={(e) => onChange("expectedReturn", parseFloat(e.target.value) || 0)}
+              placeholder="7"
+              className="list-edit-input"
+            />
+          );
+        })()}
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">Ticker</Label>
+        <Input
+          type="text"
+          value={inv.ticker || ""}
+          onChange={(e) => onTicker(e.target.value)}
+          placeholder="NVDA"
+          className="list-edit-input"
+          list={`ticker-suggest-${inv.id}`}
+        />
+        <datalist id={`ticker-suggest-${inv.id}`}>
+          <option value="^OMXH25" label="OMX Helsinki 25" />
+          <option value="^GSPC" label="S&P 500" />
+          <option value="^STOXX50E" label="Euro Stoxx 50" />
+          <option value="BTC-USD" label="Bitcoin" />
+          <option value="ETH-USD" label="Ethereum" />
+          <option value="NVDA" label="NVIDIA" />
+          <option value="AAPL" label="Apple" />
+          <option value="MSFT" label="Microsoft" />
+          <option value="TSLA" label="Tesla" />
+          <option value="AMZN" label="Amazon" />
+          <option value="VWCE.DE" label="Vanguard FTSE All-World (Revolut proxy)" />
+          <option value="SELIGSON:brands" label="Seligson Global Top 25 Brands" />
+          <option value="SELIGSON:suomi" label="Seligson Finland Index" />
+          <option value="SELIGSON:phoebus" label="Seligson Phoebus" />
+        </datalist>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        onClick={onSave}
+      >
+        {saving ? <Check /> : <Save />}
+      </Button>
+    </div>
+  );
+}
+
 export default function InvestmentsPage() {
   const { t, locale, fmt, mask } = useLocale();
   const tooltipTrigger = useTooltipTrigger();
@@ -126,6 +241,7 @@ export default function InvestmentsPage() {
   const [tickerData, setTickerData] = useState<Record<string, TickerData>>({});
   const [chartRange, setChartRange] = useState<"1W" | "6M" | "MAX">("6M");
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [openInvestment, setOpenInvestment] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const addFormRef = useRef<HTMLFormElement>(null);
 
@@ -477,7 +593,7 @@ export default function InvestmentsPage() {
 
       {/* Range filter + Investment accounts list */}
       {investments.length > 0 && (
-        <>
+        <div className="row-cards">
           <div className="chart-range-filter">
             {(["1W", "6M", "MAX"] as const).map((r) => (
               <button key={r} type="button" className={`chart-range-btn ${chartRange === r ? "is-active" : ""}`} onClick={() => setChartRange(r)}>
@@ -514,114 +630,111 @@ export default function InvestmentsPage() {
                         {td.dayChangePct >= 0 ? "+" : ""}{td.dayChangePct}% {locale === "fi" ? "tänään" : "today"}
                       </span>
                     </p>
-                    <TickerChart data={td.sparkline || []} dataMax={td.sparklineMax} positive={td.dayChangePct >= 0} currency={td.currency} fmt={fmt} range={chartRange} />
+                    <TickerChart data={td.sparkline || []} dataMax={td.sparklineMax} currency={td.currency} fmt={fmt} range={chartRange} />
                   </div>
                 );
               })()}
-              <div className="list-edit-row">
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Arvo €" : "Value €"}</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    value={inv.balance || ""}
-                    onChange={(e) => updateInvestment(inv.id, "balance", parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="list-edit-input"
-                  />
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Lisätty nyt €" : "Added now €"}</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    value={inv.added || ""}
-                    onChange={(e) => updateInvestment(inv.id, "added", parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="list-edit-input"
-                  />
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Kk-sijoitus €" : "Monthly €"}</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    value={inv.monthlyContribution || ""}
-                    onChange={(e) => updateInvestment(inv.id, "monthlyContribution", parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="list-edit-input"
-                  />
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Tuotto %" : "Return %"}</Label>
-                  {(() => {
-                    const td = inv.ticker ? tickerData[inv.ticker.toUpperCase()] : null;
-                    if (td && td.sparkline && td.sparkline.length >= 2) {
-                      const first = td.sparkline[0].c;
-                      const last = td.sparkline[td.sparkline.length - 1].c;
-                      const yearReturn = first > 0 ? Math.round(((last - first) / first) * 1000) / 10 : 0;
-                      return (
-                        <Input
-                          type="text"
-                          value={`${yearReturn > 0 ? "+" : ""}${yearReturn}%`}
-                          readOnly
-                          className="list-edit-input"
-                        />
-                      );
-                    }
-                    return (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        value={inv.expectedReturn || ""}
-                        onChange={(e) => updateInvestment(inv.id, "expectedReturn", parseFloat(e.target.value) || 0)}
-                        placeholder="7"
-                        className="list-edit-input"
-                      />
-                    );
-                  })()}
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">Ticker</Label>
-                  <Input
-                    type="text"
-                    value={inv.ticker || ""}
-                    onChange={(e) => setInvestments((prev) => prev.map((i) => i.id === inv.id ? { ...i, ticker: e.target.value } : i))}
-                    placeholder="NVDA"
-                    className="list-edit-input"
-                    list={`ticker-suggest-${inv.id}`}
-                  />
-                  <datalist id={`ticker-suggest-${inv.id}`}>
-                    <option value="^OMXH25" label="OMX Helsinki 25" />
-                    <option value="^GSPC" label="S&P 500" />
-                    <option value="^STOXX50E" label="Euro Stoxx 50" />
-                    <option value="BTC-USD" label="Bitcoin" />
-                    <option value="ETH-USD" label="Ethereum" />
-                    <option value="NVDA" label="NVIDIA" />
-                    <option value="AAPL" label="Apple" />
-                    <option value="MSFT" label="Microsoft" />
-                    <option value="TSLA" label="Tesla" />
-                    <option value="AMZN" label="Amazon" />
-                    <option value="VWCE.DE" label="Vanguard FTSE All-World (Revolut proxy)" />
-                    <option value="SELIGSON:brands" label="Seligson Global Top 25 Brands" />
-                    <option value="SELIGSON:suomi" label="Seligson Finland Index" />
-                    <option value="SELIGSON:phoebus" label="Seligson Phoebus" />
-                  </datalist>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => saveOverride(inv)}
-                >
-                  {saving === inv.id ? <Check /> : <Save />}
-                </Button>
-              </div>
+              <InvestmentFields inv={inv} ticker={inv.ticker ? tickerData[inv.ticker.toUpperCase()] : null} saving={saving === inv.id} onChange={(f, v) => updateInvestment(inv.id, f, v)} onTicker={(v) => setInvestments((prev) => prev.map((i) => i.id === inv.id ? { ...i, ticker: v } : i))} onSave={() => saveOverride(inv)} />
               <BudgetLinkControl linkType="investment_account" targetId={inv.id} />
             </div>
           ))}
         </Card>
-        </>
+        </div>
+      )}
+
+      {/* Desktop: one line per holding; the arrow opens its price chart, range switch and fields */}
+      {investments.length > 0 && (
+        <Card className="list-card row-table-card">
+          <table className="row-table">
+            <thead>
+              <tr>
+                <th aria-hidden="true" />
+                <th>{locale === "fi" ? "Sijoitus" : "Investment"}</th>
+                <th className="is-num">{locale === "fi" ? "Arvo" : "Value"}</th>
+                <th className="is-num">{locale === "fi" ? "Kk-sijoitus" : "Monthly"}</th>
+                <th className="is-num">{locale === "fi" ? "Tuotto" : "Return"}</th>
+                <th>{locale === "fi" ? "Kurssi tänään" : "Price today"}</th>
+                <th className="row-cell-trend">{locale === "fi" ? "Kehitys" : "Trend"}</th>
+                <th aria-hidden="true" />
+              </tr>
+            </thead>
+            <tbody>
+              {investments.map((inv, idx) => {
+                const td = inv.ticker ? tickerData[inv.ticker.toUpperCase()] : null;
+                const yearReturn = tickerYearReturn(td);
+                const isOpen = openInvestment === inv.id;
+                const toggle = () => setOpenInvestment(isOpen ? null : inv.id);
+                return (
+                  <Fragment key={inv.id}>
+                    <tr className={`row-table-row ${isOpen ? "is-open" : ""}`} draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDragEnd={handleDragEnd} onClick={toggle}>
+                      <td className="row-cell-grip"><GripVertical className="drag-handle" /></td>
+                      <td>
+                        <span className="row-table-name">{inv.name}</span>
+                        {inv.monthlyTransferred > 0 && (
+                          <p className="edit-item-meta">{locale === "fi" ? "Siirretty tässä kuussa" : "Transferred this month"}: <F v={inv.monthlyTransferred} /></p>
+                        )}
+                      </td>
+                      <td className="is-num row-cell-amount text-positive"><F v={inv.balance} /></td>
+                      <td className="is-num">{inv.monthlyContribution > 0 ? <F v={inv.monthlyContribution} /> : "–"}</td>
+                      <td className="is-num">
+                        {yearReturn !== null
+                          ? <span className={yearReturn >= 0 ? "text-positive" : "text-negative"}>{mask(`${yearReturn > 0 ? "+" : ""}${yearReturn} %`)}</span>
+                          : mask(`${inv.expectedReturn || 0} %`)}
+                      </td>
+                      <td>
+                        {td ? (
+                          <span className="row-ticker">
+                            <b>{inv.ticker.toUpperCase()}</b>
+                            <span className={td.dayChangePct >= 0 ? "text-positive" : "text-negative"}>{td.dayChangePct >= 0 ? "+" : ""}{td.dayChangePct} %</span>
+                          </span>
+                        ) : "–"}
+                      </td>
+                      <td className="row-cell-trend">
+                        {td && <TickerChart data={td.sparkline || []} dataMax={td.sparklineMax} currency={td.currency} fmt={fmt} range="6M" height={32} />}
+                      </td>
+                      <td className="row-cell-toggle">
+                        <button type="button" className="row-expand" aria-expanded={isOpen} aria-label={locale === "fi" ? (isOpen ? "Piilota kaavio ja tiedot" : "Näytä kaavio ja tiedot") : (isOpen ? "Hide chart and details" : "Show chart and details")} onClick={(e) => { e.stopPropagation(); toggle(); }}>
+                          <ChevronDown />
+                        </button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="row-table-detail">
+                        <td colSpan={8}>
+                          <div className="row-detail">
+                            {td && (
+                              <div className="row-chart-box">
+                                <div className="row-chart-head">
+                                  <span className="edit-item-meta">
+                                    {td.name}: {td.price.toLocaleString("fi-FI", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {td.currency}
+                                    {" "}
+                                    <span className={td.dayChangePct >= 0 ? "text-positive" : "text-negative"}>{td.dayChangePct >= 0 ? "+" : ""}{td.dayChangePct}% {locale === "fi" ? "tänään" : "today"}</span>
+                                  </span>
+                                  <div className="chart-range-filter">
+                                    {(["1W", "6M", "MAX"] as const).map((r) => (
+                                      <button key={r} type="button" className={`chart-range-btn ${chartRange === r ? "is-active" : ""}`} onClick={() => setChartRange(r)}>
+                                        {r}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <TickerChart data={td.sparkline || []} dataMax={td.sparklineMax} currency={td.currency} fmt={fmt} range={chartRange} height={200} />
+                              </div>
+                            )}
+                            <div className="row-detail-edit">
+                              <InvestmentFields inv={inv} ticker={td} saving={saving === inv.id} onChange={(f, v) => updateInvestment(inv.id, f, v)} onTicker={(v) => setInvestments((prev) => prev.map((i) => i.id === inv.id ? { ...i, ticker: v } : i))} onSave={() => saveOverride(inv)} />
+                              <BudgetLinkControl linkType="investment_account" targetId={inv.id} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
       )}
     </div>
   );

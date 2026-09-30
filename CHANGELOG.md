@@ -1,7 +1,9 @@
-### 4.5.1: 2026-09-30
+### 4.6.0: 2026-09-30
 
 * Show debts as a table on desktop, opening to a large chart
 * Show the debt breakdown as one bar with a debt-free date
+* Show investments as a table on desktop, opening to the price chart
+* Colour price charts by their own range, not today's move
 
 ### 4.5.0: 2026-09-30
 
