@@ -75,6 +75,12 @@ CRITICAL: Production runs on a remote server. After pushing, deploy by SSH: git 
 - Be concise, no repetition, one line per change
 - Always use changelog formatting: ### x.x.x: yyyy-mm-dd with headings, no main "Changelog" heading, no sub headings
 - Always use * as bullets in changelog
+- Never an "Unreleased" heading: a change deployed to production is released, so every deploy
+  carries a version heading, a `package.json` bump and a tag
+- Sensible semver, patch by default: a fix, a tweak or a small feature is a patch. Minor only when
+  something changes profoundly, major only for something like a full redesign of the UI
+- Several deploys in one day share one version: fold them into that day's heading instead of
+  bumping again
 
 ## Database
 
