@@ -130,6 +130,20 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
     if (open) { amountTouchedRef.current = false; memoTouchedRef.current = false; }
   }, [open]);
 
+  // A category typed in the picker that does not exist yet is created on the spot and selected.
+  const createCategory = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      const d = await (await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      })).json();
+      if (d.id) setBudgetCats((prev) => [...prev, { name: trimmed, group_name: "", available: 0 }]);
+    } catch (err) { console.warn("[add-expense] create category failed:", err); }
+  };
+
   const resolveAccountFromMemo = async (memo: string) => {
     if (!memo.trim()) return;
     try {
@@ -532,6 +546,8 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
                     searchPlaceholder={locale === "fi" ? "Hae…" : "Search…"}
                     suggestions={catSuggestions}
                     suggestionsLabel={locale === "fi" ? "Ehdotukset" : "Suggested"}
+                    onCreate={createCategory}
+                    createLabel={(q) => (locale === "fi" ? `Luo "${q}"` : `Create "${q}"`)}
                   />
                 </div>
               )}
