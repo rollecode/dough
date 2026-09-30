@@ -3913,3 +3913,165 @@
   font-size: 0.75rem;
   color: var(--muted-foreground);
 }
+
+/* Debts on desktop: a table with one line per debt, opened in place; the cards stay for phones. */
+.debt-table-card {
+  display: none;
+  padding: 0;
+  overflow-x: auto;
+}
+
+@media (min-width: 1024px) {
+  .debt-cards {
+    display: none;
+  }
+  .debt-table-card {
+    display: block;
+  }
+}
+
+.debt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-table th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-align: left;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+}
+
+.debt-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.debt-table .is-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.debt-row {
+  cursor: pointer;
+}
+
+.debt-row:hover td,
+.debt-row.is-open td,
+.debt-row-detail td {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.debt-row.is-open td {
+  border-bottom: none;
+}
+
+.debt-table-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debt-cell-grip {
+  width: 1.5rem;
+  padding-right: 0 !important;
+}
+
+.debt-cell-balance {
+  font-size: 1rem !important;
+  font-weight: 600;
+}
+
+.debt-cell-paid {
+  width: 11rem;
+}
+
+.debt-cell-paid .debt-progress {
+  margin-bottom: 0.25rem;
+}
+
+.debt-cell-trend {
+  width: 8rem;
+}
+
+.debt-cell-trend .debt-spark {
+  margin: 0;
+}
+
+.debt-cell-toggle {
+  width: 2.75rem;
+  text-align: right;
+}
+
+.debt-expand {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.debt-expand:hover,
+.debt-expand:focus-visible {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.debt-expand svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  transition: transform 0.15s ease;
+}
+
+.debt-expand[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.debt-row-detail td {
+  padding-top: 0;
+}
+
+.debt-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 0.25rem 0.5rem;
+}
+
+.debt-detail-edit {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1.5rem;
+  align-items: end;
+}
+
+/* In an opened row the five fields and their save button share one line. */
+.debt-detail .list-edit-row {
+  flex-wrap: nowrap;
+  border-top: none;
+  margin-top: 0;
+}
+
+.debt-detail .list-edit-field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Too narrow for the small chart beside everything else, as on a tablet held upright: the opened
+   row still has the large one. */
+@media (max-width: 1399px) {
+  .debt-cell-trend {
+    display: none;
+  }
+  .debt-detail-edit {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}

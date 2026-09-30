@@ -1,3 +1,7 @@
+### 4.5.1: 2026-09-30
+
+* Show debts as a table on desktop, opening to a large chart
+
 ### 4.5.0: 2026-09-30
 
 * Add a smart auto-assign that covers overspending first

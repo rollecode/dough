@@ -1,7 +1,7 @@
 "use client";
 
 import { calculatePayoff } from "@/lib/debt-payoff";
-import { useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef } from "react";
 import { useLocale } from "@/lib/locale-context";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { Card } from "@/components/ui/card";
@@ -29,6 +29,7 @@ import {
   Check,
   GripVertical,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import {
   AreaChart,
@@ -63,20 +64,27 @@ interface DebtData {
   history?: { month: string; balance: number }[];
 }
 
-// Compact actual-balance history sparkline for one debt.
-function DebtSparkline({ data, uid }: { data: { month: string; balance: number }[]; uid: string }) {
-  const { fmt } = useLocale();
+// One debt's actual balance history: a sparkline, or with axes when a row is opened.
+function DebtSparkline({ data, uid, height = 56, detailed = false }: { data: { month: string; balance: number }[]; uid: string; height?: number; detailed?: boolean }) {
+  const { fmt, mask } = useLocale();
   const tooltipTrigger = useTooltipTrigger();
   return (
     <div className="debt-spark">
-      <ResponsiveContainer width="100%" height={56}>
-        <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={height}>
+        <AreaChart data={data} margin={{ top: 4, right: detailed ? 4 : 0, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id={`debt-${uid}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#f87171" stopOpacity={0.28} />
               <stop offset="100%" stopColor="#f87171" stopOpacity={0} />
             </linearGradient>
           </defs>
+          {detailed && (
+            <>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: "#71717a", fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => mask(v >= 1000 ? `${(v / 1000).toFixed(1)}k €` : `${Math.round(v)} €`)} width={56} />
+            </>
+          )}
           <Tooltip
             trigger={tooltipTrigger}
             content={({ active, payload, label }) =>
@@ -95,6 +103,81 @@ function DebtSparkline({ data, uid }: { data: { month: string; balance: number }
   );
 }
 
+// The five figures of one debt and their save button, shared by the phone's cards and the
+// desktop table's opened row.
+function DebtFields({ debt, saving, onChange, onSave }: { debt: DebtData; saving: boolean; onChange: (field: keyof DebtData, value: number) => void; onSave: () => void }) {
+  const { locale } = useLocale();
+  return (
+    <div className="list-edit-row">
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Alkup. €" : "Original €"}</Label>
+        <Input
+          type="number"
+          step="1"
+          value={debt.originalAmount || ""}
+          onChange={(e) => onChange("originalAmount", parseFloat(e.target.value) || 0)}
+          placeholder={debt.suggestedOriginal ? String(Math.round(debt.suggestedOriginal)) : "0"}
+          className="list-edit-input"
+        />
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Saldo €" : "Balance €"}</Label>
+        <Input
+          type="number"
+          step="1"
+          value={debt.balance || ""}
+          onChange={(e) => onChange("balance", parseFloat(e.target.value) || 0)}
+          placeholder="0"
+          className="list-edit-input"
+        />
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Korko %" : "Interest %"}</Label>
+        <Input
+          type="number"
+          step="0.1"
+          value={debt.interestRate || ""}
+          onChange={(e) => onChange("interestRate", parseFloat(e.target.value) || 0)}
+          placeholder="0"
+          className="list-edit-input"
+        />
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Kk-maksu €" : "Monthly €"}</Label>
+        <Input
+          type="number"
+          step="1"
+          value={debt.minimumPayment || ""}
+          onChange={(e) => onChange("minimumPayment", parseFloat(e.target.value) || 0)}
+          placeholder={debt.monthlyTarget ? String(debt.monthlyTarget) : "0"}
+          className="list-edit-input"
+        />
+      </div>
+      <div className="list-edit-field">
+        <Label className="list-edit-label">{locale === "fi" ? "Eräpv" : "Due day"}</Label>
+        <Input
+          type="number"
+          step="1"
+          min="0"
+          max="31"
+          value={debt.dueDay || ""}
+          onChange={(e) => onChange("dueDay", parseInt(e.target.value) || 0)}
+          placeholder="0"
+          className="list-edit-input"
+        />
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        onClick={onSave}
+      >
+        {saving ? <Check /> : <Save />}
+      </Button>
+    </div>
+  );
+}
+
 export default function DebtsPage() {
   const { t, locale, fmt, mask } = useLocale();
   const tooltipTrigger = useTooltipTrigger();
@@ -106,6 +189,7 @@ export default function DebtsPage() {
   const [aiHidden, setAiHidden] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [openDebt, setOpenDebt] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const addFormRef = useRef<HTMLFormElement>(null);
 
@@ -372,7 +456,7 @@ export default function DebtsPage() {
 
       {/* Debt list with editable fields */}
       {debts.length > 0 && (
-        <Card className="list-card debt-edit-grid">
+        <Card className="list-card debt-edit-grid debt-cards">
           {debts.map((debt, idx) => (
             <div key={debt.id} className="edit-item" draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDragEnd={handleDragEnd}>
               <div className="edit-item-header">
@@ -405,76 +489,92 @@ export default function DebtsPage() {
               {debt.history && debt.history.length > 1 && (
                 <DebtSparkline data={debt.history} uid={debt.id.replace(/[^a-zA-Z0-9]/g, "")} />
               )}
-              <div className="list-edit-row">
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Alkup. €" : "Original €"}</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    value={debt.originalAmount || ""}
-                    onChange={(e) => updateDebt(debt.id, "originalAmount", parseFloat(e.target.value) || 0)}
-                    placeholder={debt.suggestedOriginal ? String(Math.round(debt.suggestedOriginal)) : "0"}
-                    className="list-edit-input"
-                  />
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Saldo €" : "Balance €"}</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    value={debt.balance || ""}
-                    onChange={(e) => updateDebt(debt.id, "balance", parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="list-edit-input"
-                  />
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Korko %" : "Interest %"}</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={debt.interestRate || ""}
-                    onChange={(e) => updateDebt(debt.id, "interestRate", parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="list-edit-input"
-                  />
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Kk-maksu €" : "Monthly €"}</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    value={debt.minimumPayment || ""}
-                    onChange={(e) => updateDebt(debt.id, "minimumPayment", parseFloat(e.target.value) || 0)}
-                    placeholder={debt.monthlyTarget ? String(debt.monthlyTarget) : "0"}
-                    className="list-edit-input"
-                  />
-                </div>
-                <div className="list-edit-field">
-                  <Label className="list-edit-label">{locale === "fi" ? "Eräpv" : "Due day"}</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    max="31"
-                    value={debt.dueDay || ""}
-                    onChange={(e) => updateDebt(debt.id, "dueDay", parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                    className="list-edit-input"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => saveOverride(debt)}
-                >
-                  {saving === debt.id ? <Check /> : <Save />}
-                </Button>
-              </div>
+              <DebtFields debt={debt} saving={saving === debt.id} onChange={(f, v) => updateDebt(debt.id, f, v)} onSave={() => saveOverride(debt)} />
               <BudgetLinkControl linkType="debt_account" targetId={debt.id} />
             </div>
           ))}
+        </Card>
+      )}
+
+      {/* Desktop: one line per debt; the arrow opens the row's chart and fields */}
+      {debts.length > 0 && (
+        <Card className="list-card debt-table-card">
+          <table className="debt-table">
+            <thead>
+              <tr>
+                <th aria-hidden="true" />
+                <th>{locale === "fi" ? "Velka" : "Debt"}</th>
+                <th className="is-num">{locale === "fi" ? "Saldo" : "Balance"}</th>
+                <th>{locale === "fi" ? "Maksettu" : "Paid"}</th>
+                <th className="is-num">{locale === "fi" ? "Kk-maksu" : "Monthly"}</th>
+                <th>{locale === "fi" ? "Eräpv" : "Due day"}</th>
+                <th className="is-num">{locale === "fi" ? "Korko" : "Interest"}</th>
+                <th className="debt-cell-trend">{locale === "fi" ? "Kehitys" : "Trend"}</th>
+                <th aria-hidden="true" />
+              </tr>
+            </thead>
+            <tbody>
+              {debts.map((debt, idx) => {
+                const isOpen = openDebt === debt.id;
+                const toggle = () => setOpenDebt(isOpen ? null : debt.id);
+                return (
+                  <Fragment key={debt.id}>
+                    <tr className={`debt-row ${isOpen ? "is-open" : ""}`} draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDragEnd={handleDragEnd} onClick={toggle}>
+                      <td className="debt-cell-grip"><GripVertical className="drag-handle" /></td>
+                      <td>
+                        <div className="list-item-name-row">
+                          <span className="debt-table-name">{debt.name}</span>
+                          <button type="button" className={`priority-toggle ${debt.isPriority ? "is-priority" : ""}`} onClick={async (e) => { e.stopPropagation(); await fetch("/api/debts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ynab_account_id: debt.id, is_priority: debt.isPriority ? 0 : 1 }) }); setDebts((prev) => prev.map((d) => d.id === debt.id ? { ...d, isPriority: debt.isPriority ? 0 : 1 } : d)); }} title={locale === "fi" ? (debt.isPriority ? "Pakollinen" : "Merkitse pakolliseksi") : (debt.isPriority ? "Must-pay" : "Mark as must-pay")}>
+                            <AlertCircle />
+                          </button>
+                        </div>
+                        {debt.monthlyPayment > 0 && (
+                          <p className="edit-item-meta">{locale === "fi" ? "Maksettu tässä kuussa" : "Paid this month"}: <F v={debt.monthlyPayment} /></p>
+                        )}
+                      </td>
+                      <td className="is-num debt-cell-balance"><F v={debt.balance} /></td>
+                      <td className="debt-cell-paid">
+                        {debt.percentPaid > 0 && (
+                          <>
+                            <Progress value={debt.percentPaid} className="debt-progress" />
+                            <span className="debt-progress-label">{mask(`${debt.percentPaid} %`)} · <F v={debt.originalAmount > 0 ? debt.originalAmount : debt.suggestedOriginal} /></span>
+                          </>
+                        )}
+                      </td>
+                      <td className="is-num">{debt.minimumPayment > 0 ? <F v={debt.minimumPayment} /> : "–"}</td>
+                      <td>{debt.dueDay > 0 ? `${debt.dueDay}.` : "–"}</td>
+                      <td className="is-num">{mask(`${debt.interestRate || 0} %`)}</td>
+                      <td className="debt-cell-trend">
+                        {debt.history && debt.history.length > 1 && (
+                          <DebtSparkline data={debt.history} uid={`row-${debt.id.replace(/[^a-zA-Z0-9]/g, "")}`} height={32} />
+                        )}
+                      </td>
+                      <td className="debt-cell-toggle">
+                        <button type="button" className="debt-expand" aria-expanded={isOpen} aria-label={locale === "fi" ? (isOpen ? "Piilota kaavio ja tiedot" : "Näytä kaavio ja tiedot") : (isOpen ? "Hide chart and details" : "Show chart and details")} onClick={(e) => { e.stopPropagation(); toggle(); }}>
+                          <ChevronDown />
+                        </button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="debt-row-detail">
+                        <td colSpan={9}>
+                          <div className="debt-detail">
+                            {debt.history && debt.history.length > 1 && (
+                              <DebtSparkline data={debt.history} uid={`big-${debt.id.replace(/[^a-zA-Z0-9]/g, "")}`} height={220} detailed />
+                            )}
+                            <div className="debt-detail-edit">
+                              <DebtFields debt={debt} saving={saving === debt.id} onChange={(f, v) => updateDebt(debt.id, f, v)} onSave={() => saveOverride(debt)} />
+                              <BudgetLinkControl linkType="debt_account" targetId={debt.id} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </Card>
       )}
 
