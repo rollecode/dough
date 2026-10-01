@@ -1,6 +1,7 @@
 ### 4.7.0: 2026-10-01
 
 * Let subscriptions recur yearly or every few months, like bills
+* Show Strava's own mark
 * Count a yearly bill only in the month it falls due
 * Offer every API endpoint as an MCP tool
 * Keep debt and investment fields an update does not send
