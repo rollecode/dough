@@ -187,6 +187,11 @@ Live update events carry the household they happened in and reach only that hous
 How a request is matched to its household (by host name, for example) is the hosting service's
 business and not part of this repository.
 
+AI calls run on a household's own Anthropic key when it has saved one. A hosted instance can lend
+its own key to the rest by setting `DOUGH_AI_MONTHLY_CAP_USD`: each household may then spend up to
+that much a month, counted from the CLI's reported cost, and calls stop with a plain message once
+it is used up. A self-hosted instance sets neither and runs on whatever the CLI is signed in with.
+
 ### CSS naming convention
 
 - Module root: `.card`, `.button`, `.dialog`
