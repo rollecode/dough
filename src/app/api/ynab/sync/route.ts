@@ -86,6 +86,7 @@ export async function GET() {
         categories,
       },
       syncedAt,
+      recentTransactions: recentTransactions(db),
     };
 
     try {
@@ -110,6 +111,13 @@ export async function GET() {
     console.error("[api/ynab/sync] Cache GET error:", error);
     return NextResponse.json({ success: false, error: "Failed to read cache" }, { status: 500 });
   }
+}
+
+// The dashboard's newest entries, read past the 1st so the list is not empty early in the month.
+function recentTransactions(db: import("better-sqlite3").Database) {
+  return db.prepare(
+    "SELECT ynab_id AS id, date, amount, payee, category FROM transactions GROUP BY ynab_id ORDER BY date DESC, MAX(rowid) DESC LIMIT 30"
+  ).all() as { id: string; date: string; amount: number; payee: string; category: string }[];
 }
 
 export async function POST(request: Request) {
@@ -400,7 +408,8 @@ export async function POST(request: Request) {
     eventBus.emit("sync:complete", { syncedAt });
     eventBus.emit("data:updated", { source: "ynab-sync" });
 
-    return NextResponse.json({ success: true, data: responseData });
+    const { getDb: getRecentDb } = await import("@/lib/db");
+    return NextResponse.json({ success: true, data: { ...responseData, recentTransactions: recentTransactions(getRecentDb()) } });
   } catch (error) {
     console.error("[api/ynab/sync] Error:", error);
     const message = error instanceof Error ? error.message : "Failed to sync with YNAB";

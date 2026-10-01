@@ -50,6 +50,7 @@ interface YnabData {
   transactions: YnabTransaction[];
   monthBudget: YnabMonthBudget;
   syncedAt: string;
+  recentTransactions?: { id: string; date: string; amount: number; payee: string; category: string }[];
 }
 
 interface YnabContextValue {
