@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "crypto";
 import { getDb } from "./db";
+import { SECRET_SETTINGS, openSecret, sealSecret } from "./secrets";
 
 // Constant-time string comparison for secrets (cron header vs stored value), so the comparison
 // time does not leak how many leading characters match. Returns false for empty/missing values.
@@ -14,7 +15,8 @@ export function secretsEqual(a: string | null | undefined, b: string | null | un
 export function getHouseholdSetting(key: string): string | null {
   const db = getDb();
   const row = db.prepare("SELECT value FROM household_settings WHERE key = ?").get(key) as { value: string } | undefined;
-  return row?.value ?? null;
+  if (!row) return null;
+  return SECRET_SETTINGS.has(key) ? openSecret(row.value) : row.value;
 }
 
 export function setHouseholdSetting(key: string, value: string): void {
@@ -22,7 +24,7 @@ export function setHouseholdSetting(key: string, value: string): void {
   db.prepare(`
     INSERT INTO household_settings (key, value) VALUES (?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
-  `).run(key, value);
+  `).run(key, SECRET_SETTINGS.has(key) ? sealSecret(value) : value);
   console.info("[household] Setting saved:", key);
 }
 
@@ -31,7 +33,7 @@ export function getHouseholdSettings(): Record<string, string> {
   const rows = db.prepare("SELECT key, value FROM household_settings").all() as { key: string; value: string }[];
   const settings: Record<string, string> = {};
   for (const row of rows) {
-    settings[row.key] = row.value;
+    settings[row.key] = SECRET_SETTINGS.has(row.key) ? openSecret(row.value) : row.value;
   }
   return settings;
 }

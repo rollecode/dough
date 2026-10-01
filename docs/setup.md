@@ -26,6 +26,7 @@ cp .env.local.example .env.local
 Edit `.env.local`:
 
 - `SESSION_SECRET` — random string for JWT signing
+- `DOUGH_ENCRYPTION_KEY` — optional, 32 random bytes (`openssl rand -hex 32`). When set, bank sync, YNAB and AI credentials are encrypted in the database. Run `npx tsx scripts/seal-secrets.ts` once to encrypt the ones already saved. Keep the key: without it those credentials cannot be read and have to be entered again
 - `YNAB_ACCESS_TOKEN` — optional, can be set via settings UI instead
 - `YNAB_BUDGET_ID` — optional, can be set via settings UI instead
 - `CLAUDE_PATH` — path to claude CLI binary, defaults to `claude` in PATH
