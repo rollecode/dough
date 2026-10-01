@@ -39,6 +39,8 @@ export async function GET() {
         budget_threshold_good: settings.budget_threshold_good || "50",
         budget_mode: settings.budget_mode || "rolling",
         synci_api_token: settings.synci_api_token ? "••••••••" : null,
+        gemini_key_set: !!settings.gemini_api_key,
+        anthropic_key_set: !!settings.anthropic_api_key,
         synci_accounts: settings.synci_accounts || null,
         synci_account_mapping: settings.synci_account_mapping || null,
         synci_last_sync: settings.synci_last_sync || null,

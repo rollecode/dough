@@ -69,6 +69,8 @@ export default function SettingsPage() {
   const [thresholdsSaved, setThresholdsSaved] = useState(false);
   const [aiModels, setAiModels] = useState({ categorize: "gemini-2.5-flash", chat: "opus", vision: "opus" });
   const [geminiKey, setGeminiKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [keysSet, setKeysSet] = useState({ gemini: false, anthropic: false });
   const [aiModelsSaved, setAiModelsSaved] = useState(false);
   const [accountsSaved, setAccountsSaved] = useState(false);
   const [accountNotes, setAccountNotes] = useState<Record<string, string>>({});
@@ -168,7 +170,7 @@ export default function SettingsPage() {
           if (householdData.settings?.ai_model_categorize) setAiModels((p) => ({ ...p, categorize: householdData.settings.ai_model_categorize }));
           if (householdData.settings?.ai_model_chat) setAiModels((p) => ({ ...p, chat: householdData.settings.ai_model_chat }));
           if (householdData.settings?.ai_model_vision) setAiModels((p) => ({ ...p, vision: householdData.settings.ai_model_vision }));
-          if (householdData.settings?.gemini_api_key) setGeminiKey(householdData.settings.gemini_api_key);
+          setKeysSet({ gemini: !!householdData.settings?.gemini_key_set, anthropic: !!householdData.settings?.anthropic_key_set });
           if (householdData.settings?.synci_api_token) {
             setSynciConnected(true);
             setSynciToken("••••••••");
@@ -650,28 +652,38 @@ export default function SettingsPage() {
               ))}
               {aiModelsSaved && <span className="settings-saved">{t.common.saved}</span>}
             </div>
-            <div className="form-field">
-              <Label>{locale === "fi" ? "Gemini API-avain (valinnainen)" : "Gemini API key (optional)"}</Label>
-              <Input
-                type="password"
-                value={geminiKey}
-                placeholder={locale === "fi" ? "Tarvitaan vain Gemini-malleille" : "Only needed for Gemini models"}
-                onChange={(e) => setGeminiKey(e.target.value)}
-                onBlur={async () => {
-                  await fetch("/api/household", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ gemini_api_key: geminiKey }),
-                  });
-                  setAiModelsSaved(true);
-                  setTimeout(() => setAiModelsSaved(false), 2000);
-                }}
-              />
-            </div>
+            {([
+              ["gemini", "gemini_api_key", geminiKey, setGeminiKey, locale === "fi" ? "Gemini API-avain (valinnainen)" : "Gemini API key (optional)", locale === "fi" ? "Tarvitaan vain Gemini-malleille" : "Only needed for Gemini models"],
+              ["anthropic", "anthropic_api_key", anthropicKey, setAnthropicKey, locale === "fi" ? "Anthropic API-avain (valinnainen)" : "Anthropic API key (optional)", locale === "fi" ? "Clauden kutsut omalla avaimellasi" : "Claude calls on your own key"],
+            ] as const).map(([id, setting, value, setValue, label, hint]) => (
+              <div className="form-field" key={id}>
+                <Label htmlFor={`ai-key-${id}`}>{label}</Label>
+                <Input
+                  id={`ai-key-${id}`}
+                  type="password"
+                  value={value}
+                  placeholder={keysSet[id] ? (locale === "fi" ? "Tallennettu, kirjoita korvataksesi" : "Saved, type to replace") : hint}
+                  onChange={(e) => setValue(e.target.value)}
+                  onBlur={async () => {
+                    // Saved only when something was typed; an empty field never clears a saved key.
+                    if (!value.trim()) return;
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ [setting]: value.trim() }),
+                    });
+                    setValue("");
+                    setKeysSet((k) => ({ ...k, [id]: true }));
+                    setAiModelsSaved(true);
+                    setTimeout(() => setAiModelsSaved(false), 2000);
+                  }}
+                />
+              </div>
+            ))}
             <p className="settings-help">
               {locale === "fi"
-                ? "Päivittäiset tehtävät (kategorisointi) kannattaa ajaa nopealla ja halvalla Gemini 2.5 Flashilla (vaatii API-avaimen). Vaativat tehtävät (Dougie, kuitit) käyttävät Claude Opusta CLI:n kautta, joka kuuluu tilaukseen. Ilman Gemini-avainta kategorisointi putoaa takaisin Haikuun."
-                : "Run daily tasks (categorizing) on fast, cheap Gemini 2.5 Flash (needs the API key). Demanding tasks (Dougie, receipts) use Claude Opus via the CLI, covered by the subscription. Without a Gemini key, categorizing falls back to Haiku."}
+                ? "Päivittäiset tehtävät (kategorisointi) kannattaa ajaa nopealla ja halvalla Gemini 2.5 Flashilla (vaatii API-avaimen). Vaativat tehtävät (Dougie, kuitit) käyttävät Claude Opusta CLI:n kautta, joka kuuluu tilaukseen. Ilman Gemini-avainta kategorisointi putoaa takaisin Haikuun. Anthropic-avaimella Claude käyttää sitä."
+                : "Run daily tasks (categorizing) on fast, cheap Gemini 2.5 Flash (needs the API key). Demanding tasks (Dougie, receipts) use Claude Opus via the CLI, covered by the subscription. Without a Gemini key, categorizing falls back to Haiku. With an Anthropic key, Claude runs on that key instead."}
             </p>
           </CardContent>
         </Card>
