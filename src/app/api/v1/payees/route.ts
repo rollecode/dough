@@ -17,6 +17,7 @@ interface UsageRow {
   account_id: string;
   amount: number;
   date: string;
+  memo: string;
 }
 
 export const GET = apiRoute("read", (request) => {
@@ -33,7 +34,7 @@ export const GET = apiRoute("read", (request) => {
   const usage = db
     .prepare(
       `SELECT payee, COALESCE(category, '') AS category, COALESCE(account_id, '') AS account_id, ` +
-        `amount, date FROM transactions WHERE LOWER(payee) IN (${placeholders}) AND ${NOT_MACHINE_PAYEE} ` +
+        `amount, date, CASE WHEN COALESCE(memo, '') = 'Synci' THEN '' ELSE COALESCE(memo, '') END AS memo FROM transactions WHERE LOWER(payee) IN (${placeholders}) AND ${NOT_MACHINE_PAYEE} ` +
         `ORDER BY date DESC`
     )
     .all(...names) as UsageRow[];
@@ -67,6 +68,8 @@ export const GET = apiRoute("read", (request) => {
       category: commonest(rows.map((r) => r.category)),
       account_id: commonest(rows.map((r) => r.account_id)),
       last_amount: latest ? Math.round(Math.abs(latest.amount) * 100) / 100 : null,
+      // What the web's add dialog fills in as the description; the import marker never counts.
+      last_memo: latest?.memo || null,
       // An inflow payee (a salary, a refund) should not be offered as an expense by default.
       inflow: latest ? latest.amount > 0 : false,
     };

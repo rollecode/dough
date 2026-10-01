@@ -167,7 +167,7 @@ export const SECTIONS: Section[] = [
         path: "/payees",
         scope: "read",
         summary:
-          "The payees this household uses, most used first, each with the category it is usually filed under, the account it is usually paid from and what it last cost. A client can complete an entry from this without asking again, and it keeps working offline. The category is stated only when the history agrees, so an inconsistently filed payee gets none rather than a wrong guess.",
+          "The payees this household uses, most used first, each with the category it is usually filed under, the account it is usually paid from, what it last cost and its last description. A client can complete an entry from this without asking again, and it keeps working offline. The category is stated only when the history agrees, so an inconsistently filed payee gets none rather than a wrong guess.",
         params: [{ name: "limit", type: "number", description: "1 to 1000, default 300." }],
       },
       {
