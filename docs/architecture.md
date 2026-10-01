@@ -172,6 +172,21 @@ Polls Synci REST API every 30 minutes via systemd timer (see setup.md). Per mapp
 4. Exempted: `/api/auth`, `/api/events`, `/api/synci/sync` (cron secret)
 5. Unauthenticated requests redirect to `/login`
 
+### Hosting several households
+
+A self-hosted instance is one household and one database file, and nothing below changes that.
+
+A hosted service can serve many households from one process. It wraps each request in
+`runWithHousehold({ id, dbPath }, handler)` from `src/lib/db.ts`, and `getDb()` then answers with
+that household's file, opening it and running the schema migrations on first use. The household is
+held in an `AsyncLocalStorage` kept at `globalThis.__doughHousehold`, so a server outside Next's
+bundle and the code inside it share the same one. Everything a household owns lives in its file:
+users, sessions' session versions, API keys, OAuth clients and tokens, settings and credentials.
+Live update events carry the household they happened in and reach only that household's streams.
+
+How a request is matched to its household (by host name, for example) is the hosting service's
+business and not part of this repository.
+
 ### CSS naming convention
 
 - Module root: `.card`, `.button`, `.dialog`

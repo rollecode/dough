@@ -1,28 +1,62 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { AsyncLocalStorage } from "async_hooks";
 
 // Overridable so a throwaway database (the demo seed) can be opened without touching the real one.
 const DB_PATH = process.env.DOUGH_DB_PATH
   ? path.resolve(process.env.DOUGH_DB_PATH)
   : path.join(process.cwd(), "data", "dough.db");
 
-// Ensure data directory exists
-const dataDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
 let _db: Database.Database | null = null;
 
+// A hosted instance serves many households from one process, each in its own database file. The
+// server in front of the app runs every request inside `runWithHousehold`, and getDb() answers with
+// that household's file. With no household set, as when self-hosted, it is the one database above.
+// The store sits on globalThis so code outside Next's bundle shares the same one.
+export interface Household {
+  id: string;
+  dbPath: string;
+}
+
+const shared = globalThis as typeof globalThis & {
+  __doughHousehold?: AsyncLocalStorage<Household>;
+  __doughHouseholdDbs?: Map<string, Database.Database>;
+};
+const householdStore = (shared.__doughHousehold ??= new AsyncLocalStorage<Household>());
+// ponytail: one open connection per household for the life of the process; close idle ones if
+// the count of households ever runs into file-handle limits.
+const householdDbs = (shared.__doughHouseholdDbs ??= new Map<string, Database.Database>());
+
+export function runWithHousehold<T>(household: Household, fn: () => T): T {
+  return householdStore.run(household, fn);
+}
+
+export function currentHousehold(): Household | undefined {
+  return householdStore.getStore();
+}
+
+function openDb(file: string): Database.Database {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  console.info("[db] Opening database at", file);
+  const db = new Database(file);
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+  initializeDb(db);
+  return db;
+}
+
 export function getDb(): Database.Database {
-  if (!_db) {
-    console.info("[db] Opening database at", DB_PATH);
-    _db = new Database(DB_PATH);
-    _db.pragma("journal_mode = WAL");
-    _db.pragma("foreign_keys = ON");
-    initializeDb(_db);
+  const household = householdStore.getStore();
+  if (household) {
+    let db = householdDbs.get(household.dbPath);
+    if (!db) {
+      db = openDb(household.dbPath);
+      householdDbs.set(household.dbPath, db);
+    }
+    return db;
   }
+  if (!_db) _db = openDb(DB_PATH);
   return _db;
 }
 
