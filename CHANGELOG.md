@@ -13,6 +13,7 @@
 * Run Claude on a household's own Anthropic key when it has one
 * Encrypt saved credentials when an encryption key is set
 * Serve several households from one instance, each in its own database
+* Add scripts to add a person and migrate a database
 
 ### 4.6.1: 2026-09-30
 
