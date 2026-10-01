@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { getDb } from "./db";
+import { getDb, currentHousehold } from "./db";
 import bcrypt from "bcryptjs";
 
 // Fail closed: a missing SESSION_SECRET must never silently fall back to a default that is
@@ -31,7 +31,9 @@ export async function createSession(userId: number): Promise<string> {
   const db = getDb();
   const row = db.prepare("SELECT session_version FROM users WHERE id = ?").get(userId) as { session_version: number } | undefined;
   const sv = row?.session_version ?? 1;
-  const token = await new SignJWT({ userId, sv })
+  // A hosted instance signs every household's sessions with one secret, so the token names its
+  // household and is refused by any other.
+  const token = await new SignJWT({ userId, sv, hid: currentHousehold()?.id ?? null })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("30d")
     .sign(JWT_SECRET);
@@ -48,6 +50,10 @@ export async function getSession(): Promise<SessionUser | null> {
 
     const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
     const userId = payload.userId as number;
+    if ((payload.hid ?? null) !== (currentHousehold()?.id ?? null)) {
+      console.warn("[auth] Rejected a session issued for another household");
+      return null;
+    }
 
     const db = getDb();
     const row = db

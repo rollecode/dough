@@ -36,3 +36,16 @@ test("events reach only the household they happened in", () => {
   offA();
   offB();
 });
+
+test("a session from one household is refused by another", async () => {
+  const { createSession } = await import("@/lib/auth");
+  const { jwtVerify } = await import("jose");
+  const user = (h: typeof a) => runWithHousehold(h, () => {
+    getDb().prepare("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (1, 'x@example.com', 'x')").run();
+  });
+  user(a);
+  user(b);
+  const token = await runWithHousehold(a, () => createSession(1));
+  const { payload } = await jwtVerify(token, new TextEncoder().encode(process.env.SESSION_SECRET));
+  assert.equal(payload.hid, "a");
+});
