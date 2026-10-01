@@ -41,6 +41,14 @@ USER2_EMAIL=partner USER2_PASSWORD=partnerpassword USER2_NAME="Partner" \
 npx tsx scripts/seed.ts
 ```
 
+To add one person later, without putting the password on the command line:
+
+```bash
+echo '{"email":"you@example.com","name":"You","locale":"en","password":"..."}' | npx tsx scripts/create-user.ts
+```
+
+After an upgrade, `npx tsx scripts/migrate.ts data/dough.db` brings a database up to date without starting the app.
+
 ### Demo data
 
 To try the app, or to take screenshots, without using real finances:
