@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { resolveDayThisMonth } from "@/lib/date-utils";
 import { isYearly, cadenceLabel } from "@/lib/bills";
+import { RecurrenceFields, recurrenceFromForm } from "@/components/shared/recurrence-fields";
 import { useLocale } from "@/lib/locale-context";
 import { useEvent } from "@/lib/use-events";
 import { Card } from "@/components/ui/card";
@@ -101,8 +102,7 @@ export default function BillsPage() {
           amount: (fd.get("amount") as string).replace(",", "."),
           due_day: parseInt(fd.get("due_day") as string, 10),
           category: fd.get("category"),
-          interval_months: parseInt(fd.get("interval_months") as string, 10) || 1,
-          due_month: (parseInt(fd.get("interval_months") as string, 10) || 1) > 1 ? parseInt(fd.get("due_month") as string, 10) : null,
+          ...recurrenceFromForm(fd),
         }),
       });
       setAddOpen(false);
@@ -125,8 +125,7 @@ export default function BillsPage() {
           amount: (fd.get("amount") as string).replace(",", "."),
           due_day: parseInt(fd.get("due_day") as string, 10),
           category: fd.get("category"),
-          interval_months: parseInt(fd.get("interval_months") as string, 10) || 1,
-          due_month: (parseInt(fd.get("interval_months") as string, 10) || 1) > 1 ? parseInt(fd.get("due_month") as string, 10) : null,
+          ...recurrenceFromForm(fd),
         }),
       });
       setEditOpen(false);
@@ -267,22 +266,7 @@ export default function BillsPage() {
                   <Input name="due_day" type="number" min="1" max="31" placeholder="1" required />
                 </div>
               </div>
-              <div className="form-grid-2">
-                <div className="form-field">
-                  <Label>{locale === "fi" ? "Toistuu (kk välein)" : "Repeat every (months)"}</Label>
-                  <Input name="interval_months" type="number" min="1" max="120" value={String(addInterval)} onChange={(e) => setAddInterval(Math.max(1, parseInt(e.target.value, 10) || 1))} />
-                </div>
-                {addInterval > 1 && (
-                  <div className="form-field">
-                    <Label>{locale === "fi" ? "Seuraava erääntymiskuukausi" : "Next due month"}</Label>
-                    <select className="input" name="due_month" defaultValue={String(new Date().getMonth() + 1)}>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                        <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(locale === "fi" ? "fi-FI" : "en-US", { month: "long" })}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
+              <RecurrenceFields interval={addInterval} onInterval={setAddInterval} />
               <div className="form-field">
                 <Label>{t.bills.category}</Label>
                 <Input name="category" placeholder={t.bills.categoryPlaceholder} />
@@ -401,22 +385,7 @@ export default function BillsPage() {
                   <Input name="due_day" type="number" min="1" max="31" defaultValue={editTarget.due_day} required />
                 </div>
               </div>
-              <div className="form-grid-2">
-                <div className="form-field">
-                  <Label>{locale === "fi" ? "Toistuu (kk välein)" : "Repeat every (months)"}</Label>
-                  <Input name="interval_months" type="number" min="1" max="120" value={String(editInterval)} onChange={(e) => setEditInterval(Math.max(1, parseInt(e.target.value, 10) || 1))} />
-                </div>
-                {editInterval > 1 && (
-                  <div className="form-field">
-                    <Label>{locale === "fi" ? "Seuraava erääntymiskuukausi" : "Next due month"}</Label>
-                    <select className="input" name="due_month" defaultValue={String(editTarget.due_month || new Date().getMonth() + 1)}>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                        <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleDateString(locale === "fi" ? "fi-FI" : "en-US", { month: "long" })}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
+              <RecurrenceFields interval={editInterval} onInterval={setEditInterval} dueMonth={editTarget.due_month} />
               <div className="form-field">
                 <Label>{t.bills.category}</Label>
                 <Input name="category" defaultValue={editTarget.category} placeholder={t.bills.categoryPlaceholder} />

@@ -1,9 +1,11 @@
 import { apiRoute, resolveMonth } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { getBrandConfig, brandImagePath } from "@/lib/brand-table";
+import { billDueInYearMonth } from "@/lib/bills";
 
-// GET /api/v1/subscriptions?month=YYYY-MM - recurring subscriptions with their amount, due day and
-// whether the month's charge has been paid, resolved as the bills endpoint resolves it.
+// GET /api/v1/subscriptions?month=YYYY-MM - recurring subscriptions with their amount, due day,
+// how many months apart they fall and whether the month's charge has been paid, resolved as the
+// bills endpoint resolves it.
 export const GET = apiRoute("read", (request) => {
   const month = resolveMonth(request);
   const db = getDb();
@@ -27,10 +29,11 @@ export const GET = apiRoute("read", (request) => {
   const today = new Date().getDate();
 
   const rows = db
-    .prepare("SELECT id, name, amount, due_day, is_priority, is_active, brand_color, brand_logo FROM subscriptions ORDER BY due_day ASC")
+    .prepare("SELECT id, name, amount, due_day, is_priority, is_active, brand_color, brand_logo, COALESCE(interval_months, 1) AS interval_months, due_month FROM subscriptions ORDER BY due_day ASC")
     .all() as {
       id: number; name: string; amount: number; due_day: number; is_priority: number;
       is_active: number; brand_color: string | null; brand_logo: string | null;
+      interval_months: number; due_month: number | null;
     }[];
   const subscriptions = rows.map((s) => {
     const isPaid = manual.has(s.id + 10000) ? manual.get(s.id + 10000)! : matched.has(s.id);
@@ -42,7 +45,11 @@ export const GET = apiRoute("read", (request) => {
       is_priority: !!s.is_priority,
       is_active: !!s.is_active,
       is_paid: isPaid,
-      is_overdue: !isPaid && !!s.is_active && s.due_day < today,
+      is_overdue: !isPaid && !!s.is_active && billDueInYearMonth(s, month) && s.due_day < today,
+      // A yearly subscription, like a yearly bill, is due only in its month.
+      interval_months: s.interval_months,
+      due_month: s.due_month,
+      due_this_month: billDueInYearMonth(s, month),
       // The brand as every surface draws it: its colour, its mark, and the bitmap when it has one.
       brand_color: s.brand_color || getBrandConfig(s.name).color,
       brand_logo: s.brand_logo || getBrandConfig(s.name).logo,

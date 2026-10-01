@@ -423,7 +423,7 @@ export function makeTargetResolver(
   ).all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
   const targetMap = new Map(targets.map((t) => [t.category_id, t]));
   const subMap = new Map(
-    (db.prepare("SELECT id, name, amount FROM subscriptions").all() as { id: number; name: string; amount: number }[]).map((s) => [s.id, s])
+    (db.prepare("SELECT id, name, amount, COALESCE(interval_months, 1) AS interval_months, due_month FROM subscriptions").all() as { id: number; name: string; amount: number; interval_months: number; due_month: number | null }[]).map((s) => [s.id, s])
   );
   const billMap = new Map(
     (db.prepare("SELECT id, name, amount, COALESCE(interval_months, 1) AS interval_months, due_month FROM recurring_bills").all() as { id: number; name: string; amount: number; interval_months: number; due_month: number | null }[]).map((b) => [b.id, b])
@@ -463,10 +463,11 @@ export function makeTargetResolver(
       : (linked && linked.amount > 0 ? linked.amount : (linked ? 0 : (t?.monthly_amount || 0)));
     const target_cadence = goalByDate ? "by_date" : (linked ? "monthly" : (t?.cadence || "monthly"));
     const target_date = goalByDate ? (linkedGoal!.target_date) : (linked ? "" : (t?.target_date || ""));
-    // A linked bill sets aside amount / interval each month (quarterly bill -> a third every month),
-    // so the category has the full amount by the time the bill is due. Monthly bills are unchanged.
-    const target_monthly = linkedBill && linkedBill.amount > 0
-      ? billMonthlySetAside(linkedBill.amount, linkedBill)
+    // A linked bill or subscription sets aside amount / interval each month (yearly -> a twelfth),
+    // so the category has the full amount by the time it is due. Monthly ones are unchanged.
+    const recurring = linkedBill ?? linkedSub;
+    const target_monthly = recurring && recurring.amount > 0
+      ? billMonthlySetAside(recurring.amount, recurring)
       : (target_amount > 0
           ? (target_cadence === "by_date"
               ? byDateMonthlyTarget(target_amount, carry, month, target_date)

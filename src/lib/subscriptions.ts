@@ -1,10 +1,12 @@
 // Subscription writes, shared by the session-authed /api/subscriptions route and the key-authed
-// /api/v1/subscriptions routes so both create/edit/delete subscriptions identically. Subscriptions
-// are monthly; their paid status is tracked in bill_manual_status with bill_id offset by 10000 to
-// avoid collision with recurring_bills ids.
+// /api/v1/subscriptions routes so both create/edit/delete subscriptions identically. A subscription
+// recurs every interval_months months like a bill (1 = monthly, 12 = yearly), anchored on due_month
+// when less often than monthly. Paid status is tracked in bill_manual_status with bill_id offset by
+// 10000 to avoid collision with recurring_bills ids.
 
 import { getDb } from "./db";
 import { eventBus } from "./event-bus";
+import { clampInterval, clampMonth } from "./bills-write";
 
 function currentMonth(): string {
   const n = new Date();
@@ -20,6 +22,8 @@ export interface SubscriptionCreate {
   due_day: number;
   brand_color?: string;
   brand_logo?: string;
+  interval_months?: number;
+  due_month?: number;
 }
 
 export function createSubscription(p: SubscriptionCreate): { id: number } | { error: string } {
@@ -27,9 +31,10 @@ export function createSubscription(p: SubscriptionCreate): { id: number } | { er
     return { error: "name, amount and due_day required" };
   }
   const db = getDb();
+  const interval = p.interval_months === undefined ? 1 : clampInterval(p.interval_months);
   const r = db.prepare(
-    "INSERT INTO subscriptions (name, amount, due_day, brand_color, brand_logo) VALUES (?, ?, ?, ?, ?)"
-  ).run(p.name, toAmount(p.amount), p.due_day, p.brand_color || "#6366f1", p.brand_logo || "");
+    "INSERT INTO subscriptions (name, amount, due_day, brand_color, brand_logo, interval_months, due_month) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(p.name, toAmount(p.amount), p.due_day, p.brand_color || "#6366f1", p.brand_logo || "", interval, interval > 1 ? clampMonth(p.due_month) : null);
   console.info("[subscriptions] Created:", p.name, "id:", r.lastInsertRowid);
   eventBus.emit("data:updated", { source: "subscription-added" });
   return { id: Number(r.lastInsertRowid) };
@@ -45,6 +50,8 @@ export interface SubscriptionUpdate {
   is_priority?: boolean;
   is_active?: boolean;
   mark_paid?: boolean;
+  interval_months?: number;
+  due_month?: number;
 }
 
 // Applies whatever fields are provided: mark_paid writes the month's bill_manual_status (bill_id =
@@ -64,7 +71,7 @@ export function updateSubscription(p: SubscriptionUpdate): { found: boolean } {
   }
 
   const updates: string[] = [];
-  const values: (string | number)[] = [];
+  const values: (string | number | null)[] = [];
   if (p.name !== undefined) { updates.push("name = ?"); values.push(p.name); }
   if (p.amount !== undefined) { updates.push("amount = ?"); values.push(toAmount(p.amount)); }
   if (p.due_day !== undefined) { updates.push("due_day = ?"); values.push(p.due_day); }
@@ -72,6 +79,13 @@ export function updateSubscription(p: SubscriptionUpdate): { found: boolean } {
   if (p.brand_logo !== undefined) { updates.push("brand_logo = ?"); values.push(p.brand_logo); }
   if (p.is_priority !== undefined) { updates.push("is_priority = ?"); values.push(p.is_priority ? 1 : 0); }
   if (p.is_active !== undefined) { updates.push("is_active = ?"); values.push(p.is_active ? 1 : 0); }
+  if (p.interval_months !== undefined) {
+    const interval = clampInterval(p.interval_months);
+    updates.push("interval_months = ?"); values.push(interval);
+    updates.push("due_month = ?"); values.push(interval > 1 ? clampMonth(p.due_month) : null);
+  } else if (p.due_month !== undefined) {
+    updates.push("due_month = ?"); values.push(clampMonth(p.due_month));
+  }
 
   if (updates.length > 0) {
     updates.push("updated_at = datetime('now')");

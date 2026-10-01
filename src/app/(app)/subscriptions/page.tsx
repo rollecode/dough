@@ -21,6 +21,8 @@ import { Plus, Loader2, Check, AlertCircle, X } from "lucide-react";
 import { F } from "@/components/ui/f";
 import { BudgetLinkControl } from "@/components/shared/budget-link-control";
 import { getBrandConfig, BrandIcon } from "@/lib/brands";
+import { isYearly, cadenceLabel, billMonthlySetAside, billInterval } from "@/lib/bills";
+import { RecurrenceFields, recurrenceFromForm } from "@/components/shared/recurrence-fields";
 
 
 interface Subscription {
@@ -35,6 +37,8 @@ interface Subscription {
   is_paid: boolean;
   is_overdue: boolean;
   is_priority: number;
+  interval_months: number;
+  due_month: number | null;
   patterns: { id: number; pattern: string; min_amount: number; max_amount: number }[];
 }
 
@@ -45,6 +49,8 @@ export default function SubscriptionsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Subscription | null>(null);
+  const [addInterval, setAddInterval] = useState(1);
+  const [editInterval, setEditInterval] = useState(1);
   const [newPattern, setNewPattern] = useState("");
   const [newPatternAmount, setNewPatternAmount] = useState("");
   const addFormRef = useRef<HTMLFormElement>(null);
@@ -79,6 +85,7 @@ export default function SubscriptionsPage() {
       name,
       amount: parseFloat((fd.get("amount") as string).replace(",", ".")),
       due_day: parseInt(fd.get("due_day") as string, 10),
+      ...recurrenceFromForm(fd),
       brand_color: brand.color,
       brand_logo: brand.logo,
     };
@@ -88,6 +95,7 @@ export default function SubscriptionsPage() {
       if ((await res.json()).id) {
         setAddOpen(false);
         form.reset();
+        setAddInterval(1);
         loadSubscriptions();
       }
     } catch (err) { console.error("[subscriptions] Add error:", err); }
@@ -104,6 +112,7 @@ export default function SubscriptionsPage() {
       name,
       amount: parseFloat((fd.get("amount") as string).replace(",", ".")),
       due_day: parseInt(fd.get("due_day") as string, 10),
+      ...recurrenceFromForm(fd),
       brand_color: brand.color,
       brand_logo: brand.logo,
     };
@@ -183,8 +192,9 @@ export default function SubscriptionsPage() {
   };
 
   const active = subscriptions.filter((s) => s.is_active);
-  const monthlyTotal = active.reduce((s, sub) => s + sub.amount, 0);
-  const yearlyTotal = monthlyTotal * 12;
+  // A yearly subscription is a twelfth of its price a month, and its price once a year.
+  const monthlyTotal = active.reduce((s, sub) => s + billMonthlySetAside(sub.amount, sub), 0);
+  const yearlyTotal = active.reduce((s, sub) => s + (sub.amount * 12) / billInterval(sub), 0);
 
   if (loading) {
     return <div className="page-loading"><Loader2 className="page-loading-spinner animate-spin" /></div>;
@@ -219,6 +229,7 @@ export default function SubscriptionsPage() {
                   <Input name="due_day" type="number" min="1" max="31" placeholder="1" required autoComplete="off" />
                 </div>
               </div>
+              <RecurrenceFields interval={addInterval} onInterval={setAddInterval} />
               <Button type="submit">{locale === "fi" ? "Lisää tilaus" : "Add subscription"}</Button>
             </form>
           </DialogContent>
@@ -244,7 +255,7 @@ export default function SubscriptionsPage() {
               key={sub.id}
               className={`subscription-card ${!sub.is_active ? "is-inactive" : ""}`}
               style={{ backgroundColor: sub.brand_color + "1a", borderColor: sub.brand_color + "33" }}
-              onClick={() => { setEditTarget(sub); setEditOpen(true); }}
+              onClick={() => { setEditTarget(sub); setEditInterval(sub.interval_months || 1); setEditOpen(true); }}
             >
               <div className="subscription-card-header">
                 <div className="subscription-brand-icon" style={{ backgroundColor: sub.brand_color }}>
@@ -260,7 +271,9 @@ export default function SubscriptionsPage() {
                     </button>
                   </div>
                   <p className="subscription-card-meta">
-                    {locale === "fi" ? "Veloitus" : "Billing"} {resolveDayThisMonth(sub.due_day)}. {locale === "fi" ? "päivä" : ""}
+                    {locale === "fi" ? "Veloitus" : "Billing"} {isYearly(sub) && sub.due_month
+                      ? `${sub.due_day}.${sub.due_month}. (${cadenceLabel(sub, locale)})`
+                      : <>{resolveDayThisMonth(sub.due_day)}. {locale === "fi" ? "päivä" : ""}</>}
                     {sub.patterns.length > 0 && <span className="list-item-patterns"> – {sub.patterns.map((p) => p.pattern).join(", ")}</span>}
                   </p>
                 </div>
@@ -300,6 +313,7 @@ export default function SubscriptionsPage() {
                   <Input name="due_day" type="number" min="1" max="31" defaultValue={editTarget.due_day} required autoComplete="off" />
                 </div>
               </div>
+              <RecurrenceFields interval={editInterval} onInterval={setEditInterval} dueMonth={editTarget.due_month} />
               <div className="form-field">
                 <Label>{locale === "fi" ? "Yhdistä maksajaan" : "Match payee"}</Label>
                 <div className="match-pattern-row">

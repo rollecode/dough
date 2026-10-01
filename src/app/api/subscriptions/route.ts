@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { createSubscription, updateSubscription, deleteSubscription } from "@/lib/subscriptions";
+import { billDueInYearMonth } from "@/lib/bills";
 
 export async function GET() {
   try {
@@ -43,7 +44,7 @@ export async function GET() {
       const manual = manualMap.get(s.id);
       const autoMatched = matchMap.has(s.id);
       const isPaid = manual ? !!manual.is_paid : autoMatched;
-      const isOverdue = !isPaid && s.is_active && s.due_day < today;
+      const isOverdue = !isPaid && s.is_active && billDueInYearMonth(s, month) && s.due_day < today;
       return {
         ...s,
         is_paid: isPaid,

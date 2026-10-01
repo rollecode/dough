@@ -147,8 +147,8 @@ export async function respondToChat(
 
         // Load recurring bills with paid/overdue status
         const bills = chatDb
-          .prepare("SELECT id, name, amount, due_day, is_priority, COALESCE(cadence, 'monthly') AS cadence, due_month FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
-          .all() as { id: number; name: string; amount: number; due_day: number; is_priority: number; cadence: string; due_month: number | null }[];
+          .prepare("SELECT id, name, amount, due_day, is_priority, COALESCE(cadence, 'monthly') AS cadence, due_month, COALESCE(interval_months, 1) AS interval_months FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
+          .all() as { id: number; name: string; amount: number; due_day: number; is_priority: number; cadence: string; due_month: number | null; interval_months: number }[];
 
         const chatMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         const chatCurMonth1 = now.getMonth() + 1;
@@ -164,7 +164,7 @@ export async function respondToChat(
           .all(chatMonth) as { bill_id: number; is_paid: number }[];
         const manualMap = new Map(manualStatuses.map((m) => [m.bill_id, !!m.is_paid]));
 
-        const enrichedBills: { name: string; amount: number; dueDay: number; status: string; type: string; isPriority: boolean; cadence: string; due_month: number | null }[] = bills.map((b) => {
+        const enrichedBills: { name: string; amount: number; dueDay: number; status: string; type: string; isPriority: boolean; cadence: string; due_month: number | null; interval_months?: number }[] = bills.map((b) => {
           const isPaid = manualMap.has(b.id) ? manualMap.get(b.id)! : paidBillIds.has(b.id);
           const dueThis = billDueInMonth(b, chatCurMonth1);
           return {
@@ -176,12 +176,13 @@ export async function respondToChat(
           isPriority: !!b.is_priority,
           cadence: b.cadence,
           due_month: b.due_month,
+          interval_months: b.interval_months,
         }; });
 
         // Load subscriptions with paid status from payee matching
         const subscriptions = chatDb
-          .prepare("SELECT id, name, amount, due_day, is_priority FROM subscriptions WHERE is_active = 1 ORDER BY due_day ASC")
-          .all() as { id: number; name: string; amount: number; due_day: number; is_priority: number }[];
+          .prepare("SELECT id, name, amount, due_day, is_priority, COALESCE(interval_months, 1) AS interval_months, due_month FROM subscriptions WHERE is_active = 1 ORDER BY due_day ASC")
+          .all() as { id: number; name: string; amount: number; due_day: number; is_priority: number; interval_months: number; due_month: number | null }[];
         const subMatches = chatDb
           .prepare("SELECT source_id FROM monthly_matches WHERE source_type = 'subscription' AND month = ?")
           .all(chatMonth) as { source_id: number }[];
@@ -193,11 +194,12 @@ export async function respondToChat(
             name: sub.name,
             amount: sub.amount,
             dueDay: sub.due_day,
-            status: paidSubIds.has(sub.id) ? "paid" : sub.due_day < now.getDate() ? "overdue" : "upcoming",
+            status: paidSubIds.has(sub.id) ? "paid" : (billDueInMonth(sub, chatCurMonth1) && sub.due_day < now.getDate()) ? "overdue" : "upcoming",
             type: "subscription",
             isPriority: !!sub.is_priority,
-            cadence: "monthly",
-            due_month: null,
+            cadence: sub.interval_months === 12 ? "yearly" : "monthly",
+            due_month: sub.due_month,
+            interval_months: sub.interval_months,
           });
         }
 

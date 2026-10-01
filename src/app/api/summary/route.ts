@@ -131,15 +131,15 @@ export async function GET(request: Request) {
       .all() as { name: string; amount: number; expected_day: number; is_active: number }[];
 
     const recurringBills = db
-      .prepare("SELECT id, name, amount, due_day, is_active, COALESCE(cadence, 'monthly') AS cadence, due_month FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
-      .all() as { id: number; name: string; amount: number; due_day: number; is_active: number; cadence: string; due_month: number | null }[];
+      .prepare("SELECT id, name, amount, due_day, is_active, COALESCE(cadence, 'monthly') AS cadence, due_month, COALESCE(interval_months, 1) AS interval_months FROM recurring_bills WHERE is_active = 1 ORDER BY due_day ASC")
+      .all() as { id: number; name: string; amount: number; due_day: number; is_active: number; cadence: string; due_month: number | null; interval_months: number }[];
 
-    // Merge subscriptions into bills for unified calculations. Subscriptions are always monthly.
+    // Merge subscriptions into bills for unified calculations; they recur on the same rules.
     const subscriptionRows = db
-      .prepare("SELECT id, name, amount, due_day FROM subscriptions WHERE is_active = 1")
-      .all() as { id: number; name: string; amount: number; due_day: number }[];
+      .prepare("SELECT id, name, amount, due_day, COALESCE(interval_months, 1) AS interval_months, due_month FROM subscriptions WHERE is_active = 1")
+      .all() as { id: number; name: string; amount: number; due_day: number; interval_months: number; due_month: number | null }[];
     for (const sub of subscriptionRows) {
-      recurringBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: 1, cadence: "monthly", due_month: null });
+      recurringBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: 1, cadence: "monthly", due_month: sub.due_month, interval_months: sub.interval_months });
     }
     // A yearly bill is an obligation only in its due month; the daily budget and the "bills due this
     // month" totals must skip it the other months. currentMonth1/nextMonth1 gate that (1-12).

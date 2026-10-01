@@ -41,8 +41,8 @@ export function dashboardFor(userId: number) {
       is_priority: number; cadence: string; due_month: number | null; interval_months: number;
     }[];
   const subscriptionRows = db
-    .prepare("SELECT id, name, amount, due_day, is_active, COALESCE(is_priority, 0) AS is_priority FROM subscriptions ORDER BY due_day ASC")
-    .all() as { id: number; name: string; amount: number; due_day: number; is_active: number; is_priority: number }[];
+    .prepare("SELECT id, name, amount, due_day, is_active, COALESCE(is_priority, 0) AS is_priority, COALESCE(interval_months, 1) AS interval_months, due_month FROM subscriptions ORDER BY due_day ASC")
+    .all() as { id: number; name: string; amount: number; due_day: number; is_active: number; is_priority: number; interval_months: number; due_month: number | null }[];
 
   const manualPaid = new Map(
     (db.prepare("SELECT bill_id, is_paid FROM bill_manual_status WHERE month = ?").all(month) as {
@@ -84,9 +84,9 @@ export function dashboardFor(userId: number) {
         is_active: !!s.is_active,
         is_paid: manualPaid.has(id) ? manualPaid.get(id)! : matchedSubscriptions.has(s.id),
         is_priority: !!s.is_priority,
-        cadence: "monthly",
-        due_month: null,
-        interval_months: 1,
+        cadence: s.interval_months === 12 ? "yearly" : "monthly",
+        due_month: s.due_month,
+        interval_months: s.interval_months,
       };
     }),
   ];

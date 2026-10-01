@@ -1,7 +1,7 @@
 import { calculateDailyBudget, type DailyBudgetResult } from "./daily-budget";
 import { fixedCostMatcher } from "./fixed-costs";
 import { spendingFlow } from "./spending-flow";
-import { billDueInMonth } from "./bills";
+import { billDueInMonth, type BillCadenceFields } from "./bills";
 import { isTransfer } from "./transaction-utils";
 import { streakWeek, type StreakDay, type StreakRecord } from "./savings-streak";
 
@@ -206,7 +206,7 @@ export interface MonthStatusInput {
   transactions: DashTransaction[];
   monthBudgetIncome: number;
   incomes: { amount: number; is_active: boolean | number }[];
-  bills: { amount: number; is_active: boolean | number; is_paid?: boolean | number }[];
+  bills: ({ amount: number; is_active: boolean | number; is_paid?: boolean | number } & BillCadenceFields)[];
   savingRate: number;
   debtMonthly: number;
   investmentMonthly: number;
@@ -262,7 +262,8 @@ export function monthStatus(input: MonthStatusInput): MonthStatus {
     .reduce((s, t) => s + Math.abs(t.amount), 0);
   const commitmentsLeft = round(Math.max(0, debtMonthly + investmentMonthly - commitmentsPaid));
 
-  const activeBills = bills.filter((b) => b.is_active);
+  // Only what falls due this month: a yearly bill or subscription counts in its own month.
+  const activeBills = bills.filter((b) => b.is_active && billDueInMonth(b, now.getMonth() + 1));
   const billsTotal = round(activeBills.reduce((s, b) => s + b.amount, 0));
   const paidBills = round(activeBills.filter((b) => b.is_paid).reduce((s, b) => s + b.amount, 0));
   const unpaidBills = round(billsTotal - paidBills);
@@ -504,7 +505,8 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   );
   const burnRate = today > 0 ? round(realSpendingTotal / today) : 0;
 
-  const activeBills = bills.filter((b) => b.is_active);
+  // Only what falls due this month: a yearly bill or subscription counts in its own month.
+  const activeBills = bills.filter((b) => b.is_active && billDueInMonth(b, now.getMonth() + 1));
   const paidBillsAmount = round(activeBills.filter((b) => b.is_paid).reduce((s, b) => s + b.amount, 0));
   const unpaidBillsAmount = round(activeBills.reduce((s, b) => s + b.amount, 0) - paidBillsAmount);
 

@@ -815,6 +815,14 @@ function initializeDb(db: Database.Database) {
     db.exec("UPDATE recurring_bills SET interval_months = 12 WHERE cadence = 'yearly'");
   }
 
+  // Subscriptions recur like bills: every interval_months months, anchored on due_month when > 1.
+  const subCols = db.prepare("PRAGMA table_info(subscriptions)").all() as { name: string }[];
+  if (!subCols.some((c) => c.name === "interval_months")) {
+    console.info("[db] Adding interval_months and due_month columns to subscriptions");
+    db.exec("ALTER TABLE subscriptions ADD COLUMN interval_months INTEGER NOT NULL DEFAULT 1");
+    db.exec("ALTER TABLE subscriptions ADD COLUMN due_month INTEGER");
+  }
+
   // Create chat_reactions table if missing
   const hasReactions = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_reactions'").get();
   if (!hasReactions) {

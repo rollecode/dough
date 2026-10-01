@@ -204,14 +204,15 @@ export function buildMcpServer(api: DoughApi): McpServer {
   server.registerTool(
     "dough_create_bill",
     {
-      description: "Add a recurring bill. A monthly bill recurs every month on due_day; a yearly bill recurs once a year on due_month + due_day. Requires a write-scoped key.",
+      description: "Add a recurring bill. It recurs every interval_months months on due_day (1 monthly, 12 yearly), anchored on due_month when less often than monthly. cadence is the older monthly/yearly switch, kept for compatibility. Requires a write-scoped key.",
       inputSchema: {
         name: z.string().describe("Bill name"),
         amount: z.number().describe("Amount due"),
         due_day: z.number().int().min(1).max(31).describe("Day of month it is due"),
         category: z.string().optional().describe("Budget category name"),
-        cadence: z.enum(["monthly", "yearly"]).optional().describe("Defaults to monthly"),
-        due_month: z.number().int().min(1).max(12).optional().describe("Month 1-12, required for a yearly bill"),
+        cadence: z.enum(["monthly", "yearly"]).optional().describe("Older switch; prefer interval_months"),
+        interval_months: z.number().int().min(1).max(120).optional().describe("Every how many months it recurs: 1 monthly (default), 3 quarterly, 12 yearly"),
+        due_month: z.number().int().min(1).max(12).optional().describe("Month 1-12 it next falls in, needed when interval_months is over 1"),
       },
     },
     (args) => reply(api.post("bills/create", args))
@@ -227,8 +228,9 @@ export function buildMcpServer(api: DoughApi): McpServer {
         amount: z.number().optional(),
         due_day: z.number().int().min(1).max(31).optional(),
         category: z.string().optional(),
-        cadence: z.enum(["monthly", "yearly"]).optional(),
-        due_month: z.number().int().min(1).max(12).optional(),
+        cadence: z.enum(["monthly", "yearly"]).optional().describe("Older switch; prefer interval_months"),
+        interval_months: z.number().int().min(1).max(120).optional().describe("Every how many months it recurs: 1 monthly (default), 3 quarterly, 12 yearly"),
+        due_month: z.number().int().min(1).max(12).optional().describe("Month 1-12 it next falls in, needed when interval_months is over 1"),
         is_priority: z.boolean().optional().describe("Mark as a must-pay bill"),
         is_active: z.boolean().optional(),
         mark_paid: z.boolean().optional().describe("Mark this month paid/unpaid"),
@@ -249,11 +251,13 @@ export function buildMcpServer(api: DoughApi): McpServer {
   server.registerTool(
     "dough_create_subscription",
     {
-      description: "Add a subscription (monthly, on due_day). Requires a write-scoped key.",
+      description: "Add a subscription. It recurs every interval_months months on due_day (1 monthly, 12 yearly), anchored on due_month when less often than monthly, exactly as a bill does. Requires a write-scoped key.",
       inputSchema: {
         name: z.string(),
         amount: z.number(),
         due_day: z.number().int().min(1).max(31),
+        interval_months: z.number().int().min(1).max(120).optional().describe("Every how many months it recurs: 1 monthly (default), 3 quarterly, 12 yearly"),
+        due_month: z.number().int().min(1).max(12).optional().describe("Month 1-12 it next falls in, needed when interval_months is over 1"),
         brand_color: z.string().optional().describe("Hex colour, e.g. '#6366f1'"),
         brand_logo: z.string().optional(),
       },
@@ -270,11 +274,13 @@ export function buildMcpServer(api: DoughApi): McpServer {
         name: z.string().optional(),
         amount: z.number().optional(),
         due_day: z.number().int().min(1).max(31).optional(),
+        interval_months: z.number().int().min(1).max(120).optional().describe("Every how many months it recurs: 1 monthly (default), 3 quarterly, 12 yearly"),
+        due_month: z.number().int().min(1).max(12).optional().describe("Month 1-12 it next falls in, needed when interval_months is over 1"),
         brand_color: z.string().optional(),
         brand_logo: z.string().optional(),
-        is_priority: z.boolean().optional(),
+        is_priority: z.boolean().optional().describe("Mark as a must-pay subscription"),
         is_active: z.boolean().optional(),
-        mark_paid: z.boolean().optional(),
+        mark_paid: z.boolean().optional().describe("Mark this month paid/unpaid"),
       },
     },
     (args) => reply(api.post("subscriptions/update", args))

@@ -129,7 +129,7 @@ export default function DashboardPage() {
       const allBills = [...(billsData.bills || [])];
       if (subsData.subscriptions) {
         for (const sub of subsData.subscriptions) {
-          allBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: sub.is_active, is_paid: sub.is_paid, cadence: "monthly", due_month: null });
+          allBills.push({ id: sub.id + 10000, name: sub.name, amount: sub.amount, due_day: sub.due_day, is_active: sub.is_active, is_paid: sub.is_paid, cadence: sub.interval_months === 12 ? "yearly" : "monthly", due_month: sub.due_month ?? null, interval_months: sub.interval_months ?? 1 });
         }
       }
       setBills(allBills);
@@ -416,9 +416,10 @@ export default function DashboardPage() {
   const dailyBurnRate = daysPassed > 0 ? Math.round((realSpendingTotal / daysPassed) * 100) / 100 : 0;
 
   // Separate bills from discretionary for accurate projection
-  const totalBillsAmount = bills.filter((b) => b.is_active).reduce((s, b) => s + b.amount, 0);
+  // Only what falls due this month: a yearly bill or subscription counts in its own month.
+  const totalBillsAmount = bills.filter((b) => b.is_active && billDueInMonth(b, curMonth1)).reduce((s, b) => s + b.amount, 0);
   const paidBillsAmount = bills
-    .filter((b) => b.is_active && b.is_paid)
+    .filter((b) => b.is_active && b.is_paid && billDueInMonth(b, curMonth1))
     .reduce((s, b) => s + b.amount, 0);
   const unpaidBillsAmount = totalBillsAmount - paidBillsAmount;
   const discretionarySpending = Math.max(0, realSpendingTotal - paidBillsAmount);

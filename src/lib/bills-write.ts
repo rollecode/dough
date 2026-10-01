@@ -12,10 +12,10 @@ function currentMonth(): string {
 function normCadence(v: unknown): "monthly" | "yearly" {
   return v === "yearly" ? "yearly" : "monthly";
 }
-function clampMonth(v: unknown): number {
+export function clampMonth(v: unknown): number {
   return Math.min(12, Math.max(1, parseInt(String(v), 10) || 1));
 }
-function clampInterval(v: unknown): number {
+export function clampInterval(v: unknown): number {
   const n = parseInt(String(v), 10);
   return Number.isFinite(n) && n >= 1 ? Math.min(120, n) : 1;
 }
