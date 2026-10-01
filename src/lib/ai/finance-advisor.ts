@@ -31,9 +31,9 @@ interface FinancialContext {
 }
 
 function buildSystemPrompt(ctx: FinancialContext): string {
-  const lang = ctx.locale === "fi"
-    ? "Respond in Finnish. Be natural and conversational."
-    : "Respond in English. Be natural and conversational.";
+  // The language of the question decides the answer's: someone with the app in English may ask in
+  // Finnish. The app's language only breaks a tie, such as a message that is just a number.
+  const lang = `Reply in the language the person's latest message is written in. If that is unclear, reply in ${ctx.locale === "fi" ? "Finnish" : "English"}. Be natural and conversational.`;
 
   const now = new Date();
   const dateStr = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()}`;
