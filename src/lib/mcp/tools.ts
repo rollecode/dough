@@ -76,14 +76,14 @@ export function buildMcpServer(api: DoughApi): McpServer {
 
   server.registerTool(
     "dough_bills",
-    { description: "Recurring bills with amount and due day of month.", inputSchema: {} },
-    () => reply(api.get("bills"))
+    { description: "Recurring bills with amount, due day, how many months apart they fall (interval_months, due_month), whether each falls in the month asked for (due_this_month), and paid and overdue status.", inputSchema: { month: MONTH } },
+    ({ month }) => reply(api.get("bills", { month }))
   );
 
   server.registerTool(
     "dough_subscriptions",
-    { description: "Subscriptions with amount and due day of month.", inputSchema: {} },
-    () => reply(api.get("subscriptions"))
+    { description: "Subscriptions with amount, due day, how many months apart they fall (interval_months, due_month; 12 is yearly), whether each falls in the month asked for (due_this_month), and paid and overdue status. A yearly subscription is a subscription, not a bill.", inputSchema: { month: MONTH } },
+    ({ month }) => reply(api.get("subscriptions", { month }))
   );
 
   server.registerTool(
@@ -189,14 +189,14 @@ export function buildMcpServer(api: DoughApi): McpServer {
 
   server.registerTool(
     "dough_debts",
-    { description: "Debt/loan accounts with their overrides: balance, interest rate, minimum payment, due day, original amount, notes, priority.", inputSchema: {} },
-    () => reply(api.get("debts"))
+    { description: "Debt/loan accounts with their overrides: balance, interest rate, minimum payment, due day, original amount, notes, priority, plus the payoff plan (snowball and avalanche) and the months to debt-free at minimum payments.", inputSchema: { extra: z.number().min(0).optional().describe("Extra paid each month on top of the minimums, for the payoff plan") } },
+    ({ extra }) => reply(api.get("debts", { extra }))
   );
 
   server.registerTool(
     "dough_investments",
-    { description: "Investment accounts with their overrides: balance (market value), monthly contribution, expected return, ticker, cost basis (contributed).", inputSchema: {} },
-    () => reply(api.get("investments"))
+    { description: "Investment accounts with their overrides: balance (market value), monthly contribution, expected return, ticker, cost basis (contributed), plus the growth projection.", inputSchema: { years: z.number().int().min(1).max(50).optional().describe("Projection horizon in years, default 20") } },
+    ({ years }) => reply(api.get("investments", { years }))
   );
 
   // ---- Bills (write) ----
@@ -380,7 +380,7 @@ export function buildMcpServer(api: DoughApi): McpServer {
   server.registerTool(
     "dough_update_debt",
     {
-      description: "Set a debt/loan account's terms by ynab_account_id (from dough_debts or dough_accounts). Only provided fields change. Requires a write-scoped key.",
+      description: "Set a debt/loan account's terms by ynab_account_id (from dough_debts or dough_accounts). Only provided fields change; the others keep their values. Requires a write-scoped key.",
       inputSchema: {
         ynab_account_id: z.string(),
         interest_rate: z.number().optional().describe("Annual interest rate %"),
@@ -574,6 +574,178 @@ export function buildMcpServer(api: DoughApi): McpServer {
     "dough_delete_income",
     { description: "Delete an income source by id. Requires a write-scoped key.", inputSchema: { id: z.number().int() } },
     ({ id }) => reply(api.post("income/delete", { id }))
+  );
+
+  // ---- Everything else the API offers ----
+
+  server.registerTool(
+    "dough_dashboard",
+    { description: "Everything the dashboard shows in one call: the daily budget and why it is what it is, today's spending, balances, the bills, subscriptions and debts ahead (subscription ids there are offset by 10000), charts and the month's figures. Always the current month. Records today's daily budget as a side effect.", inputSchema: {} },
+    () => reply(api.get("dashboard"))
+  );
+
+  server.registerTool(
+    "dough_payees",
+    { description: "Payees this household uses, most used first, each with its usual category and account (only when at least 60% of its history agrees), last amount, last description and whether it was money in.", inputSchema: { limit: z.number().int().min(1).max(1000).optional().describe("Default 300") } },
+    ({ limit }) => reply(api.get("payees", { limit }))
+  );
+
+  server.registerTool(
+    "dough_suggest_categories",
+    { description: "Categories to offer first for an entry: the best guess (payee and amount history, else AI, may be empty) and the categories this payee or description is most often filed under. Can be slow when the AI is asked.", inputSchema: { payee: z.string().optional(), memo: z.string().optional(), amount: z.number().optional() } },
+    (args) => reply(api.get("categories/suggest", args))
+  );
+
+  server.registerTool(
+    "dough_payee_merge_suggestions",
+    { description: "Payees that look like one merchant written several ways, as groups of { into, from }, proposed by a quick AI model from the 300 most used payees. Nothing is merged; apply a group with dough_merge_payees. Slow, up to about 90 seconds.", inputSchema: {} },
+    () => reply(api.get("payees/merge-suggestions"))
+  );
+
+  server.registerTool(
+    "dough_merge_payees",
+    { description: "Rename every transaction under the names in from to into (exact, case-sensitive). A rename is a merge of one name. Local mode only. Requires a write-scoped key.", inputSchema: { from: z.array(z.string()).min(1), into: z.string().min(1) } },
+    (args) => reply(api.post("payees/merge", args))
+  );
+
+  server.registerTool(
+    "dough_payee_matches",
+    { description: "The payee patterns that mark a bill, subscription or income source paid or received when a matching transaction appears. min_amount and max_amount of 0 mean no bound. Subscription ids here are the plain ids.", inputSchema: { source_type: z.enum(["bill", "subscription", "income"]).optional(), source_id: z.number().int().optional() } },
+    (args) => reply(api.get("payee-matches", args))
+  );
+
+  server.registerTool(
+    "dough_add_payee_match",
+    { description: "Add a payee pattern that settles a bill, subscription or income source, optionally only within an amount range (0 = no bound). Requires a write-scoped key.", inputSchema: { source_type: z.enum(["bill", "subscription", "income"]), source_id: z.number().int(), payee_pattern: z.string().min(1), min_amount: z.number().optional(), max_amount: z.number().optional() } },
+    (args) => reply(api.post("payee-matches", args))
+  );
+
+  server.registerTool(
+    "dough_delete_payee_match",
+    { description: "Remove a payee pattern by its id (from dough_payee_matches). Requires a write-scoped key.", inputSchema: { id: z.number().int() } },
+    ({ id }) => reply(api.post("payee-matches", { id, delete: true }))
+  );
+
+  const LINK_TYPE = z.enum(["savings_goal", "subscription", "bill", "debt_account", "investment_account"]);
+
+  server.registerTool(
+    "dough_budget_link",
+    { description: "Which budget category a bill, subscription, savings goal, debt or investment account is linked to. id is the numeric id for bills, subscriptions and savings goals, the account id for debts and investments.", inputSchema: { type: LINK_TYPE, id: z.union([z.string(), z.number()]) } },
+    ({ type, id }) => reply(api.get("budget-links", { type, id: String(id) }))
+  );
+
+  server.registerTool(
+    "dough_set_budget_link",
+    { description: "Link a bill, subscription, savings goal, debt or investment account to a budget category, which then takes its target from it (a yearly one sets aside a twelfth a month). category_id null unlinks. A target links to at most one category. Requires a write-scoped key.", inputSchema: { type: LINK_TYPE, id: z.union([z.string(), z.number()]), category_id: z.number().int().nullable() } },
+    (args) => reply(api.post("budget-links", args))
+  );
+
+  server.registerTool(
+    "dough_unassign",
+    { description: "When Ready to Assign is below zero, take unspent money back from the month's assignments until it is zero: money above a target first, then untargeted categories, then targeted ones. Does nothing otherwise. Requires a write-scoped key.", inputSchema: { month: MONTH } },
+    ({ month }) => reply(api.post("budget/unassign", { month }))
+  );
+
+  server.registerTool(
+    "dough_reorder_categories",
+    { description: "Set category order and group. items [{ id, group_name }] re-lays every category; order [id, ...] reorders without moving groups; groups [name, ...] orders the groups. At least one is needed; groups combines with either. Requires a write-scoped key.", inputSchema: { items: z.array(z.object({ id: z.number().int(), group_name: z.string() })).optional(), order: z.array(z.number().int()).optional(), groups: z.array(z.string()).optional() } },
+    (args) => reply(api.post("categories/reorder", args))
+  );
+
+  server.registerTool(
+    "dough_split_transaction",
+    { description: "Spread one transaction across categories. splits are positive amounts; the sign comes from the transaction and any rounding difference goes on the last line, so the parts always add up to the original. One split puts it back to a single category. Local mode only. Requires a write-scoped key.", inputSchema: { transaction_id: z.string(), splits: z.array(z.object({ category: z.string(), amount: z.number().positive() })).min(1) } },
+    (args) => reply(api.post("transactions/split", args))
+  );
+
+  server.registerTool(
+    "dough_account_flags",
+    { description: "Set whether the daily budget leaves an account out (budget_excluded, for the whole household) and whether it is the key owner's own spending account (mine). Requires a write-scoped key.", inputSchema: { id: z.string(), budget_excluded: z.boolean().optional(), mine: z.boolean().optional() } },
+    (args) => reply(api.post("accounts/flags", args))
+  );
+
+  server.registerTool(
+    "dough_reorder_accounts",
+    { description: "Set the order accounts are listed in. Requires a write-scoped key.", inputSchema: { order: z.array(z.string()).describe("Account ids, in the order wanted") } },
+    ({ order }) => reply(api.post("accounts/reorder", { order }))
+  );
+
+  server.registerTool(
+    "dough_reconcile_account",
+    { description: "Compare an account's balance in Dough with the bank's real balance; the AI explains the gap from the last 7 days and names likely duplicates. Writes nothing. Slow when there is a gap.", inputSchema: { account_id: z.string(), true_balance: z.number(), locale: z.enum(["en", "fi"]).optional() } },
+    (args) => reply(api.post("accounts/reconcile", args))
+  );
+
+  server.registerTool(
+    "dough_net_worth_snapshot",
+    { description: "Record today's net worth for the chart; a second one today replaces the first. Requires a write-scoped key.", inputSchema: {} },
+    () => reply(api.post("net-worth/snapshot", {}))
+  );
+
+  server.registerTool(
+    "dough_read_receipt",
+    { description: "Read a photographed receipt or bank statement and return its lines as draft transactions (absolute amounts, an account name to resolve). Writes nothing: record the lines with dough_create_transaction. Slow.", inputSchema: { image: z.string().describe("Base64, without a data: prefix"), image_media_type: z.string().describe("e.g. image/jpeg") } },
+    (args) => reply(api.post("receipt", args))
+  );
+
+  server.registerTool(
+    "dough_chat_history",
+    { description: "The conversation with Dougie, Dough's assistant, oldest first: the key owner's messages and every reply.", inputSchema: { limit: z.number().int().min(1).max(200).optional().describe("Latest N, default 50") } },
+    ({ limit }) => reply(api.get("chat", { limit }))
+  );
+
+  server.registerTool(
+    "dough_ask_dougie",
+    { description: "Ask Dougie, Dough's own assistant, with the conversation so far; the question and answer are kept in the household's chat. An image can go with the question. Slow. Requires a write-scoped key.", inputSchema: { messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).min(1), image: z.string().optional().describe("Base64, without a data: prefix"), image_media_type: z.string().optional() } },
+    (args) => reply(api.post("chat", args))
+  );
+
+  server.registerTool(
+    "dough_profile",
+    { description: "Who the key belongs to: display name, budget share and the accounts they have linked as their own.", inputSchema: {} },
+    () => reply(api.get("profile"))
+  );
+
+  server.registerTool(
+    "dough_update_profile",
+    { description: "Change the key owner's display name (what the dashboard greets by) or budget share (0-100, their part of the household's daily budget). Requires a write-scoped key.", inputSchema: { display_name: z.string().optional(), budget_share: z.number().min(0).max(100).optional() } },
+    (args) => reply(api.post("profile", args))
+  );
+
+  server.registerTool(
+    "dough_settings",
+    { description: "The household settings that shape the daily budget: saving rate, thresholds, whether bills are taken out, reserving next month's saving.", inputSchema: {} },
+    () => reply(api.get("settings"))
+  );
+
+  server.registerTool(
+    "dough_update_settings",
+    { description: "Change the daily budget settings. Only the fields sent change. Requires a write-scoped key.", inputSchema: { saving_rate: z.number().min(0).optional(), budget_threshold_tight: z.number().min(0).optional(), budget_threshold_normal: z.number().min(0).optional(), budget_threshold_good: z.number().min(0).optional(), budget_include_bills: z.enum(["auto", "1", "0"]).optional(), reserve_next_month_saving: z.boolean().optional() } },
+    (args) => reply(api.post("settings", args))
+  );
+
+  server.registerTool(
+    "dough_badges",
+    { description: "The navigation notice dots: overspent categories this month, whether someone else added a transaction since the key owner last looked, and unread chat messages.", inputSchema: { month: MONTH } },
+    ({ month }) => reply(api.get("badges", { month }))
+  );
+
+  server.registerTool(
+    "dough_mark_seen",
+    { description: "Clear the transactions or chat notice dot for the key owner. The budget dot clears itself once nothing is overspent. Requires a write-scoped key.", inputSchema: { seen: z.enum(["transactions", "chat"]) } },
+    ({ seen }) => reply(api.post("badges", { seen }))
+  );
+
+  server.registerTool(
+    "dough_tickers",
+    { description: "Price, day change, 52-week range and sparklines for stock or fund symbols. SELIGSON:<fund> reads a Seligson fund, anything else is a Yahoo Finance symbol. Cached for 15 minutes.", inputSchema: { symbols: z.string().describe("Comma-separated, e.g. AAPL,SELIGSON:brands") } },
+    ({ symbols }) => reply(api.get("ticker", { symbols }))
+  );
+
+  server.registerTool(
+    "dough_delete_my_account",
+    { description: "Delete the key owner's own Dough account, after their password. Their chats, keys and tokens go and what they added passes to the next member; the last member's deletion erases the whole household for good. Only on the person's explicit request. Requires a write-scoped key.", inputSchema: { password: z.string() } },
+    ({ password }) => reply(api.post("account/delete", { password }))
   );
 
   return server;

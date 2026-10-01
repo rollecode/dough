@@ -42,41 +42,83 @@ import { POST as transactionsCreatePost } from "@/app/api/v1/transactions/create
 import { POST as transactionsDeletePost } from "@/app/api/v1/transactions/delete/route";
 import { POST as transactionsUpdatePost } from "@/app/api/v1/transactions/update/route";
 
+import { POST as accountDeletePost } from "@/app/api/v1/account/delete/route";
+import { POST as accountsFlagsPost } from "@/app/api/v1/accounts/flags/route";
+import { POST as accountsReconcilePost } from "@/app/api/v1/accounts/reconcile/route";
+import { POST as accountsReorderPost } from "@/app/api/v1/accounts/reorder/route";
+import { GET as badgesGet, POST as badgesPost } from "@/app/api/v1/badges/route";
+import { GET as budgetLinksGet, POST as budgetLinksPost } from "@/app/api/v1/budget-links/route";
+import { POST as budgetUnassignPost } from "@/app/api/v1/budget/unassign/route";
+import { POST as categoriesReorderPost } from "@/app/api/v1/categories/reorder/route";
+import { GET as categoriesSuggestGet } from "@/app/api/v1/categories/suggest/route";
+import { GET as chatGet, POST as chatPost } from "@/app/api/v1/chat/route";
+import { GET as dashboardGet } from "@/app/api/v1/dashboard/route";
+import { POST as netWorthSnapshotPost } from "@/app/api/v1/net-worth/snapshot/route";
+import { GET as payeeMatchesGet, POST as payeeMatchesPost } from "@/app/api/v1/payee-matches/route";
+import { GET as payeesGet } from "@/app/api/v1/payees/route";
+import { POST as payeesMergePost } from "@/app/api/v1/payees/merge/route";
+import { GET as payeesMergeSuggestionsGet } from "@/app/api/v1/payees/merge-suggestions/route";
+import { GET as profileGet, POST as profilePost } from "@/app/api/v1/profile/route";
+import { POST as receiptPost } from "@/app/api/v1/receipt/route";
+import { GET as settingsGet, POST as settingsPost } from "@/app/api/v1/settings/route";
+import { GET as tickerGet } from "@/app/api/v1/ticker/route";
+import { POST as transactionsSplitPost } from "@/app/api/v1/transactions/split/route";
+
 type Handler = (request: Request) => Promise<Response>;
 
 // The v1 handlers run in this same process, so a tool call is a function call rather than a network
 // round trip. Each gets the caller's own Authorization header, which keeps scopes and identity exact.
-const GET_ROUTES: Record<string, Handler> = {
+export const GET_ROUTES: Record<string, Handler> = {
   "accounts": accountsGet,
+  "badges": badgesGet,
   "bills": billsGet,
   "budget": budgetGet,
+  "budget-links": budgetLinksGet,
   "budget/auto-assign": budgetAutoAssignGet,
+  "categories/suggest": categoriesSuggestGet,
+  "chat": chatGet,
+  "dashboard": dashboardGet,
   "debts": debtsGet,
   "income": incomeGet,
   "investments": investmentsGet,
   "net-worth": netWorthGet,
+  "payee-matches": payeeMatchesGet,
+  "payees": payeesGet,
+  "payees/merge-suggestions": payeesMergeSuggestionsGet,
+  "profile": profileGet,
   "savings-goals": savingsGoalsGet,
+  "settings": settingsGet,
   "subscriptions": subscriptionsGet,
   "summary": summaryGet,
+  "ticker": tickerGet,
   "transactions": transactionsGet,
 };
 
-const POST_ROUTES: Record<string, Handler> = {
+export const POST_ROUTES: Record<string, Handler> = {
+  "account/delete": accountDeletePost,
   "accounts/create": accountsCreatePost,
   "accounts/delete": accountsDeletePost,
+  "accounts/flags": accountsFlagsPost,
+  "accounts/reconcile": accountsReconcilePost,
+  "accounts/reorder": accountsReorderPost,
   "accounts/update": accountsUpdatePost,
+  "badges": badgesPost,
   "bills/create": billsCreatePost,
   "bills/delete": billsDeletePost,
   "bills/update": billsUpdatePost,
+  "budget-links": budgetLinksPost,
   "budget/assign": budgetAssignPost,
   "budget/auto-assign": budgetAutoAssignPost,
   "budget/move": budgetMovePost,
   "budget/snooze": budgetSnoozePost,
+  "budget/unassign": budgetUnassignPost,
   "budget/unsnooze": budgetUnsnoozePost,
   "categories/create": categoriesCreatePost,
   "categories/delete": categoriesDeletePost,
+  "categories/reorder": categoriesReorderPost,
   "categories/target": categoriesTargetPost,
   "categories/update": categoriesUpdatePost,
+  "chat": chatPost,
   "debts/reorder": debtsReorderPost,
   "debts/update": debtsUpdatePost,
   "income/create": incomeCreatePost,
@@ -84,14 +126,21 @@ const POST_ROUTES: Record<string, Handler> = {
   "income/update": incomeUpdatePost,
   "investments/reorder": investmentsReorderPost,
   "investments/update": investmentsUpdatePost,
+  "net-worth/snapshot": netWorthSnapshotPost,
+  "payee-matches": payeeMatchesPost,
+  "payees/merge": payeesMergePost,
+  "profile": profilePost,
+  "receipt": receiptPost,
   "savings-goals/create": savingsGoalsCreatePost,
   "savings-goals/delete": savingsGoalsDeletePost,
   "savings-goals/update": savingsGoalsUpdatePost,
+  "settings": settingsPost,
   "subscriptions/create": subscriptionsCreatePost,
   "subscriptions/delete": subscriptionsDeletePost,
   "subscriptions/update": subscriptionsUpdatePost,
   "transactions/create": transactionsCreatePost,
   "transactions/delete": transactionsDeletePost,
+  "transactions/split": transactionsSplitPost,
   "transactions/update": transactionsUpdatePost,
 };
 
