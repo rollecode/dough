@@ -46,6 +46,22 @@ function openDb(file: string): Database.Database {
   return db;
 }
 
+// Closes and removes the database a request is using: the household's file when hosted, the
+// instance's own otherwise. The next getDb() starts an empty one.
+export function eraseCurrentDatabase(): void {
+  const household = householdStore.getStore();
+  const file = household ? household.dbPath : DB_PATH;
+  if (household) {
+    householdDbs.get(file)?.close();
+    householdDbs.delete(file);
+  } else {
+    _db?.close();
+    _db = null;
+  }
+  for (const suffix of ["", "-wal", "-shm"]) fs.rmSync(file + suffix, { force: true });
+  console.warn("[db] Erased database", household ? `of household ${household.id}` : "of this instance");
+}
+
 export function getDb(): Database.Database {
   const household = householdStore.getStore();
   if (household) {

@@ -654,6 +654,28 @@ export const SECTIONS: Section[] = [
       },
     ],
   },
+  {
+    id: "account",
+    title: "Account",
+    intro: "The household's data to take away, and deleting the account the key belongs to.",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/account/export",
+        scope: "write",
+        summary:
+          "The household's data as one SQLite file, the format Dough runs on, so it opens anywhere and can start a self-hosted instance. API keys and OAuth tokens are left out and saved credentials are readable. Needs write: the file holds every member's sign-in.",
+      },
+      {
+        method: "POST",
+        path: "/account/delete",
+        scope: "write",
+        summary:
+          "Delete the key owner's account. Their chats, keys and tokens go; what they added to the household passes to the next member. The last member's deletion removes the whole household. Answers { deleted: \"left-household\" | \"erased-household\" }, or 403 for a wrong password.",
+        body: [{ name: "password", type: "string", required: true, description: "The account's password, as confirmation." }],
+      },
+    ],
+  },
 ];
 
 // Signing in is not an endpoint of the finance API, so it is described beside it rather than in the

@@ -21,6 +21,7 @@ import { F } from "@/components/ui/f";
 import { DEFAULT_CHAT_GUIDELINES, DEFAULT_SUMMARY_INSTRUCTIONS, DEFAULT_DEBT_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { ApiKeysCard } from "@/components/settings/api-keys";
 import { McpConnectCard } from "@/components/settings/mcp-connect";
+import { YourDataCard } from "@/components/settings/your-data";
 
 interface UserProfile {
   id: number;
@@ -1333,6 +1334,8 @@ export default function SettingsPage() {
         <McpConnectCard />
 
         <ApiKeysCard />
+
+        <YourDataCard />
       </div>
     </div>
   );
