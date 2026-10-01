@@ -57,6 +57,8 @@ export interface SubscriptionUpdate {
 // Applies whatever fields are provided: mark_paid writes the month's bill_manual_status (bill_id =
 // id + 10000, is_paid only); the rest patch the subscriptions row.
 export function updateSubscription(p: SubscriptionUpdate): { found: boolean } {
+  // A client may send the id as text; the paid status offsets it numerically.
+  p = { ...p, id: Number(p.id) };
   if (!p.id) return { found: false };
   const db = getDb();
   const exists = db.prepare("SELECT 1 FROM subscriptions WHERE id = ?").get(p.id);

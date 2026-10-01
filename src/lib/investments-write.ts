@@ -24,7 +24,8 @@ export function updateInvestment(p: InvestmentUpdate): { ok: true } | { error: s
   if (!id) return { error: "ynab_account_id required" };
   const db = getDb();
   const acct = db.prepare("SELECT balance FROM ynab_accounts WHERE id = ?").get(id) as { balance: number } | undefined;
-  const prev = db.prepare("SELECT contributed FROM investment_overrides WHERE ynab_account_id = ?").get(id) as { contributed: number | null } | undefined;
+  const prev = db.prepare("SELECT contributed, monthly_contribution, expected_return, notes, ticker FROM investment_overrides WHERE ynab_account_id = ?")
+    .get(id) as { contributed: number | null; monthly_contribution: number; expected_return: number; notes: string; ticker: string } | undefined;
   const oldBalance = acct?.balance ?? 0;
 
   const hasValue = p.value !== undefined && p.value !== null && p.value !== "";
@@ -46,7 +47,8 @@ export function updateInvestment(p: InvestmentUpdate): { ok: true } | { error: s
     db.prepare(
       "INSERT INTO investment_overrides (ynab_account_id, monthly_contribution, expected_return, notes, ticker, contributed) VALUES (?, ?, ?, ?, ?, ?) " +
         "ON CONFLICT(ynab_account_id) DO UPDATE SET monthly_contribution = excluded.monthly_contribution, expected_return = excluded.expected_return, notes = excluded.notes, ticker = excluded.ticker, contributed = excluded.contributed, updated_at = datetime('now')"
-    ).run(id, p.monthly_contribution ?? 0, p.expected_return ?? 7, p.notes ?? "", p.ticker ?? "", contributed);
+    // Only the fields sent change; the rest keep what they were.
+    ).run(id, p.monthly_contribution ?? prev?.monthly_contribution ?? 0, p.expected_return ?? prev?.expected_return ?? 7, p.notes ?? prev?.notes ?? "", p.ticker ?? prev?.ticker ?? "", contributed);
 
     const totals = db.prepare(
       "SELECT COALESCE(SUM(a.balance), 0) AS value, COALESCE(SUM(COALESCE(o.contributed, a.balance)), 0) AS invested " +
