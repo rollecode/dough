@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getDb } from "@/lib/db";
+import { getYnabToken } from "@/lib/household";
 
 export async function GET() {
   try {
@@ -9,12 +9,8 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const db = getDb();
-    const row = db
-      .prepare("SELECT ynab_access_token FROM users WHERE id = ?")
-      .get(user.id) as { ynab_access_token: string | null } | undefined;
-
-    const token = row?.ynab_access_token;
+    // The household's token; the old per-user column is emptied when it moves there.
+    const token = getYnabToken();
     if (!token) {
       return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
     }

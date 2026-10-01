@@ -18,20 +18,6 @@ export async function POST(request: Request) {
         .run(body.locale, user.id);
     }
 
-    if (body.ynab_access_token !== undefined) {
-      const value = body.ynab_access_token || null;
-      console.info("[api/auth/update]", value ? "Saving" : "Clearing", "YNAB token for user", user.id);
-      db.prepare("UPDATE users SET ynab_access_token = ?, updated_at = datetime('now') WHERE id = ?")
-        .run(value, user.id);
-    }
-
-    if (body.ynab_budget_id !== undefined) {
-      const value = body.ynab_budget_id || null;
-      console.info("[api/auth/update]", value ? "Saving" : "Clearing", "YNAB budget ID for user", user.id);
-      db.prepare("UPDATE users SET ynab_budget_id = ?, updated_at = datetime('now') WHERE id = ?")
-        .run(value, user.id);
-    }
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[api/auth/update] Error:", error);
