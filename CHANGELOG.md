@@ -1,3 +1,18 @@
+### 4.7.0: 2026-10-01
+
+* Let subscriptions recur yearly or every few months, like bills
+* Count a yearly bill only in the month it falls due
+* Offer every API endpoint as an MCP tool
+* Keep debt and investment fields an update does not send
+* Download the household's data and delete an account
+* Show recent transactions from before the 1st
+* Give each payee its last description in the API
+* List YNAB budgets with the household's own token
+* Keep a saved AI key when its field is left empty
+* Run Claude on a household's own Anthropic key when it has one
+* Encrypt saved credentials when an encryption key is set
+* Serve several households from one instance, each in its own database
+
 ### 4.6.1: 2026-09-30
 
 * Stop the debt and investment tables jumping on hover
