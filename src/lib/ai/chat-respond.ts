@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getFinancialAdvice } from "@/lib/ai/finance-advisor";
+import { issuerFor } from "@/lib/oauth";
 import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { localDateIso } from "@/lib/date-utils";
@@ -584,7 +585,9 @@ export async function respondToChat(
     }
   }
 
-  const fullResponse = await getFinancialAdvice(messagesWithContext, context, image, image_media_type);
+  // With a signed-in person and the address it was asked on, Dougie can act for them.
+  const actAs = user && origin ? { userId: user.id, origin: issuerFor(origin) } : undefined;
+  const fullResponse = await getFinancialAdvice(messagesWithContext, context, image, image_media_type, actAs);
 
   // Save assistant response to DB for persistence
   if (user && fullResponse) {

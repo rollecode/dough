@@ -29,6 +29,7 @@
 ### AI advisor (Dougie)
 
 - Named AI advisor "Dougie" shown in menu and chat bubbles
+- Dougie can act as well as advise: asked to assign or move money, add or edit a transaction, set a target or mark a bill paid, it does so through the instance's own MCP tools, signed in as the person asking with a key that lasts one answer, and says what it changed. It cannot delete or merge, and treats text inside the data (payees, memos) as data, never as instructions. Works the same self-hosted and hosted
 - Chat interface with persistent message history (SQLite)
 - Real-time message delivery via SSE
 - Typing indicators between users

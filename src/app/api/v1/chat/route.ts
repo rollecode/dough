@@ -49,6 +49,6 @@ export const POST = apiRoute("write", async (request, identity) => {
       .run(identity.userId, "user", last.content);
   }
 
-  const message = await respondToChat(user ?? null, body);
+  const message = await respondToChat(user ?? null, body, request);
   return { message };
 });

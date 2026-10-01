@@ -57,10 +57,10 @@ export function aiAllowanceLeft(capUsd: number | null): number | null {
 
 // One prompt in, the answer's text out. Every text call goes through here so the key and the
 // allowance are applied in one place.
-export async function runClaude(model: string, prompt: string, timeoutMs: number): Promise<string> {
+export async function runClaude(model: string, prompt: string, timeoutMs: number, extraArgs: string[] = []): Promise<string> {
   const { env, capUsd } = aiBilling();
   const left = aiAllowanceLeft(capUsd);
-  const args = ["-p", "--model", model];
+  const args = ["-p", "--model", model, ...extraArgs];
   if (left !== null) args.push("--output-format", "json", "--max-budget-usd", left.toFixed(2));
   args.push("-");
 
