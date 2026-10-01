@@ -29,6 +29,7 @@ Edit `.env.local`:
 - `DOUGH_ENCRYPTION_KEY` — optional, 32 random bytes (`openssl rand -hex 32`). When set, bank sync, YNAB and AI credentials are encrypted in the database. Run `npx tsx scripts/seal-secrets.ts` once to encrypt the ones already saved. Keep the key: without it those credentials cannot be read and have to be entered again
 - `YNAB_ACCESS_TOKEN` — optional, can be set via settings UI instead
 - `YNAB_BUDGET_ID` — optional, can be set via settings UI instead
+- `YNAB_CLIENT_ID`, `YNAB_CLIENT_SECRET` — optional. With an OAuth app registered at app.ynab.com (Developer settings, redirect address `https://your-dough/api/ynab/oauth/callback`), Settings offers Sign in with YNAB instead of pasting a personal token, and the token renews itself. `YNAB_REDIRECT_URI` overrides the redirect address when one address serves several instances
 - `CLAUDE_PATH` — path to claude CLI binary, defaults to `claude` in PATH
 
 ### Create users

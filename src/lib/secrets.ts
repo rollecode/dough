@@ -7,6 +7,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
 export const SECRET_SETTINGS = new Set([
   "ynab_access_token",
+  "ynab_refresh_token",
   "synci_api_token",
   "gemini_api_key",
   "anthropic_api_key",

@@ -1,3 +1,4 @@
+import { ynabToken } from "@/lib/ynab/oauth";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getFinancialAdvice } from "@/lib/ai/finance-advisor";
 import { issuerFor } from "@/lib/oauth";
@@ -40,7 +41,7 @@ export async function respondToChat(
   let context;
 
   if (user) {
-    const token = getYnabToken();
+    const token = await ynabToken();
     const budgetId = getYnabBudgetId();
     const locale = user.locale || "en";
     const { getHouseholdSetting } = await import("@/lib/household");

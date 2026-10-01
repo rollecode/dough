@@ -1,3 +1,4 @@
+import { ynabToken } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getYnabToken } from "@/lib/household";
@@ -10,7 +11,7 @@ export async function GET() {
     }
 
     // The household's token; the old per-user column is emptied when it moves there.
-    const token = getYnabToken();
+    const token = await ynabToken();
     if (!token) {
       return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
     }

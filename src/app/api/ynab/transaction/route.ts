@@ -1,3 +1,4 @@
+import { ynabToken } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, id, category: categoryName ? "auto" : "uncategorized" });
     }
 
-    const token = getYnabToken();
+    const token = await ynabToken();
     const budgetId = getYnabBudgetId();
     if (!token || !budgetId) {
       return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
@@ -192,7 +193,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const token = getYnabToken();
+    const token = await ynabToken();
     const budgetId = getYnabBudgetId();
     if (!token || !budgetId) return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
 
@@ -272,7 +273,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const token = getYnabToken();
+    const token = await ynabToken();
     const budgetId = getYnabBudgetId();
     if (!token || !budgetId) return NextResponse.json({ error: "YNAB not connected" }, { status: 400 });
 

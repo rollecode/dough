@@ -1,3 +1,4 @@
+import { ynabToken } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual, getBudgetMode } from "@/lib/household";
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
 
     console.info("[api/ynab/sync] Starting sync for user", user.id, isCron ? "(cron)" : "");
 
-    const token = getYnabToken();
+    const token = await ynabToken();
     const budgetId = getYnabBudgetId();
 
     if (!token) {

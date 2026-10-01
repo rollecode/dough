@@ -1,3 +1,4 @@
+import { ynabOAuthConfigured } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getHouseholdSettings, setHouseholdSetting } from "@/lib/household";
@@ -41,6 +42,7 @@ export async function GET() {
         synci_api_token: settings.synci_api_token ? "••••••••" : null,
         gemini_key_set: !!settings.gemini_api_key,
         anthropic_key_set: !!settings.anthropic_api_key,
+        ynab_oauth_available: ynabOAuthConfigured(),
         synci_accounts: settings.synci_accounts || null,
         synci_account_mapping: settings.synci_account_mapping || null,
         synci_last_sync: settings.synci_last_sync || null,

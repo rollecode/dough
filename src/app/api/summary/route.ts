@@ -1,3 +1,4 @@
+import { ynabToken } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
     console.info("[summary] Generating fresh AI summary for user", user.id);
 
     // Get YNAB data from household settings
-    const token = getYnabToken();
+    const token = await ynabToken();
     const budgetId = getYnabBudgetId();
 
     const now = new Date();

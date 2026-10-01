@@ -5,6 +5,7 @@
 * Count a yearly bill only in the month it falls due
 * Offer every API endpoint as an MCP tool
 * Let Dougie act on what you ask, not only advise
+* Sign in to YNAB instead of pasting a token, when the instance has a YNAB app
 * Keep debt and investment fields an update does not send
 * Download the household's data and delete an account
 * Show recent transactions from before the 1st

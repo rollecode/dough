@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState("en");
   const [ynabToken, setYnabToken] = useState("");
+  const [ynabOAuth, setYnabOAuth] = useState(false);
   const [ynabBudgetId, setYnabBudgetId] = useState("");
   const [ynabLoading, setYnabLoading] = useState(false);
   const [ynabError, setYnabError] = useState("");
@@ -195,6 +196,23 @@ export default function SettingsPage() {
           if (notesData.notes) {
             setAccountNotes(notesData.notes);
           }
+          setYnabOAuth(!!householdData.settings?.ynab_oauth_available);
+          // Back from signing in to YNAB: pick the first budget, as pasting a token does.
+          const back = new URLSearchParams(window.location.search).get("ynab");
+          if (back) {
+            window.history.replaceState({}, "", "/settings");
+            if (back === "failed") setYnabError(locale === "fi" ? "YNAB-kirjautuminen epäonnistui" : "Signing in to YNAB failed");
+            else if (!householdData.settings?.ynab_budget_id) {
+              fetch("/api/ynab/budgets").then((r) => r.json()).then(async (bd) => {
+                const first = bd.budgets?.[0];
+                if (!first) return;
+                setYnabBudgets(bd.budgets);
+                setYnabBudgetId(first.id);
+                await fetch("/api/household", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ynab_budget_id: first.id }) });
+                setProfile((prev) => prev ? { ...prev, ynab_budget_id: first.id } : prev);
+              }).catch(() => {});
+            }
+          }
           if (householdData.settings?.ynab_connected) {
             fetch("/api/ynab/budgets")
               .then((r) => r.json())
@@ -305,6 +323,8 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ynab_access_token: null,
+          ynab_refresh_token: null,
+          ynab_token_expires_at: null,
           ynab_budget_id: null,
         }),
       });
@@ -986,6 +1006,14 @@ export default function SettingsPage() {
                     ? "Vapaaehtoinen. Ilman YNABia Dough toimii itsenäisesti (käytä Synciä tai lisää tapahtumat käsin). Yhdistä YNAB näin:"
                     : "Optional. Without YNAB, Dough runs on its own (use Synci or add transactions manually). To connect YNAB:"}
                 </p>
+                {ynabOAuth && (
+                  <>
+                    <a className="button" data-size="sm" href="/api/ynab/oauth/start">
+                      {locale === "fi" ? "Kirjaudu YNABiin" : "Sign in with YNAB"}
+                    </a>
+                    <p className="settings-help">{locale === "fi" ? "Tai liitä oma avain:" : "Or paste a token of your own:"}</p>
+                  </>
+                )}
                 <ol className="setup-steps">
                   <li>
                     <span className="setup-step-num">1</span>

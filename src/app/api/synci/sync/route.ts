@@ -1,3 +1,4 @@
+import { ynabToken } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
@@ -220,15 +221,15 @@ export async function POST(request: Request) {
             // person's account when a source was configured for a different account.)
             const overrideAccount = db.prepare("SELECT target_account_id FROM income_sources WHERE id = ?").get(pattern.source_id) as { target_account_id: string } | undefined;
             const ynabAccountId = (accountMapping[txSynciAccount] || overrideAccount?.target_account_id || "");
-            const ynabToken = getHouseholdSetting("ynab_access_token");
+            const householdYnabToken = await ynabToken();
             const ynabBudgetId = getHouseholdSetting("ynab_budget_id");
             let realYnabId = synciTxId;
 
             // Create in YNAB first to get real ID
-            if (ynabToken && ynabBudgetId && ynabAccountId) {
+            if (householdYnabToken && ynabBudgetId && ynabAccountId) {
               try {
                 const { createTransaction } = await import("@/lib/ynab/client");
-                const ynabTx = await createTransaction(ynabBudgetId, ynabToken, {
+                const ynabTx = await createTransaction(ynabBudgetId, householdYnabToken, {
                   account_id: ynabAccountId,
                   date: txDate || localDateIso(now),
                   amount,

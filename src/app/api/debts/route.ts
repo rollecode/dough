@@ -1,3 +1,4 @@
+import { ynabToken } from "@/lib/ynab/oauth";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
@@ -34,7 +35,7 @@ export async function GET() {
     const user = await getSession();
     if (!user) return NextResponse.json({ debts: [] }, { status: 401 });
 
-    const token = getYnabToken();
+    const token = await ynabToken();
     const budgetId = getYnabBudgetId();
     const db = getDb();
 
