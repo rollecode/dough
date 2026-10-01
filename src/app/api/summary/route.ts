@@ -6,7 +6,7 @@ import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
 import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 import { billDueInMonth } from "@/lib/bills";
-import { spawnClaude } from "@/lib/ai/claude-cli";
+import { runClaude } from "@/lib/ai/claude-cli";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -344,28 +344,7 @@ ${(() => { const goals = db.prepare("SELECT name, target_amount, saved_amount, t
 
     console.info("[summary] Calling claude CLI");
 
-    const summaryText = await new Promise<string>((resolve, reject) => {
-      const proc = spawnClaude(["-p", "--model", "opus", "-"], 120000);
-
-      let stdout = "";
-      let stderr = "";
-
-      proc.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });
-      proc.stderr.on("data", (data: Buffer) => { stderr += data.toString(); });
-
-      proc.on("close", (code: number) => {
-        if (code === 0 && stdout.trim()) {
-          resolve(stdout.trim());
-        } else {
-          reject(new Error(`claude exited with code ${code}: ${stderr}`));
-        }
-      });
-
-      proc.on("error", reject);
-
-      proc.stdin.write(prompt);
-      proc.stdin.end();
-    });
+    const summaryText = await runClaude("opus", prompt, 120000);
 
     let newId: number | undefined;
     if (summaryText) {

@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { dateForDayInMonth, formatDate } from "@/lib/date-utils";
-import { spawnClaude } from "@/lib/ai/claude-cli";
+import { runClaude } from "@/lib/ai/claude-cli";
 
 export async function GET(request: Request) {
   try {
@@ -74,20 +74,7 @@ ${debts.join("\n")}
 Total debt: ${debtAccounts.reduce((s: number, a: any) => s + Math.abs(a.balance), 0).toFixed(0)} euros`;
 
 
-    const suggestion = await new Promise<string>((resolve, reject) => {
-      const proc = spawnClaude(["-p", "--model", "opus", "-"], 120000);
-      let stdout = "";
-      let stderr = "";
-      proc.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });
-      proc.stderr.on("data", (data: Buffer) => { stderr += data.toString(); });
-      proc.on("close", (code: number) => {
-        if (code === 0 && stdout.trim()) resolve(stdout.trim());
-        else reject(new Error(`claude exited ${code}: ${stderr}`));
-      });
-      proc.on("error", reject);
-      proc.stdin.write(prompt);
-      proc.stdin.end();
-    });
+    const suggestion = await runClaude("opus", prompt, 120000);
 
     console.info("[debts/suggestion] AI suggestion generated");
 

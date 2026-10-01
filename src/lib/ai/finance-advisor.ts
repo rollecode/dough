@@ -1,4 +1,4 @@
-import { spawnClaude } from "@/lib/ai/claude-cli";
+import { runClaude } from "@/lib/ai/claude-cli";
 import { getHouseholdSetting } from "@/lib/household";
 import { getAiModel } from "./model";
 import { DEFAULT_CHAT_GUIDELINES } from "./default-prompts";
@@ -157,28 +157,7 @@ export async function getFinancialAdvice(
 
     const chatModel = getAiModel("chat");
     console.info("[ai] Chat model:", chatModel);
-    const response = await new Promise<string>((resolve, reject) => {
-      const proc = spawnClaude(["-p", "--model", chatModel, "-"], 120000);
-
-      let stdout = "";
-      let stderr = "";
-
-      proc.stdout.on("data", (data) => { stdout += data.toString(); });
-      proc.stderr.on("data", (data) => { stderr += data.toString(); });
-
-      proc.on("close", (code) => {
-        if (code === 0 && stdout.trim()) {
-          resolve(stdout.trim());
-        } else {
-          reject(new Error(`claude exited with code ${code}: ${stderr}`));
-        }
-      });
-
-      proc.on("error", reject);
-
-      proc.stdin.write(prompt);
-      proc.stdin.end();
-    });
+    const response = await runClaude(chatModel, prompt, 120000);
 
     console.info("[ai] Got response from claude CLI, length:", response.length);
     return response;

@@ -1,4 +1,4 @@
-import { spawnClaude } from "@/lib/ai/claude-cli";
+import { runClaude } from "@/lib/ai/claude-cli";
 import { getAiModel, isGeminiModel, getGeminiKey } from "./model";
 import { geminiText } from "./gemini";
 
@@ -46,17 +46,7 @@ Only include ids that appear in the list above. Use an empty array when nothing 
   const model = getAiModel("chat");
   const cliModel = isGeminiModel(model) ? "sonnet" : model;
   try {
-    raw = await new Promise<string>((resolve, reject) => {
-      const proc = spawnClaude(["-p", "--model", cliModel, "-"], 60000);
-      let stdout = "";
-      let stderr = "";
-      proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-      proc.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
-      proc.on("close", (code: number) => { if (code === 0 && stdout.trim()) resolve(stdout.trim()); else reject(new Error(stderr || "reconcile ai failed")); });
-      proc.on("error", reject);
-      proc.stdin.write(prompt);
-      proc.stdin.end();
-    });
+    raw = await runClaude(cliModel, prompt, 60000);
   } catch (err) {
     console.warn("[ai/reconcile] CLI failed, falling back to Gemini:", err);
     const key = getGeminiKey();

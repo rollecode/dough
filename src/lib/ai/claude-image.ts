@@ -1,4 +1,4 @@
-import { spawnClaude } from "@/lib/ai/claude-cli";
+import { spawnClaude, aiBilling, aiAllowanceLeft, recordAiSpend } from "@/lib/ai/claude-cli";
 import { getAiModel } from "./model";
 
 interface ClaudeImageResult {
@@ -36,8 +36,16 @@ export async function queryClaudeWithImage(
 
   const visionModel = getAiModel("vision");
   console.debug("[claude-image] Vision model:", visionModel);
+  const { env, capUsd } = aiBilling();
+  let left: number | null;
+  try {
+    left = aiAllowanceLeft(capUsd);
+  } catch (err) {
+    return { text: "", error: (err as Error).message };
+  }
+  const budget = left === null ? [] : ["--max-budget-usd", left.toFixed(2)];
   return new Promise((resolve, reject) => {
-    const proc = spawnClaude(["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"], timeoutMs);
+    const proc = spawnClaude(["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", ...budget], timeoutMs, env);
 
     let stdout = "";
     let stderr = "";
@@ -58,6 +66,7 @@ export async function queryClaudeWithImage(
         try {
           const parsed = JSON.parse(line);
           if (parsed.type === "result") {
+            if (left !== null) recordAiSpend(parsed.total_cost_usd ?? 0);
             if (parsed.is_error || parsed.api_error_status) {
               resultError = (typeof parsed.result === "string" && parsed.result.trim())
                 || `Claude API error${parsed.api_error_status ? ` ${parsed.api_error_status}` : ""}`;
