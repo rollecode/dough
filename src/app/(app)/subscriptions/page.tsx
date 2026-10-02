@@ -21,7 +21,7 @@ import { Plus, Loader2, Check, AlertCircle, X } from "lucide-react";
 import { F } from "@/components/ui/f";
 import { BudgetLinkControl } from "@/components/shared/budget-link-control";
 import { getBrandConfig, BrandIcon } from "@/lib/brands";
-import { isYearly, cadenceLabel, billMonthlySetAside, billInterval } from "@/lib/bills";
+import { isYearly, cadenceLabel, billInterval } from "@/lib/bills";
 import { RecurrenceFields, recurrenceFromForm } from "@/components/shared/recurrence-fields";
 
 
@@ -192,8 +192,9 @@ export default function SubscriptionsPage() {
   };
 
   const active = subscriptions.filter((s) => s.is_active);
-  // A yearly subscription is a twelfth of its price a month, and its price once a year.
-  const monthlyTotal = active.reduce((s, sub) => s + billMonthlySetAside(sub.amount, sub), 0);
+  // Monthly is what is charged every month, as the bills page counts it; a yearly subscription is
+  // not a monthly cost and counts only in the year's total, at its full price.
+  const monthlyTotal = active.filter((sub) => !isYearly(sub)).reduce((s, sub) => s + sub.amount, 0);
   const yearlyTotal = active.reduce((s, sub) => s + (sub.amount * 12) / billInterval(sub), 0);
 
   if (loading) {
@@ -240,7 +241,6 @@ export default function SubscriptionsPage() {
         <Card className="metric-card">
           <p className="metric-card-label">{locale === "fi" ? "Kuukaudessa" : "Monthly"}</p>
           <p className="metric-card-value-3xl text-negative"><F v={monthlyTotal} /></p>
-          <p className="metric-card-note metric-card-note-mt">{active.length} {locale === "fi" ? "tilausta" : "subscriptions"}</p>
         </Card>
         <Card className="metric-card">
           <p className="metric-card-label">{locale === "fi" ? "Vuodessa" : "Yearly"}</p>
