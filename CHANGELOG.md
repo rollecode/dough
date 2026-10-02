@@ -1,3 +1,8 @@
+### 4.7.1: 2026-10-02
+
+* Count only monthly subscriptions in the monthly total
+* Drop the subscription count under the monthly total
+
 ### 4.7.0: 2026-10-01
 
 * Let subscriptions recur yearly or every few months, like bills
