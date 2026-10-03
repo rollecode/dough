@@ -23,6 +23,7 @@ import {
 import { ChartContainer } from "@/components/ui/chart-container";
 import { RefreshCw, TrendingUp, TrendingDown, Wallet, Loader2, LineChart } from "lucide-react";
 import { F } from "@/components/ui/f";
+import { SignedLine } from "@/components/charts/signed-line";
 
 interface Snapshot {
   date: string;
@@ -160,24 +161,7 @@ export default function NetWorthPage() {
     }
   }
 
-  // The line is coloured by height, not along its length: green above zero, red below, fading over
-  // a short band at zero. A gradient along the length split a steep jump through zero into a red
-  // and a green half across the stroke, and on a narrow screen every day's change looked like a cut.
-  // The gradient spans the line's own box, top (its highest reading) to bottom (its lowest).
-  const actualValues = chartData.filter((d) => d.netWorth !== undefined).map((d) => d.netWorth!);
-  const lineHigh = actualValues.length ? Math.max(...actualValues) : 0;
-  const lineLow = actualValues.length ? Math.min(...actualValues) : 0;
-  const ZERO_BAND = 0.05;
-  const zeroAt = lineHigh > lineLow ? lineHigh / (lineHigh - lineLow) : 0.5;
-  const gradientStops =
-    lineLow >= 0 ? [{ pos: 0, color: nwColor(1) }, { pos: 1, color: nwColor(1) }]
-    : lineHigh < 0 ? [{ pos: 0, color: nwColor(-1) }, { pos: 1, color: nwColor(-1) }]
-    : [
-        { pos: 0, color: nwColor(1) },
-        { pos: Math.max(0, zeroAt - ZERO_BAND), color: nwColor(1) },
-        { pos: Math.min(1, zeroAt + ZERO_BAND), color: nwColor(-1) },
-        { pos: 1, color: nwColor(-1) },
-      ];
+  const signedPoints = chartData.filter((d) => d.netWorth !== undefined).map((d) => ({ x: d.date, y: d.netWorth! }));
 
   return (
     <div className="page-stack">
@@ -248,13 +232,6 @@ export default function NetWorthPage() {
                 <div className="spending-flow-chart">
                   <ResponsiveContainer width="100%" height={160}>
                     <AreaChart data={chartData} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="nwLineGrad" x1="0" y1="0" x2="0" y2="1">
-                          {gradientStops.map((s, i) => (
-                            <stop key={i} offset={`${(s.pos * 100).toFixed(2)}%`} stopColor={s.color} />
-                          ))}
-                        </linearGradient>
-                      </defs>
                       <XAxis dataKey="date" hide />
                       <YAxis hide domain={[(dataMin: number) => Math.min(dataMin, 0) - 200, (dataMax: number) => Math.max(dataMax, 0) + 200]} />
                       <ReferenceLine y={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
@@ -279,7 +256,8 @@ export default function NetWorthPage() {
                         }}
                       />
                       <Area type="monotone" dataKey="forecast" stroke={dotColor} strokeWidth={2} strokeDasharray="6 4" fill="none" dot={false} strokeOpacity={0.4} />
-                      <Area type="monotone" dataKey="netWorth" stroke="url(#nwLineGrad)" strokeWidth={5} fill="none" dot={false} />
+                      <Area type="monotone" dataKey="netWorth" stroke="none" fill="none" dot={false} activeDot={false} />
+                      <SignedLine points={signedPoints} positive={nwColor(1)} negative={nwColor(-1)} width={5} />
                       {lastActualPoint && (
                         <ReferenceDot
                           x={lastActualPoint.date}
