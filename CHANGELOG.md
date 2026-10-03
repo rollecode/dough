@@ -1,3 +1,10 @@
+### 4.7.2: 2026-10-03
+
+* Measure the burn rate over the last 30 days
+* Leave chosen payees out of the burn rate
+* Draw the burn bars from those same days
+* Share the burn rate's days with the phone
+
 ### 4.7.1: 2026-10-02
 
 * Count only monthly subscriptions in the monthly total
