@@ -9,6 +9,7 @@
 * Choose which name a payee merge keeps
 * Blend the net worth line along its direction through zero
 * Remove the bank sync notice from the dashboard
+* Colour chat amounts by expense, income and transfer
 
 ### 4.7.1: 2026-10-02
 

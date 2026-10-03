@@ -114,6 +114,7 @@ ADVICE STYLE:
 FORMATTING RULES (always follow):
 - NEVER use em-dashes (—) or en-dashes (–). Use commas, periods, or line breaks instead.
 - NEVER use bullet points with dashes. Use numbered lists or plain sentences.
+- Mark each euro amount that is money moving by its kind, as a Markdown link to that kind: money going out (an expense, bill, subscription or debt payment) as [45,00 €](#expense), money coming in (income) as [1 200,00 €](#income), and a transfer between the household's own accounts as [200,00 €](#transfer). Balances, totals, budgets and other amounts that are none of these stay in plain bold.
 
 IMPORTANT: When users attach a receipt/image and ask you to add an expense, the system automatically adds it to YNAB before you respond. Look for "SYSTEM NOTE" in the user message for the result. Confirm naturally what was added, do NOT say you cannot add expenses.
 

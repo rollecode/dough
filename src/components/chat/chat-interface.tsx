@@ -11,6 +11,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { copyToClipboard } from "@/lib/clipboard";
 
+const AMOUNT_KINDS: Record<string, string> = {
+  "#expense": "chat-amount-negative",
+  "#income": "chat-amount-positive",
+  "#transfer": "chat-amount-transfer",
+};
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -372,6 +378,12 @@ export function ChatInterface() {
                 <div className="chat-message-text">
                   {message.role === "assistant" ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+                      // Dougie marks an amount's kind as a link to #expense, #income or #transfer.
+                      a: ({ href, children }) => {
+                        const kind = AMOUNT_KINDS[href ?? ""];
+                        if (kind) return <strong className={kind}>{children}</strong>;
+                        return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
+                      },
                       strong: ({ children }) => {
                         const text = String(children);
                         const hasEuro = text.includes("€");

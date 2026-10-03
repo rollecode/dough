@@ -280,6 +280,11 @@
   white-space: nowrap;
 }
 
+.chat-amount-transfer {
+  color: var(--warning);
+  white-space: nowrap;
+}
+
 .chat-amount-neutral {
   color: var(--chart-3);
   white-space: nowrap;
