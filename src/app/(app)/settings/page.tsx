@@ -61,6 +61,8 @@ export default function SettingsPage() {
   const [excludedSaved, setExcludedSaved] = useState(false);
   const [budgetBillsMode, setBudgetBillsMode] = useState("auto");
   const [reserveNextMonthSaving, setReserveNextMonthSaving] = useState(false);
+  const [burnExcluded, setBurnExcluded] = useState("");
+  const [burnExcludedSaved, setBurnExcludedSaved] = useState(false);
   const [reserveSaved, setReserveSaved] = useState(false);
   const [ynabSyncHour, setYnabSyncHour] = useState("6");
   const [syncHourSaved, setSyncHourSaved] = useState(false);
@@ -156,6 +158,9 @@ export default function SettingsPage() {
           }
           if (householdData.settings?.budget_include_bills !== undefined) {
             setBudgetBillsMode(householdData.settings.budget_include_bills);
+          }
+          if (householdData.settings?.burn_rate_excluded_payees) {
+            try { setBurnExcluded((JSON.parse(householdData.settings.burn_rate_excluded_payees) as string[]).join("\n")); } catch {}
           }
           if (householdData.settings?.reserve_next_month_saving !== undefined) {
             setReserveNextMonthSaving(householdData.settings.reserve_next_month_saving === "1");
@@ -853,6 +858,34 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Maksunsaajat, joita kulutusvauhti ei laske" : "Payees left out of the burn rate"}</Label>
+              <div className="settings-row">
+                <textarea
+                  className="input settings-input"
+                  rows={3}
+                  value={burnExcluded}
+                  placeholder={locale === "fi" ? "Yksi riville" : "One per line"}
+                  onChange={(e) => setBurnExcluded(e.target.value)}
+                  onBlur={async () => {
+                    const names = burnExcluded.split("\n").map((n) => n.trim()).filter(Boolean);
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ burn_rate_excluded_payees: JSON.stringify(names) }),
+                    });
+                    setBurnExcludedSaved(true);
+                    setTimeout(() => setBurnExcludedSaved(false), 2000);
+                  }}
+                />
+                {burnExcludedSaved && <span className="settings-saved">{t.common.saved}</span>}
+              </div>
+              <p className="settings-help">
+                {locale === "fi"
+                  ? "Kulutusvauhti on viimeisen 30 päivän kulutus päivää kohti. Esimerkiksi vuokra jätetään pois, jotta luku kertoo arjen kulutuksesta."
+                  : "The burn rate is the last 30 days' spending per day. Leave out rent, for example, so the figure shows everyday spending."}
+              </p>
+            </div>
             <div className="form-field">
               <Label>{locale === "fi" ? "Laskut päiväbudjetissa" : "Bills in daily budget"}</Label>
               <div className="settings-row">

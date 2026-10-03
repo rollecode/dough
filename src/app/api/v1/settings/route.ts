@@ -6,6 +6,8 @@ import { getHouseholdSettings, setHouseholdSetting } from "@/lib/household";
 // can change a saving goal without opening the web app. Deliberately narrow: this is not a way to
 // reach every setting, only the ones a person adjusts while looking at the day's number.
 //
+// burn_rate_excluded_payees is the one list: payees the burn rate leaves out, rent for example.
+//
 // Display preferences are not here. How many decimals a client shows is that client's business,
 // and a phone changing the web app's formatting would be a surprise, not a feature.
 const NUMBERS = [
@@ -14,6 +16,15 @@ const NUMBERS = [
   "budget_threshold_normal",
   "budget_threshold_good",
 ] as const;
+
+function excludedPayees(raw: string | undefined): string[] {
+  try {
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
 
 export const GET = apiRoute("read", () => {
   const settings = getHouseholdSettings();
@@ -26,6 +37,7 @@ export const GET = apiRoute("read", () => {
     budget_threshold_good: parseInt(settings.budget_threshold_good || "50", 10),
     reserve_next_month_saving: settings.reserve_next_month_saving === "1",
     household_size: parseInt(settings.household_size || "1", 10),
+    burn_rate_excluded_payees: excludedPayees(settings.burn_rate_excluded_payees),
   };
 });
 
@@ -55,6 +67,15 @@ export const POST = apiRoute("write", async (request) => {
   if (body.reserve_next_month_saving !== undefined) {
     setHouseholdSetting("reserve_next_month_saving", body.reserve_next_month_saving ? "1" : "0");
     written.push("reserve_next_month_saving");
+  }
+
+  if (body.burn_rate_excluded_payees !== undefined) {
+    if (!Array.isArray(body.burn_rate_excluded_payees) || body.burn_rate_excluded_payees.some((p: unknown) => typeof p !== "string")) {
+      return NextResponse.json({ error: "burn_rate_excluded_payees must be a list of payee names" }, { status: 400 });
+    }
+    const names = body.burn_rate_excluded_payees.map((p: string) => p.trim()).filter(Boolean);
+    setHouseholdSetting("burn_rate_excluded_payees", JSON.stringify(names));
+    written.push("burn_rate_excluded_payees");
   }
 
   if (written.length === 0) {

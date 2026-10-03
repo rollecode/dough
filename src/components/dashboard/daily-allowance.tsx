@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, CalendarClock, Wallet, Info } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { F } from "@/components/ui/f";
 import { SavingsStreak } from "./savings-streak";
-import { useDailyHistory } from "@/lib/use-daily-history";
 
 interface DailyAllowanceProps {
   dailyBudget: number;
@@ -18,7 +17,6 @@ interface DailyAllowanceProps {
   nextIncomeAmount: number;
   nextIncomeDate: string;
   daysUntilIncome: number;
-  burnRate?: number;
   projectedMonthEnd?: number;
   accountCount?: number;
   billCount?: number;
@@ -59,7 +57,6 @@ export function DailyAllowance({
   nextIncomeAmount,
   nextIncomeDate,
   daysUntilIncome,
-  burnRate = 0,
   projectedMonthEnd = 0,
   accountCount = 0,
   billCount = 0,
@@ -77,7 +74,16 @@ export function DailyAllowance({
   currency = "€",
 }: DailyAllowanceProps) {
   const { t, locale, fmt, mask } = useLocale();
-  const dailyHistory = useDailyHistory();
+  // The burn rate comes from the server's model, the same figure the phone shows: the last 30
+  // days' spending a day, with the payees the settings leave out.
+  const [burn, setBurn] = useState<{ per_day: number; by_date: Record<string, number> } | null>(null);
+  useEffect(() => {
+    fetch("/api/dashboard-model")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.burn_rate) setBurn(d.burn_rate); })
+      .catch((err) => console.error("[daily-allowance] Load error:", err));
+  }, []);
+  const burnDays = Object.entries(burn?.by_date ?? {}).map(([date, spent]) => ({ date, spent }));
   const [infoOpen, setInfoOpen] = useState(false);
   const [budgetInfoOpen, setBudgetInfoOpen] = useState(false);
   const [billsInfoOpen, setBillsInfoOpen] = useState(false);
@@ -327,8 +333,8 @@ export function DailyAllowance({
           </div>
           <div>
             <p className="metric-card-label"><Link href="/transactions" className="card-title-link">{locale === "fi" ? "Kulutusvauhti" : "Burn rate"}</Link></p>
-            <p className="metric-card-value"><F v={burnRate} s={` ${currency}/${locale === "fi" ? "pv" : "day"}`} /></p>
-            <BurnBars history={dailyHistory} average={burnRate} />
+            <p className="metric-card-value">{burn ? <F v={burn.per_day} s={` ${currency}/${locale === "fi" ? "pv" : "day"}`} /> : "…"}</p>
+            <BurnBars history={burnDays} average={burn?.per_day ?? 0} />
             <p className="metric-card-note">
               {trendPercent !== 0 ? (
                 <>
@@ -338,7 +344,7 @@ export function DailyAllowance({
                   {" "}{locale === "fi" ? "vs ed. viikko" : "vs last week"}
                 </>
               ) : (
-                locale === "fi" ? "keskiarvo tässä kuussa" : "average this month"
+                locale === "fi" ? "30 päivän keskiarvo" : "average over 30 days"
               )}
             </p>
           </div>

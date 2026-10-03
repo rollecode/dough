@@ -31,6 +31,7 @@ export async function GET() {
         time_format: settings.time_format || "24h",
         budget_excluded_accounts: settings.budget_excluded_accounts || "[]",
         budget_include_bills: settings.budget_include_bills || "1",
+        burn_rate_excluded_payees: settings.burn_rate_excluded_payees || "[]",
         reserve_next_month_saving: settings.reserve_next_month_saving || "0",
         last_reservation_month: settings.last_reservation_month || "",
         ynab_sync_hour: settings.ynab_sync_hour || "6",

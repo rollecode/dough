@@ -193,6 +193,7 @@ export function dashboardFor(userId: number) {
     displayName,
     accounts: data.summary.accounts,
     transactions: data.transactions,
+    burnRateExcludedPayees: parseJsonSetting("burn_rate_excluded_payees"),
     monthBudget: data.monthBudget,
     bills,
     incomes,

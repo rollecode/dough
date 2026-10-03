@@ -103,6 +103,8 @@ export interface DashboardInput {
   // How many of the month's biggest spending categories to report. Six fills the browser's donut;
   // a phone lists them, so it asks for more.
   topCategories?: number;
+  // Payees the burn rate leaves out, rent for example, matched as fixed costs are.
+  burnRateExcludedPayees?: string[];
 }
 
 export interface DashboardModel {
@@ -170,6 +172,9 @@ export interface DashboardModel {
   // week is the card's seven bars, oldest first, each judged against its own day's budget.
   streak: { days: number; spent_by_date: Record<string, number>; week: StreakDay[] };
   heatmap: Record<string, number>;
+  // What the household spends a day over the last 30 days, and each of those days, with the
+  // excluded payees left out. month_summary.burn_rate carries the same per-day figure.
+  burn_rate: { per_day: number; window_days: number; by_date: Record<string, number>; excluded_payees: string[] };
   cash_flow: { month: string; income: number; expenses: number; upcoming_income: number }[];
   trends: { category: string; this_month: number; last_month: number }[];
   recent_transactions: {
@@ -237,6 +242,38 @@ export function averageDailySpend(spentByDate: Record<string, number>, now: Date
   return round(total / days);
 }
 
+export const BURN_RATE_DAYS = 30;
+
+// The daily rate over the last 30 days rather than the month so far: on the 2nd, one rent payment
+// divided by two days is not a rate anyone spends at. Payees named in the setting are left out,
+// matched the way fixed costs are (either name contains the other), so "M2-Kodit" catches
+// "M2-KODIT OY".
+export function burnRate<T extends { date: string; amount: number; payee: string }>(
+  transactions: T[],
+  now: Date,
+  excludedPayees: string[],
+  counts: (t: T) => boolean
+): { per_day: number; window_days: number; by_date: Record<string, number>; excluded_payees: string[] } {
+  const excluded = excludedPayees.map((n) => n.trim().toLowerCase()).filter(Boolean);
+  const leftOut = (payee: string) => {
+    const p = (payee || "").trim().toLowerCase();
+    return p !== "" && excluded.some((n) => p.includes(n) || n.includes(p));
+  };
+  const end = isoDay(now);
+  const start = isoDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (BURN_RATE_DAYS - 1)));
+  const byDate: Record<string, number> = {};
+  for (let back = BURN_RATE_DAYS - 1; back >= 0; back--) {
+    byDate[isoDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - back))] = 0;
+  }
+  let total = 0;
+  for (const t of transactions) {
+    if (t.date < start || t.date > end || !counts(t) || leftOut(t.payee)) continue;
+    byDate[t.date] = round((byDate[t.date] ?? 0) + Math.abs(t.amount));
+    total += Math.abs(t.amount);
+  }
+  return { per_day: round(total / BURN_RATE_DAYS), window_days: BURN_RATE_DAYS, by_date: byDate, excluded_payees: excluded };
+}
+
 export function monthStatus(input: MonthStatusInput): MonthStatus {
   const { now, transactions, monthBudgetIncome, incomes, bills } = input;
   const { savingRate, debtMonthly, investmentMonthly, commitmentCategories } = input;
@@ -296,7 +333,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     debtMonthly, investmentMonthly, commitmentCategories, topCategories = 6,
     excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
-    monthlyHistory, trends, budgetByDay, streakHistory,
+    monthlyHistory, trends, budgetByDay, streakHistory, burnRateExcludedPayees = [],
   } = input;
 
   const month = ym(now);
@@ -503,7 +540,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   const realSpendingTotal = round(
     monthTx.filter(isSpending).reduce((s, t) => s + Math.abs(t.amount), 0)
   );
-  const burnRate = today > 0 ? round(realSpendingTotal / today) : 0;
+  const burn = burnRate(transactions, now, burnRateExcludedPayees, isSpending);
 
   // Only what falls due this month: a yearly bill or subscription counts in its own month.
   const activeBills = bills.filter((b) => b.is_active && billDueInMonth(b, now.getMonth() + 1));
@@ -688,7 +725,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
       activity: round(Math.abs(monthBudget.activity)),
       to_be_budgeted: round(monthBudget.toBeBudgeted),
       expenses_estimate: monthExpensesEstimate,
-      burn_rate: burnRate,
+      burn_rate: burn.per_day,
       trend_percent: trendPercent,
       days_in_month: daysInMonth,
       days_passed: today,
@@ -709,6 +746,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     categories,
     streak: { days: streak.current, spent_by_date: spentByDate, week: streak.days },
     heatmap,
+    burn_rate: burn,
     // The months that have a snapshot, then this one from the live ledger. A snapshot for the
     // current month may not exist yet, and when it does it is already stale, so it is replaced
     // rather than trusted - the same thing the web page does before it draws the chart.
