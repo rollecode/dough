@@ -10,6 +10,7 @@
 * Blend the net worth line along its direction through zero
 * Remove the bank sync notice from the dashboard
 * Colour chat amounts by expense, income and transfer
+* Stop Dougie referring to Dough as somewhere else
 
 ### 4.7.1: 2026-10-02
 
