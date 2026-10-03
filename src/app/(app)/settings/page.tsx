@@ -61,8 +61,10 @@ export default function SettingsPage() {
   const [excludedSaved, setExcludedSaved] = useState(false);
   const [budgetBillsMode, setBudgetBillsMode] = useState("auto");
   const [reserveNextMonthSaving, setReserveNextMonthSaving] = useState(false);
-  const [burnExcluded, setBurnExcluded] = useState("");
+  const [burnExcluded, setBurnExcluded] = useState<string[]>([]);
   const [burnExcludedSaved, setBurnExcludedSaved] = useState(false);
+  const [burnPayee, setBurnPayee] = useState("");
+  const [payeeNames, setPayeeNames] = useState<string[]>([]);
   const [reserveSaved, setReserveSaved] = useState(false);
   const [ynabSyncHour, setYnabSyncHour] = useState("6");
   const [syncHourSaved, setSyncHourSaved] = useState(false);
@@ -107,6 +109,10 @@ export default function SettingsPage() {
         if (d?.daily_budget) setSpendPace({ budget: d.daily_budget.amount, average: d.daily_budget.average_spent_last_month });
       })
       .catch((err) => console.warn("[settings] Could not load the spending pace:", err));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/payees").then((r) => r.json()).then((d) => { if (Array.isArray(d.payees)) setPayeeNames(d.payees); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -160,7 +166,7 @@ export default function SettingsPage() {
             setBudgetBillsMode(householdData.settings.budget_include_bills);
           }
           if (householdData.settings?.burn_rate_excluded_payees) {
-            try { setBurnExcluded((JSON.parse(householdData.settings.burn_rate_excluded_payees) as string[]).join("\n")); } catch {}
+            try { setBurnExcluded(JSON.parse(householdData.settings.burn_rate_excluded_payees) as string[]); } catch {}
           }
           if (householdData.settings?.reserve_next_month_saving !== undefined) {
             setReserveNextMonthSaving(householdData.settings.reserve_next_month_saving === "1");
@@ -860,26 +866,25 @@ export default function SettingsPage() {
             )}
             <div className="form-field">
               <Label>{locale === "fi" ? "Maksunsaajat, joita kulutusvauhti ei laske" : "Payees left out of the burn rate"}</Label>
-              <div className="settings-row">
-                <textarea
-                  className="input settings-input"
-                  rows={3}
-                  value={burnExcluded}
-                  placeholder={locale === "fi" ? "Yksi riville" : "One per line"}
-                  onChange={(e) => setBurnExcluded(e.target.value)}
-                  onBlur={async () => {
-                    const names = burnExcluded.split("\n").map((n) => n.trim()).filter(Boolean);
-                    await fetch("/api/household", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ burn_rate_excluded_payees: JSON.stringify(names) }),
-                    });
-                    setBurnExcludedSaved(true);
-                    setTimeout(() => setBurnExcludedSaved(false), 2000);
-                  }}
-                />
-                {burnExcludedSaved && <span className="settings-saved">{t.common.saved}</span>}
-              </div>
+              <BurnPayeePicker
+                selected={burnExcluded}
+                payees={payeeNames}
+                query={burnPayee}
+                onQuery={setBurnPayee}
+                saved={burnExcludedSaved}
+                savedLabel={t.common.saved}
+                locale={locale}
+                onChange={async (names) => {
+                  setBurnExcluded(names);
+                  await fetch("/api/household", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ burn_rate_excluded_payees: JSON.stringify(names) }),
+                  });
+                  setBurnExcludedSaved(true);
+                  setTimeout(() => setBurnExcludedSaved(false), 2000);
+                }}
+              />
               <p className="settings-help">
                 {locale === "fi"
                   ? "Kulutusvauhti on viimeisen 30 päivän kulutus päivää kohti. Esimerkiksi vuokra jätetään pois, jotta luku kertoo arjen kulutuksesta."
@@ -1397,6 +1402,51 @@ export default function SettingsPage() {
         <ApiKeysCard />
 
         <YourDataCard />
+      </div>
+    </div>
+  );
+}
+
+
+// The payees the burn rate leaves out, picked as in the add dialog: the usual ones as chips, a
+// search over every payee, and whatever is typed when none match.
+function BurnPayeePicker({ selected, payees, query, onQuery, onChange, saved, savedLabel, locale }: {
+  selected: string[]; payees: string[]; query: string; onQuery: (q: string) => void;
+  onChange: (names: string[]) => void; saved: boolean; savedLabel: string; locale: string;
+}) {
+  const has = (name: string) => selected.some((s) => s.toLowerCase() === name.toLowerCase());
+  const trimmed = query.trim();
+  const remaining = payees.filter((p) => !has(p));
+  const matches = trimmed ? remaining.filter((p) => p.toLowerCase().includes(trimmed.toLowerCase())) : remaining;
+  const suggestions = matches.slice(0, 8);
+  const offerOwn = trimmed && !matches.some((p) => p.toLowerCase() === trimmed.toLowerCase());
+  const add = (name: string) => { if (!has(name)) onChange([...selected, name]); onQuery(""); };
+  return (
+    <div className="burn-picker">
+      {selected.length > 0 && (
+        <div className="burn-picker-chips">
+          {selected.map((name) => (
+            <button key={name} type="button" className="match-pattern-tag burn-picker-chip" onClick={() => onChange(selected.filter((s) => s !== name))} aria-label={`${locale === "fi" ? "Poista" : "Remove"} ${name}`}>
+              {name} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="settings-row">
+        <Input
+          className="settings-input"
+          value={query}
+          placeholder={locale === "fi" ? "Hae maksunsaajaa" : "Search payees"}
+          onChange={(e) => onQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && trimmed) { e.preventDefault(); add(trimmed); } }}
+        />
+        {saved && <span className="settings-saved">{savedLabel}</span>}
+      </div>
+      <div className="burn-picker-suggestions">
+        {suggestions.map((name) => (
+          <button key={name} type="button" className="burn-picker-suggestion" onClick={() => add(name)}>{name}</button>
+        ))}
+        {offerOwn && <button type="button" className="burn-picker-suggestion" onClick={() => add(trimmed)}>+ {trimmed}</button>}
       </div>
     </div>
   );

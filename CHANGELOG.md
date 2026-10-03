@@ -1,7 +1,7 @@
 ### 4.7.2: 2026-10-03
 
 * Measure the burn rate over the last 30 days
-* Leave chosen payees out of the burn rate
+* Leave chosen payees out of the burn rate, picked as in the add dialog
 * Draw the burn bars from those same days
 * Share the burn rate's days with the phone
 * Keep budget popovers above the rows of other groups
