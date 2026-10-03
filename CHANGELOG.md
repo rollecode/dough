@@ -8,6 +8,7 @@
 * Open the payee merge dialog from Settings
 * Choose which name a payee merge keeps
 * Blend the net worth line along its direction through zero
+* Remove the bank sync notice from the dashboard
 
 ### 4.7.1: 2026-10-02
 

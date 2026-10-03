@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DailyAllowance } from "@/components/dashboard/daily-allowance";
 import { AiSummary } from "@/components/dashboard/ai-summary";
 import { EntryReminder } from "@/components/dashboard/entry-reminder";
-import { SynciStatus } from "@/components/dashboard/synci-status";
 import { PersonalGreeting } from "@/components/dashboard/personal-greeting";
 import { SpendingFlow } from "@/components/dashboard/spending-flow";
 import { fixedCostMatcher } from "@/lib/fixed-costs";
@@ -599,7 +598,6 @@ export default function DashboardPage() {
         onAddExpense={() => setAddOpen(true)}
       />
       <AddExpenseDialog open={addOpen} onOpenChange={setAddOpen} />
-      <SynciStatus />
 
       <PersonalGreeting
         todaySpentPersonal={todaySpentPersonal}
