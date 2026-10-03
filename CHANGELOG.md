@@ -7,6 +7,7 @@
 * Keep budget popovers above the rows of other groups
 * Open the payee merge dialog from Settings
 * Choose which name a payee merge keeps
+* Colour the net worth line by height, so jumps through zero blend
 
 ### 4.7.1: 2026-10-02
 
