@@ -67,11 +67,14 @@ export function PayeesDialog({ open, onOpenChange }: PayeesDialogProps) {
     return q ? usage.filter((u) => u.payee.toLowerCase().includes(q)) : usage;
   }, [usage, query]);
 
-  // The most used of the selected names is the one the others become, as a person would pick.
+  // The most used of the selected names is the one the others become unless another is chosen.
+  const [chosenTarget, setChosenTarget] = useState("");
   const target = useMemo(
-    () => usage.find((u) => selected.includes(u.payee))?.payee ?? "",
-    [usage, selected]
+    () => (selected.includes(chosenTarget) ? chosenTarget : usage.find((u) => selected.includes(u.payee))?.payee ?? ""),
+    [usage, selected, chosenTarget]
   );
+  // Which name a suggested group keeps, when not the one the AI proposed.
+  const [groupTargets, setGroupTargets] = useState<Record<string, string>>({});
 
   async function merge(from: string[], into: string) {
     setBusy(true);
@@ -133,9 +136,17 @@ export function PayeesDialog({ open, onOpenChange }: PayeesDialogProps) {
               suggestions.map((group) => (
                 <div key={group.into} className="payees-suggestion">
                   <p className="payees-suggestion-text">
-                    {group.from.join(", ")} → <strong>{group.into}</strong>
+                    {[group.into, ...group.from].filter((n) => n !== (groupTargets[group.into] ?? group.into)).join(", ")} →{" "}
+                    <select
+                      className="payees-target"
+                      value={groupTargets[group.into] ?? group.into}
+                      onChange={(e) => setGroupTargets((t) => ({ ...t, [group.into]: e.target.value }))}
+                      aria-label={fi ? "Säilytettävä nimi" : "Name to keep"}
+                    >
+                      {[group.into, ...group.from].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
                   </p>
-                  <Button size="sm" onClick={() => merge(group.from, group.into)} disabled={busy}>
+                  <Button size="sm" onClick={() => { const keep = groupTargets[group.into] ?? group.into; merge([group.into, ...group.from].filter((n) => n !== keep), keep); }} disabled={busy}>
                     {fi ? "Yhdistä" : "Merge"}
                   </Button>
                 </div>
@@ -189,7 +200,10 @@ export function PayeesDialog({ open, onOpenChange }: PayeesDialogProps) {
         {selected.length >= 2 && (
           <div className="payees-merge-bar">
             <p className="payees-note">
-              {fi ? `Yhdistä ${selected.length} saajaa nimelle` : `Merge ${selected.length} payees into`} <strong>{target}</strong>
+              {fi ? `Yhdistä ${selected.length} saajaa nimelle` : `Merge ${selected.length} payees into`}{" "}
+              <select className="payees-target" value={target} onChange={(e) => setChosenTarget(e.target.value)} aria-label={fi ? "Säilytettävä nimi" : "Name to keep"}>
+                {selected.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
             </p>
             <Button size="sm" onClick={() => merge(selected, target)} disabled={busy}>
               {fi ? "Yhdistä" : "Merge"}
