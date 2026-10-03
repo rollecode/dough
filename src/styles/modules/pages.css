@@ -979,11 +979,13 @@
   gap: 0.3125rem;
 }
 
+/* The row popovers sit above every row's assign input (41, raised for the calculator backdrop):
+   at the same level the next row's input, later in the DOM, painted over them and took the clicks. */
 .budget-autoassign-menu {
   position: absolute;
   top: calc(100% + 0.375rem);
   right: 0;
-  z-index: 41;
+  z-index: 45;
   min-width: 12rem;
   display: flex;
   flex-direction: column;
@@ -1127,7 +1129,7 @@
   position: absolute;
   top: calc(100% + 0.25rem);
   right: 0;
-  z-index: 41;
+  z-index: 45;
   width: 15rem;
   padding: 0.5rem;
   border-radius: 0.625rem;
@@ -1236,7 +1238,7 @@
   position: absolute;
   top: calc(100% + 0.25rem);
   right: 0;
-  z-index: 41;
+  z-index: 45;
   width: 18rem;
   max-width: 80vw;
   padding: 0.5rem;
