@@ -5,6 +5,7 @@
 * Draw the burn bars from those same days
 * Share the burn rate's days with the phone
 * Keep budget popovers above the rows of other groups
+* Open the payee merge dialog from Settings
 
 ### 4.7.1: 2026-10-02
 

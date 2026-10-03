@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, CheckCircle2, XCircle, Globe, Link, Loader2, PiggyBank, Users, Sparkles, User, Wallet } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, Globe, Link, Loader2, PiggyBank, Users, Sparkles, User, Wallet, Store } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import type { Locale } from "@/lib/i18n";
 import { F } from "@/components/ui/f";
@@ -22,6 +22,7 @@ import { DEFAULT_CHAT_GUIDELINES, DEFAULT_SUMMARY_INSTRUCTIONS, DEFAULT_DEBT_INS
 import { ApiKeysCard } from "@/components/settings/api-keys";
 import { McpConnectCard } from "@/components/settings/mcp-connect";
 import { YourDataCard } from "@/components/settings/your-data";
+import { PayeesDialog } from "@/components/shared/payees-dialog";
 
 interface UserProfile {
   id: number;
@@ -64,6 +65,7 @@ export default function SettingsPage() {
   const [burnExcluded, setBurnExcluded] = useState<string[]>([]);
   const [burnExcludedSaved, setBurnExcludedSaved] = useState(false);
   const [burnPayee, setBurnPayee] = useState("");
+  const [payeesOpen, setPayeesOpen] = useState(false);
   const [payeeNames, setPayeeNames] = useState<string[]>([]);
   const [reserveSaved, setReserveSaved] = useState(false);
   const [ynabSyncHour, setYnabSyncHour] = useState("6");
@@ -1137,6 +1139,29 @@ export default function SettingsPage() {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Payees: rename and merge, the same dialog the transactions page opens */}
+        <Card className="settings-card">
+          <CardHeader>
+            <CardTitle className="settings-card-title">
+              <Store />
+              {locale === "fi" ? "Maksunsaajat" : "Payees"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="form-stack">
+            <p className="settings-help">
+              {locale === "fi"
+                ? "Nimeä maksunsaaja uudelleen tai yhdistä saman kaupan eri kirjoitusasut yhdeksi. Dough ehdottaa yhdistettäviä."
+                : "Rename a payee, or merge the different spellings of one merchant into one. Dough suggests which to merge."}
+            </p>
+            <div>
+              <Button variant="outline" onClick={() => setPayeesOpen(true)}>
+                {locale === "fi" ? "Yhdistä maksunsaajia" : "Merge payees"}
+              </Button>
+            </div>
+            <PayeesDialog open={payeesOpen} onOpenChange={setPayeesOpen} />
           </CardContent>
         </Card>
 
