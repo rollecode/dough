@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { queryClaudeWithImage } from "@/lib/ai/claude-image";
+import { routineAnswer } from "@/lib/ai/routine";
 import { titleCasePayee } from "@/lib/text-utils";
 import { localDateIso } from "@/lib/date-utils";
 
@@ -47,34 +47,40 @@ Reply with ONLY a valid JSON array, nothing else:
 
 If you cannot read clearly, still try your best guess.`;
 
-    const result = await queryClaudeWithImage(prompt, image, media_type);
-
-    if (result.error) {
-      console.error("[receipt] Parse error:", result.error);
-      return NextResponse.json({ error: result.error }, { status: 500 });
+    let resultText: string;
+    try {
+      resultText = await routineAnswer("vision", prompt, {
+        image: { data: image, mediaType: media_type },
+        thinking: "low",
+        claudeModel: "opus",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[receipt] Parse error:", message);
+      return NextResponse.json({ error: message }, { status: 500 });
     }
 
     // Extract JSON array or object from response
     let transactions: { amount: string; payee: string; date?: string; account?: string }[] = [];
     try {
       // Try array first
-      const arrayMatch = result.text.match(/\[[\s\S]*\]/);
+      const arrayMatch = resultText.match(/\[[\s\S]*\]/);
       if (arrayMatch) {
         transactions = JSON.parse(arrayMatch[0]);
       } else {
         // Fallback to single object
-        const objMatch = result.text.match(/\{[\s\S]*\}/);
+        const objMatch = resultText.match(/\{[\s\S]*\}/);
         if (objMatch) {
           transactions = [JSON.parse(objMatch[0])];
         }
       }
     } catch {
-      console.warn("[receipt] Failed to parse JSON from:", result.text);
+      console.warn("[receipt] Failed to parse JSON from:", resultText);
     }
 
     if (transactions.length === 0) {
-      console.warn("[receipt] Could not parse receipt, raw:", result.text);
-      return NextResponse.json({ error: "Could not read receipt", raw: result.text }, { status: 422 });
+      console.warn("[receipt] Could not parse receipt, raw:", resultText);
+      return NextResponse.json({ error: "Could not read receipt", raw: resultText }, { status: 422 });
     }
 
     console.info("[receipt] Parsed", transactions.length, "transactions");

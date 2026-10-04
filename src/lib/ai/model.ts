@@ -1,21 +1,23 @@
 import { getHouseholdSetting } from "@/lib/household";
 
-// Per-task AI model selection, configurable in settings (stored in household_settings).
-// Tiering: routine/daily work (categorizing) defaults to fast, near-free Gemini 2.5 Flash over
-// HTTP; demanding work (Dougie chat, receipt vision) defaults to Claude Opus 4.8 over the CLI,
-// which is covered by the Claude Code subscription (no per-token cost).
-export type AiTask = "categorize" | "chat" | "vision";
+// Per-task AI model, configurable in settings (stored in household_settings). Dougie (chat) runs on
+// the Claude CLI; everything else defaults to Gemini over its API: categorizing and quick answers,
+// receipt images (vision) and the written insights (summary, debt advice, balance reconcile).
+export type AiTask = "categorize" | "chat" | "vision" | "insight";
+
+export const GEMINI_DEFAULT = "gemini-3-flash-preview";
 
 export const AI_MODEL_DEFAULTS: Record<AiTask, string> = {
-  categorize: "gemini-2.5-flash",
+  categorize: GEMINI_DEFAULT,
   chat: "opus",
-  vision: "opus",
+  vision: GEMINI_DEFAULT,
+  insight: GEMINI_DEFAULT,
 };
 
-// Claude CLI model aliases (covered by the subscription)
+// Claude CLI model aliases
 export const CLI_MODEL_CHOICES = ["haiku", "sonnet", "opus"] as const;
-// Models that can be selected for categorizing (adds the HTTP Gemini option)
-export const CATEGORIZE_MODEL_CHOICES = ["gemini-2.5-flash", ...CLI_MODEL_CHOICES] as const;
+export const GEMINI_MODEL_CHOICES = [GEMINI_DEFAULT, "gemini-2.5-flash"] as const;
+export const CATEGORIZE_MODEL_CHOICES = [...GEMINI_MODEL_CHOICES, ...CLI_MODEL_CHOICES] as const;
 
 const ALLOWED = new Set<string>([...CATEGORIZE_MODEL_CHOICES]);
 

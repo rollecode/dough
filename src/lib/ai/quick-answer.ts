@@ -1,25 +1,27 @@
-import { getAiModel, isGeminiModel, getGeminiKey } from "./model";
-import { geminiText } from "./gemini";
+import { getAiModel, isGeminiModel } from "./model";
+import { gemini, geminiBilling } from "./gemini";
 import { runClaude } from "./claude-cli";
 
-// One short answer from the routine-work model: fast Gemini when a key is set, otherwise the
-// Claude CLI (Haiku fallback). `accept` turns the reply into a result or rejects it; a Gemini
-// reply that is rejected still gets a second try from the CLI. Null when nothing was accepted.
+// One short answer from the routine-work model: Gemini when the categorize model is a Gemini one
+// and a key is there, otherwise the Claude CLI (Haiku when the setting names Gemini). `accept` turns
+// the reply into a result or rejects it. Null when nothing was accepted.
 export async function quickAnswer<T>(
   label: string,
   prompt: string,
   accept: (reply: string) => T | null,
   options: { maxOutputTokens?: number; timeoutMs?: number } = {}
 ): Promise<T | null> {
-  const { maxOutputTokens = 40, timeoutMs = 30000 } = options;
+  const { timeoutMs = 30000 } = options;
   const model = getAiModel("categorize");
+  const billing = geminiBilling();
 
-  if (isGeminiModel(model)) {
-    const key = getGeminiKey();
-    if (key) {
-      const out = await geminiText(prompt, key, model, maxOutputTokens);
-      const accepted = out ? accept(out) : null;
-      if (accepted !== null) return accepted;
+  if (isGeminiModel(model) && billing) {
+    try {
+      // No output cap here: Gemini 3 counts its thinking against it and would cut the answer off.
+      return accept(await gemini({ prompt, model, thinking: "minimal", timeoutMs }, billing));
+    } catch (err) {
+      console.warn(`[ai/${label}] Gemini failed:`, err);
+      return null;
     }
   }
 

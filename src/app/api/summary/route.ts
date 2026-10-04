@@ -7,7 +7,7 @@ import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
 import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
 import { billDueInMonth } from "@/lib/bills";
-import { runClaude } from "@/lib/ai/claude-cli";
+import { routineAnswer } from "@/lib/ai/routine";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -345,7 +345,7 @@ ${(() => { const goals = db.prepare("SELECT name, target_amount, saved_amount, t
 
     console.info("[summary] Calling claude CLI");
 
-    const summaryText = await runClaude("opus", prompt, 120000);
+    const summaryText = await routineAnswer("insight", prompt, { timeoutMs: 120000, claudeModel: "opus" });
 
     let newId: number | undefined;
     if (summaryText) {

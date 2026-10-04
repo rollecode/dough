@@ -4,6 +4,7 @@
 * Fix an API key showing in the server log
 * Add a self-hosted and cloud comparison to the README
 * Fix receipt reading hiding why it failed
+* Change AI except Dougie to Gemini 3 Flash
 
 ### 4.7.2: 2026-10-03
 

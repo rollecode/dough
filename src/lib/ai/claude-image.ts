@@ -1,5 +1,5 @@
 import { spawnClaude, aiBilling, aiAllowanceLeft, recordAiSpend } from "@/lib/ai/claude-cli";
-import { getAiModel } from "./model";
+import { getAiModel, isGeminiModel } from "./model";
 
 interface ClaudeImageResult {
   text: string;
@@ -14,7 +14,8 @@ export async function queryClaudeWithImage(
   textPrompt: string,
   imageBase64: string,
   mediaType: string,
-  timeoutMs = 60000
+  timeoutMs = 60000,
+  model?: string
 ): Promise<ClaudeImageResult> {
 
   const isPdf = mediaType === "application/pdf";
@@ -34,7 +35,8 @@ export async function queryClaudeWithImage(
 
   console.debug("[claude-image] Sending image prompt, text length:", textPrompt.length, "image size:", Math.round(imageBase64.length / 1024), "KB");
 
-  const visionModel = getAiModel("vision");
+  const configured = getAiModel("vision");
+  const visionModel = model ?? (isGeminiModel(configured) ? "opus" : configured);
   console.debug("[claude-image] Vision model:", visionModel);
   let billing: ReturnType<typeof aiBilling>;
   let left: number | null;

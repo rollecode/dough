@@ -37,7 +37,7 @@ Dough is open source and runs on your own server. A hosted version, Dough Cloud,
 | Setup | Node.js, build, run it as a service | Sign up, nothing to install |
 | Updates | You pull and rebuild | Done for you |
 | Backups | Up to you | Every night, each one checked by restoring it |
-| AI | Claude Code on your own Claude subscription, optional Gemini key | Included with a monthly limit, or your own key |
+| AI | Dougie on your own Claude subscription, everything else on your own Gemini key | Included with a monthly limit, or your own key |
 | AI on a Claude subscription | Yes | No: Anthropic does not let hosted apps use subscription logins |
 | Bank import (Synci) | Your own Synci account | Your own Synci account |
 | YNAB | Your own YNAB account | Your own YNAB account |
@@ -190,7 +190,7 @@ AI features:
 - **Balance reconcile** that explains why an account differs from the real bank balance
 - **Debt payoff suggestions** with strategy recommendations
 
-Categorization can use Google Gemini instead of the Claude CLI when a Gemini API key is set in Settings (faster and cheaper for that routine task). Everything else uses the Claude CLI.
+Dougie, the chat advisor, runs on the Claude CLI. Everything else (categorizing, receipt reading, the summary, debt advice and balance reconcile) runs on Google Gemini 3 Flash once a Gemini API key is saved in Settings, which costs a fraction of Claude through its API. Without a Gemini key those tasks use the Claude CLI too. Use a paid Gemini key: Google's free tier may use what is sent to improve its products.
 
 All AI prompts are editable in Settings. The household profile is injected into every prompt for personalized advice.
 

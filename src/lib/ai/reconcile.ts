@@ -1,6 +1,4 @@
-import { runClaude } from "@/lib/ai/claude-cli";
-import { getAiModel, isGeminiModel, getGeminiKey } from "./model";
-import { geminiText } from "./gemini";
+import { routineAnswer } from "./routine";
 
 export interface ReconcileTx {
   id: string;
@@ -43,14 +41,10 @@ Reply with ONLY valid JSON, no markdown fences: {"explanation":"...","duplicateI
 Only include ids that appear in the list above. Use an empty array when nothing looks like a duplicate.`;
 
   let raw: string | null = null;
-  const model = getAiModel("chat");
-  const cliModel = isGeminiModel(model) ? "sonnet" : model;
   try {
-    raw = await runClaude(cliModel, prompt, 60000);
+    raw = await routineAnswer("insight", prompt, { thinking: "low", timeoutMs: 60000, claudeModel: "sonnet" });
   } catch (err) {
-    console.warn("[ai/reconcile] CLI failed, falling back to Gemini:", err);
-    const key = getGeminiKey();
-    if (key) raw = await geminiText(prompt, key, "gemini-2.5-flash", 400);
+    console.warn("[ai/reconcile] AI failed:", err);
   }
 
   if (!raw) return { explanation: "", duplicateIds: [] };

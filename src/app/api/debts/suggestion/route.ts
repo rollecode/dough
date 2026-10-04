@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
 import { dateForDayInMonth, formatDate } from "@/lib/date-utils";
-import { runClaude } from "@/lib/ai/claude-cli";
+import { routineAnswer } from "@/lib/ai/routine";
 
 export async function GET(request: Request) {
   try {
@@ -74,7 +74,7 @@ ${debts.join("\n")}
 Total debt: ${debtAccounts.reduce((s: number, a: any) => s + Math.abs(a.balance), 0).toFixed(0)} euros`;
 
 
-    const suggestion = await runClaude("opus", prompt, 120000);
+    const suggestion = await routineAnswer("insight", prompt, { timeoutMs: 120000, claudeModel: "opus" });
 
     console.info("[debts/suggestion] AI suggestion generated");
 

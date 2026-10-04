@@ -39,7 +39,7 @@
 - Conservative advice rules with 3-day buffer requirement
 - Today's spending, remaining budget, and tomorrow's budget in context
 - All data read from local DB for real-time accuracy
-- Per-task AI model configurable in settings, tiered by demand: routine categorizing on fast, cheap Gemini 2.5 Flash (optional key, thinking disabled, ~0.4s, falls back to Haiku CLI); demanding tasks (Dougie chat, receipt vision) on Claude Opus via the CLI (covered by the subscription, no per-token cost)
+- Per-task AI model configurable in settings: Dougie on Claude through the CLI; categorizing, receipts and the written insights (summary, debt advice, reconcile) on Gemini 3 Flash when a Gemini key is saved, otherwise on the Claude CLI. In the hosted edition a household without its own Gemini key uses the service key, metered against the monthly allowance
 - Auto-trigger YNAB sync if cache older than 2 hours
 - Message reactions context for learning preferences
 - Attachments: read-only by default, expense adding only on explicit request

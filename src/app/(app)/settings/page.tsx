@@ -75,7 +75,7 @@ export default function SettingsPage() {
   const [billsModeSaved, setBillsModeSaved] = useState(false);
   const [thresholds, setThresholds] = useState({ tight: "20", normal: "30", good: "50" });
   const [thresholdsSaved, setThresholdsSaved] = useState(false);
-  const [aiModels, setAiModels] = useState({ categorize: "gemini-2.5-flash", chat: "opus", vision: "opus" });
+  const [aiModels, setAiModels] = useState({ categorize: "gemini-3-flash-preview", chat: "opus", vision: "gemini-3-flash-preview", insight: "gemini-3-flash-preview" });
   const [geminiKey, setGeminiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
   const [keysSet, setKeysSet] = useState({ gemini: false, anthropic: false });
@@ -185,6 +185,7 @@ export default function SettingsPage() {
           if (householdData.settings?.ai_model_categorize) setAiModels((p) => ({ ...p, categorize: householdData.settings.ai_model_categorize }));
           if (householdData.settings?.ai_model_chat) setAiModels((p) => ({ ...p, chat: householdData.settings.ai_model_chat }));
           if (householdData.settings?.ai_model_vision) setAiModels((p) => ({ ...p, vision: householdData.settings.ai_model_vision }));
+          if (householdData.settings?.ai_model_insight) setAiModels((p) => ({ ...p, insight: householdData.settings.ai_model_insight }));
           setKeysSet({ gemini: !!householdData.settings?.gemini_key_set, anthropic: !!householdData.settings?.anthropic_key_set });
           if (householdData.settings?.synci_api_token) {
             setSynciConnected(true);
@@ -656,6 +657,7 @@ export default function SettingsPage() {
                 ["categorize", locale === "fi" ? "Kategorisointi" : "Categorizing"],
                 ["chat", locale === "fi" ? "Dougie-keskustelu" : "Dougie chat"],
                 ["vision", locale === "fi" ? "Kuitit (kuvat)" : "Receipts (images)"],
+                ["insight", locale === "fi" ? "Yhteenvedot ja neuvot" : "Summaries and advice"],
               ] as const).map(([key, label]) => (
                 <div className="form-field" key={key}>
                   <Label>{label}</Label>
@@ -676,7 +678,7 @@ export default function SettingsPage() {
                   >
                     <SelectTrigger className="settings-input"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {key === "categorize" && <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash ({locale === "fi" ? "nopein, halvin" : "fastest, cheapest"})</SelectItem>}
+                      {key !== "chat" && <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash ({locale === "fi" ? "nopea, edullinen" : "fast, low cost"})</SelectItem>}
                       <SelectItem value="haiku">Haiku</SelectItem>
                       <SelectItem value="sonnet">Sonnet</SelectItem>
                       <SelectItem value="opus">Opus ({locale === "fi" ? "tarkin" : "most capable"})</SelectItem>
@@ -716,8 +718,8 @@ export default function SettingsPage() {
             ))}
             <p className="settings-help">
               {locale === "fi"
-                ? "Päivittäiset tehtävät (kategorisointi) kannattaa ajaa nopealla ja halvalla Gemini 2.5 Flashilla (vaatii API-avaimen). Vaativat tehtävät (Dougie, kuitit) käyttävät Claude Opusta CLI:n kautta, joka kuuluu tilaukseen. Ilman Gemini-avainta kategorisointi putoaa takaisin Haikuun. Anthropic-avaimella Claude käyttää sitä."
-                : "Run daily tasks (categorizing) on fast, cheap Gemini 2.5 Flash (needs the API key). Demanding tasks (Dougie, receipts) use Claude Opus via the CLI, covered by the subscription. Without a Gemini key, categorizing falls back to Haiku. With an Anthropic key, Claude runs on that key instead."}
+                ? "Dougie käyttää Claudea CLI:n kautta. Kaikki muu (kategorisointi, kuitit, yhteenvedot ja neuvot) toimii Gemini 3 Flashilla, kun Gemini-avain on tallennettu. Ilman avainta nekin käyttävät Claudea. Anthropic-avaimella Claude käyttää sitä."
+                : "Dougie runs on Claude through the CLI. Everything else (categorizing, receipts, summaries and advice) runs on Gemini 3 Flash once a Gemini key is saved; without one, those use Claude too. With an Anthropic key, Claude runs on that key instead."}
             </p>
           </CardContent>
         </Card>
