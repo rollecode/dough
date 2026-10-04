@@ -36,6 +36,15 @@ export function buildMcpServer(api: DoughApi): McpServer {
   );
 
   server.registerTool(
+    "dough_ai_status",
+    {
+      description: "Each AI service (Dougie, receipts, categorizing, summaries) with the provider and model it runs on, whether it works (ok, failing with the last error, or off), and how much of this month's AI allowance is used (null when unlimited).",
+      inputSchema: {},
+    },
+    () => reply(api.get("ai-status"))
+  );
+
+  server.registerTool(
     "dough_accounts",
     {
       description: "All accounts with balances. Each row carries budget_excluded (true when the account is left out of the app's spendable-balance figure). Set include_closed to also return closed accounts.",

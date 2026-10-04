@@ -1,5 +1,6 @@
 ### 4.7.3: 2026-10-04
 
+* Add AI service status and limits to Settings
 * Add unlimited AI for owner households in the cloud
 * Fix an API key showing in the server log
 * Add a self-hosted and cloud comparison to the README

@@ -1,6 +1,6 @@
 import { getHouseholdSetting } from "@/lib/household";
 import { currentHousehold } from "@/lib/db";
-import { aiAllowanceLeft, recordAiSpend } from "./claude-cli";
+import { aiAllowanceLeft, isOwnerHousehold, recordAiResult, recordAiSpend } from "./claude-cli";
 
 export const GEMINI_MODEL = "gemini-3-flash-preview";
 const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta";
@@ -33,8 +33,12 @@ export function geminiBilling(): GeminiBilling | null {
     return { apiKey: own, capUsd: null };
   }
   const server = process.env.GEMINI_API_KEY;
-  if (!currentHousehold() || !server) {
+  const household = currentHousehold();
+  if (!household || !server) {
     return null;
+  }
+  if (isOwnerHousehold(household.id)) {
+    return { apiKey: server, capUsd: null };
   }
   const cap = parseFloat(process.env.DOUGH_AI_MONTHLY_CAP_USD || "");
   return { apiKey: server, capUsd: Number.isFinite(cap) ? cap : null };
@@ -53,7 +57,17 @@ export async function gemini(req: GeminiRequest, billing: GeminiBilling | null =
     throw new Error("Add a Gemini API key in Settings to use AI");
   }
   aiAllowanceLeft(billing.capUsd);
+  try {
+    const answer = await callGemini(req, billing);
+    recordAiResult("gemini");
+    return answer;
+  } catch (err) {
+    recordAiResult("gemini", err);
+    throw err;
+  }
+}
 
+async function callGemini(req: GeminiRequest, billing: GeminiBilling): Promise<string> {
   const model = req.model || GEMINI_MODEL;
   const parts: unknown[] = [];
   if (req.image) {

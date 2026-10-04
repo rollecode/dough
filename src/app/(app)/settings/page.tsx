@@ -22,6 +22,7 @@ import { DEFAULT_CHAT_GUIDELINES, DEFAULT_SUMMARY_INSTRUCTIONS, DEFAULT_DEBT_INS
 import { ApiKeysCard } from "@/components/settings/api-keys";
 import { McpConnectCard } from "@/components/settings/mcp-connect";
 import { YourDataCard } from "@/components/settings/your-data";
+import { AiStatusCard } from "@/components/settings/ai-status";
 import { PayeesDialog } from "@/components/shared/payees-dialog";
 
 interface UserProfile {
@@ -642,6 +643,8 @@ export default function SettingsPage() {
             </p>
           </CardContent>
         </Card>
+
+        <AiStatusCard />
 
         {/* AI models */}
         <Card className="settings-card">

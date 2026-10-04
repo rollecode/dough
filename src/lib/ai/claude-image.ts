@@ -1,4 +1,4 @@
-import { spawnClaude, aiBilling, aiAllowanceLeft, recordAiSpend } from "@/lib/ai/claude-cli";
+import { spawnClaude, aiBilling, aiAllowanceLeft, recordAiSpend, recordAiResult } from "@/lib/ai/claude-cli";
 import { getAiModel, isGeminiModel } from "./model";
 
 interface ClaudeImageResult {
@@ -48,7 +48,7 @@ export async function queryClaudeWithImage(
   }
   const { env, unset } = billing;
   const budget = left === null ? [] : ["--max-budget-usd", left.toFixed(2)];
-  return new Promise((resolve, reject) => {
+  const run = new Promise<ClaudeImageResult>((resolve, reject) => {
     const proc = spawnClaude(["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", ...budget], timeoutMs, env, unset);
 
     let stdout = "";
@@ -110,4 +110,6 @@ export async function queryClaudeWithImage(
     proc.stdin.write(message);
     proc.stdin.end();
   });
+  run.then((r) => recordAiResult("claude", r.error), (err) => recordAiResult("claude", err));
+  return run;
 }

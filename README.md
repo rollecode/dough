@@ -192,6 +192,8 @@ AI features:
 
 Dougie, the chat advisor, runs on the Claude CLI. Everything else (categorizing, receipt reading, the summary, debt advice and balance reconcile) runs on Google Gemini 3 Flash once a Gemini API key is saved in Settings, which costs a fraction of Claude through its API. Without a Gemini key those tasks use the Claude CLI too. Use a paid Gemini key: Google's free tier may use what is sent to improve its products.
 
+Settings shows whether each AI service works and how much of the monthly AI limit is used. Self-hosted, the limit is unlimited.
+
 All AI prompts are editable in Settings. The household profile is injected into every prompt for personalized advice.
 
 ## Running as a service

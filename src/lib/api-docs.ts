@@ -51,6 +51,13 @@ export const SECTIONS: Section[] = [
         scope: "read",
         summary: "Net worth by kind (checking, savings, investments, debts) plus the saved snapshot history.",
       },
+      {
+        method: "GET",
+        path: "/ai-status",
+        scope: "read",
+        summary:
+          "Each AI service (Dougie, receipts, categorizing, summaries) with its provider and model, its state (ok, failing with the last error, or off) and the share of this month's AI allowance used, null when unlimited.",
+      },
     ],
   },
   {

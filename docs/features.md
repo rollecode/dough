@@ -40,6 +40,7 @@
 - Today's spending, remaining budget, and tomorrow's budget in context
 - All data read from local DB for real-time accuracy
 - Per-task AI model configurable in settings: Dougie on Claude through the CLI; categorizing, receipts and the written insights (summary, debt advice, reconcile) on Gemini 3 Flash when a Gemini key is saved, otherwise on the Claude CLI. In the hosted edition a household without its own Gemini key uses the service key, metered against the monthly allowance
+- AI status in Settings: a dot per service (green works, amber the last call failed with its error, red not set up) and the monthly limit, unlimited when self-hosted or on your own keys, the share used in the hosted edition. Also at `GET /api/v1/ai-status`
 - Auto-trigger YNAB sync if cache older than 2 hours
 - Message reactions context for learning preferences
 - Attachments: read-only by default, expense adding only on explicit request

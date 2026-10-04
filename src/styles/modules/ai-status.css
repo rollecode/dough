@@ -1,0 +1,90 @@
+/* AI service status and the monthly limit, in settings. */
+
+.ai-status-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-status-row {
+  display: grid;
+  grid-template-columns: 0.5rem 1fr auto;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--glass-border, var(--border));
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.ai-status-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ai-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: var(--positive);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--positive) 20%, transparent);
+}
+
+.ai-status-row[data-state="failing"] .ai-status-dot {
+  background-color: var(--warning);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 20%, transparent);
+}
+
+.ai-status-row[data-state="off"] .ai-status-dot {
+  background-color: var(--negative);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--negative) 20%, transparent);
+}
+
+.ai-status-name {
+  font-weight: 600;
+}
+
+.ai-status-model,
+.ai-status-state {
+  color: var(--muted-foreground);
+}
+
+.ai-status-model {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 0.8125rem;
+}
+
+.ai-status-state {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: right;
+}
+
+.ai-status-error,
+.ai-status-meter {
+  grid-column: 2 / -1;
+}
+
+.ai-status-error {
+  font-size: 0.8125rem;
+  color: var(--warning);
+  overflow-wrap: anywhere;
+}
+
+.ai-status-meter {
+  height: 0.375rem;
+  border-radius: 999px;
+  background-color: var(--glass-bg, var(--secondary));
+  overflow: hidden;
+}
+
+.ai-status-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--primary);
+}

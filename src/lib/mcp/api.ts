@@ -37,6 +37,7 @@ import { POST as subscriptionsCreatePost } from "@/app/api/v1/subscriptions/crea
 import { POST as subscriptionsDeletePost } from "@/app/api/v1/subscriptions/delete/route";
 import { POST as subscriptionsUpdatePost } from "@/app/api/v1/subscriptions/update/route";
 import { GET as summaryGet } from "@/app/api/v1/summary/route";
+import { GET as aiStatusGet } from "@/app/api/v1/ai-status/route";
 import { GET as transactionsGet } from "@/app/api/v1/transactions/route";
 import { POST as transactionsCreatePost } from "@/app/api/v1/transactions/create/route";
 import { POST as transactionsDeletePost } from "@/app/api/v1/transactions/delete/route";
@@ -90,6 +91,7 @@ export const GET_ROUTES: Record<string, Handler> = {
   "settings": settingsGet,
   "subscriptions": subscriptionsGet,
   "summary": summaryGet,
+  "ai-status": aiStatusGet,
   "ticker": tickerGet,
   "transactions": transactionsGet,
 };

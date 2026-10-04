@@ -47,7 +47,7 @@ export interface AiBilling {
   capUsd: number | null;
 }
 
-function isOwnerHousehold(id: string): boolean {
+export function isOwnerHousehold(id: string): boolean {
   return (process.env.DOUGH_OWNER_HOUSEHOLDS || "").split(",").map((h) => h.trim()).includes(id);
 }
 
@@ -87,6 +87,34 @@ export function recordAiSpend(usd: number): void {
   if (usd > 0) setHouseholdSetting(spendKey(), String(aiSpendThisMonth() + usd));
 }
 
+export type AiProvider = "claude" | "gemini";
+
+export interface AiResult {
+  ok: boolean;
+  at: string;
+  error?: string;
+}
+
+// The last call's outcome per provider, for the status in Settings.
+export function recordAiResult(provider: AiProvider, error?: unknown): void {
+  const result: AiResult = { ok: !error, at: new Date().toISOString() };
+  if (error) result.error = error instanceof Error ? error.message : String(error);
+  try {
+    setHouseholdSetting(`ai_last_${provider}`, JSON.stringify(result));
+  } catch (err) {
+    console.warn("[claude-cli] Could not record the AI result:", err);
+  }
+}
+
+export function lastAiResult(provider: AiProvider): AiResult | null {
+  try {
+    const raw = getHouseholdSetting(`ai_last_${provider}`);
+    return raw ? (JSON.parse(raw) as AiResult) : null;
+  } catch {
+    return null;
+  }
+}
+
 // What is left of the month's allowance, or null when the call is not metered. Throws once it is
 // spent, so every caller's own failure path tells the person instead of the call going through.
 export function aiAllowanceLeft(capUsd: number | null): number | null {
@@ -105,6 +133,17 @@ export async function runClaude(model: string, prompt: string, timeoutMs: number
   if (left !== null) args.push("--output-format", "json", "--max-budget-usd", left.toFixed(2));
   args.push("-");
 
+  try {
+    const answer = await callClaude(args, prompt, timeoutMs, env, unset, left !== null);
+    recordAiResult("claude");
+    return answer;
+  } catch (err) {
+    recordAiResult("claude", err);
+    throw err;
+  }
+}
+
+async function callClaude(args: string[], prompt: string, timeoutMs: number, env: Record<string, string>, unset: string[], metered: boolean): Promise<string> {
   const stdout = await new Promise<string>((resolve, reject) => {
     const proc = spawnClaude(args, timeoutMs, env, unset);
     let out = "";
@@ -120,7 +159,7 @@ export async function runClaude(model: string, prompt: string, timeoutMs: number
     proc.stdin.end();
   });
 
-  if (left === null) return stdout;
+  if (!metered) return stdout;
   const result = JSON.parse(stdout) as { result?: string; total_cost_usd?: number; is_error?: boolean };
   recordAiSpend(result.total_cost_usd ?? 0);
   if (result.is_error || !result.result) throw new Error("claude returned no result");
