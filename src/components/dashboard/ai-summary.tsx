@@ -148,7 +148,7 @@ export function AiSummary() {
           <div className="skeleton-line skeleton-line-narrow" />
         </div>
       ) : summary ? (
-        <div className="ai-summary-text"><ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown></div>
+        <div className="ai-summary-text"><ReactMarkdown remarkPlugins={[remarkGfm]} disallowedElements={["img"]}>{summary}</ReactMarkdown></div>
       ) : null}
     </Card>
   );

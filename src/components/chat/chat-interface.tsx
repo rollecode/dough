@@ -378,7 +378,7 @@ export function ChatInterface() {
                 )}
                 <div className="chat-message-text">
                   {message.role === "assistant" ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} disallowedElements={["img"]} components={{
                       // Dougie marks an amount's kind as a link to #expense, #income or #transfer.
                       a: ({ href, children }) => {
                         const kind = AMOUNT_KINDS[href ?? ""];

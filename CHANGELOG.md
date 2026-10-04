@@ -1,5 +1,6 @@
 ### 4.7.3: 2026-10-04
 
+* Fix AI text loading outside images
 * Fix members resetting the AI spending limit
 * Fix Dougie answering without a valid session
 * Add AI service status and limits to Settings
