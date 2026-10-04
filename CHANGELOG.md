@@ -2,6 +2,7 @@
 
 * Add unlimited AI for owner households in the cloud
 * Fix an API key showing in the server log
+* Add a self-hosted and cloud comparison to the README
 
 ### 4.7.2: 2026-10-03
 

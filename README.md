@@ -26,6 +26,25 @@ Dough was built to solve this:
 - **Receipt scanning** - snap a photo of a receipt or a bank statement in the add dialog, the AI reads it and adds the transactions for you.
 - **Self-hosted, private** - your financial data stays on your machine. No cloud services, no third-party access. SQLite database you can back up with a single file copy.
 
+## Self-hosted or Dough Cloud
+
+Dough is open source and runs on your own server. A hosted version, Dough Cloud, is coming later for people who would rather not run a server.
+
+| | Self-hosted (open source) | Dough Cloud (coming later) |
+|---|---|---|
+| Price | Free, AGPL-3.0 | Subscription in the iPhone app |
+| Where your data lives | Your own server, in one SQLite file | Dough's server, in a separate database for each household |
+| Setup | Node.js, build, run it as a service | Sign up, nothing to install |
+| Updates | You pull and rebuild | Done for you |
+| Backups | Up to you | Every night, each one checked by restoring it |
+| AI | Claude Code on your own Claude subscription, optional Gemini key | Included with a monthly limit, or your own key |
+| AI on a Claude subscription | Yes | No: Anthropic does not let hosted apps use subscription logins |
+| Bank import (Synci) | Your own Synci account | Your own Synci account |
+| YNAB | Your own YNAB account | Your own YNAB account |
+| iPhone app | Connects to your server's address | Signs in to Dough Cloud |
+| HTTP API and MCP | At your server's address | At Dough Cloud's address |
+| Household | One per install, shared by everyone in it | One per account, shared by everyone in it |
+
 ### Dough has YNAB-like envelope budgeting
 
 <img width="3138" height="1736" alt="Dough budget view" src="https://github.com/user-attachments/assets/6dbd278f-583a-429c-ad81-b66c7f2c1647" />
