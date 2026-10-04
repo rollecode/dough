@@ -281,21 +281,26 @@
   color: var(--primary);
 }
 
+/* Above the assistant bold colour, which would otherwise win. */
+.chat-message-bubble[data-type="assistant"] .chat-message-text .chat-amount-positive,
 .chat-amount-positive {
   color: var(--positive);
   white-space: nowrap;
 }
 
+.chat-message-bubble[data-type="assistant"] .chat-message-text .chat-amount-negative,
 .chat-amount-negative {
   color: var(--negative);
   white-space: nowrap;
 }
 
+.chat-message-bubble[data-type="assistant"] .chat-message-text .chat-amount-transfer,
 .chat-amount-transfer {
   color: var(--warning);
   white-space: nowrap;
 }
 
+.chat-message-bubble[data-type="assistant"] .chat-message-text .chat-amount-neutral,
 .chat-amount-neutral {
   color: var(--chart-3);
   white-space: nowrap;

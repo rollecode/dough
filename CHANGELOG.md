@@ -6,6 +6,7 @@
 * Fix receipt reading hiding why it failed
 * Change AI except Dougie to Gemini 3 Flash
 * Fix the chat page footer alignment and gap
+* Fix chat amount colours to match the iPhone app
 
 ### 4.7.2: 2026-10-03
 

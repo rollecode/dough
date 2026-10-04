@@ -10,6 +10,7 @@ import { useEvent } from "@/lib/use-events";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { copyToClipboard } from "@/lib/clipboard";
+import { markdownify } from "@/lib/markdownify";
 
 const AMOUNT_KINDS: Record<string, string> = {
   "#expense": "chat-amount-negative",
@@ -397,7 +398,7 @@ export function ChatInterface() {
                         }
                         return <strong>{children}</strong>;
                       }
-                    }}>{message.content}</ReactMarkdown>
+                    }}>{markdownify(message.content)}</ReactMarkdown>
                   ) : message.content}
                 </div>
                 {message.role === "assistant" && (
