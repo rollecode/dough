@@ -1,3 +1,8 @@
+### 4.7.3: 2026-10-04
+
+* Add unlimited AI for owner households in the cloud
+* Fix an API key showing in the server log
+
 ### 4.7.2: 2026-10-03
 
 * Measure the burn rate over the last 30 days
