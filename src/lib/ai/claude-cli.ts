@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import { getHouseholdSetting, setHouseholdSetting } from "@/lib/household";
+import { currentHousehold } from "@/lib/db";
 
 // Prompts carry bank-derived text, so the CLI gets no tools, no MCP servers and no secrets of ours.
 const LOCKDOWN_ARGS = ["--tools", "", "--strict-mcp-config", "--disable-slash-commands"];
@@ -20,20 +21,60 @@ export function claudeEnv(): Record<string, string | undefined> {
   return env;
 }
 
-export function spawnClaude(args: string[], timeoutMs: number, extraEnv: Record<string, string> = {}): ChildProcessWithoutNullStreams {
-  const claudePath = process.env.CLAUDE_PATH || "claude";
-  console.debug("[claude-cli] Spawning", claudePath, args.join(" "));
-  return spawn(claudePath, claudeArgs(args), { env: { ...claudeEnv(), ...extraEnv } as NodeJS.ProcessEnv, timeout: timeoutMs });
+// The command line goes to the log; the MCP config in it carries a key, so that value is left out.
+export function describeArgs(args: string[]): string {
+  return args.map((arg, i) => (args[i - 1] === "--mcp-config" ? "<config>" : arg)).join(" ");
 }
 
-// Whose money a call spends. A household's own Anthropic key is theirs and is never metered. A
-// hosted instance that sets DOUGH_AI_MONTHLY_CAP_USD lends the rest its own key up to that much a
-// month each. Otherwise, as self-hosted, the CLI uses whatever it is signed in with.
-export function aiBilling(): { env: Record<string, string>; capUsd: number | null } {
+export function spawnClaude(
+  args: string[],
+  timeoutMs: number,
+  extraEnv: Record<string, string> = {},
+  unset: string[] = []
+): ChildProcessWithoutNullStreams {
+  const claudePath = process.env.CLAUDE_PATH || "claude";
+  console.debug("[claude-cli] Spawning", claudePath, describeArgs(args));
+  const env = { ...claudeEnv(), ...extraEnv };
+  for (const key of unset) {
+    delete env[key];
+  }
+  return spawn(claudePath, claudeArgs(args), { env: env as NodeJS.ProcessEnv, timeout: timeoutMs });
+}
+
+export interface AiBilling {
+  env: Record<string, string>;
+  unset: string[];
+  capUsd: number | null;
+}
+
+function isOwnerHousehold(id: string): boolean {
+  return (process.env.DOUGH_OWNER_HOUSEHOLDS || "").split(",").map((h) => h.trim()).includes(id);
+}
+
+// Whose money a call spends. A household's own Anthropic key is theirs and never metered. In the
+// cloud, an owner household (DOUGH_OWNER_HOUSEHOLDS) runs on the Claude login the server is signed
+// in with, unmetered; every other household borrows the server's key up to the monthly cap and
+// never that login. Self-hosted, the CLI uses whatever it is signed in with.
+export function aiBilling(): AiBilling {
   const own = getHouseholdSetting("anthropic_api_key");
-  if (own) return { env: { ANTHROPIC_API_KEY: own }, capUsd: null };
+  if (own) {
+    return { env: { ANTHROPIC_API_KEY: own }, unset: [], capUsd: null };
+  }
+
   const cap = parseFloat(process.env.DOUGH_AI_MONTHLY_CAP_USD || "");
-  return { env: {}, capUsd: Number.isFinite(cap) ? cap : null };
+  const capUsd = Number.isFinite(cap) ? cap : null;
+  const household = currentHousehold();
+  if (!household) {
+    return { env: {}, unset: [], capUsd };
+  }
+  if (isOwnerHousehold(household.id)) {
+    return { env: {}, unset: ["ANTHROPIC_API_KEY"], capUsd: null };
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.warn("[claude-cli] No server AI key for household", household.id);
+    throw new Error("AI is not set up on this server yet. Save your own Anthropic key in Settings to use it now.");
+  }
+  return { env: {}, unset: [], capUsd };
 }
 
 const spendKey = () => `ai_spend:${new Date().toISOString().slice(0, 7)}`;
@@ -58,14 +99,14 @@ export function aiAllowanceLeft(capUsd: number | null): number | null {
 // One prompt in, the answer's text out. Every text call goes through here so the key and the
 // allowance are applied in one place.
 export async function runClaude(model: string, prompt: string, timeoutMs: number, extraArgs: string[] = []): Promise<string> {
-  const { env, capUsd } = aiBilling();
+  const { env, unset, capUsd } = aiBilling();
   const left = aiAllowanceLeft(capUsd);
   const args = ["-p", "--model", model, ...extraArgs];
   if (left !== null) args.push("--output-format", "json", "--max-budget-usd", left.toFixed(2));
   args.push("-");
 
   const stdout = await new Promise<string>((resolve, reject) => {
-    const proc = spawnClaude(args, timeoutMs, env);
+    const proc = spawnClaude(args, timeoutMs, env, unset);
     let out = "";
     let err = "";
     proc.stdout.on("data", (d: Buffer) => { out += d.toString(); });

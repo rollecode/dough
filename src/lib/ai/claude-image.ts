@@ -36,16 +36,18 @@ export async function queryClaudeWithImage(
 
   const visionModel = getAiModel("vision");
   console.debug("[claude-image] Vision model:", visionModel);
-  const { env, capUsd } = aiBilling();
+  let billing: ReturnType<typeof aiBilling>;
   let left: number | null;
   try {
-    left = aiAllowanceLeft(capUsd);
+    billing = aiBilling();
+    left = aiAllowanceLeft(billing.capUsd);
   } catch (err) {
     return { text: "", error: (err as Error).message };
   }
+  const { env, unset } = billing;
   const budget = left === null ? [] : ["--max-budget-usd", left.toFixed(2)];
   return new Promise((resolve, reject) => {
-    const proc = spawnClaude(["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", ...budget], timeoutMs, env);
+    const proc = spawnClaude(["-p", "--model", visionModel, "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", ...budget], timeoutMs, env, unset);
 
     let stdout = "";
     let stderr = "";

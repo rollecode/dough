@@ -62,3 +62,38 @@ test("a hosted household without a key spends the allowance until it is gone", a
   delete process.env.DOUGH_AI_MONTHLY_CAP_USD;
   delete process.env.CLAUDE_PATH;
 });
+
+test("in the cloud the owner household runs on the subscription, never the server key", async () => {
+  const { runClaude, aiSpendThisMonth } = await import("@/lib/ai/claude-cli");
+  const { runWithHousehold } = await import("@/lib/db");
+  const { mkdtempSync } = await import("fs");
+  const { join } = await import("path");
+  const { tmpdir } = await import("os");
+  const dir = mkdtempSync(join(tmpdir(), "dough-billing-"));
+  const owner = { id: "owner", dbPath: join(dir, "owner.db") };
+  const other = { id: "other", dbPath: join(dir, "other.db") };
+  process.env.CLAUDE_PATH = await fakeCli();
+  process.env.DOUGH_OWNER_HOUSEHOLDS = "owner";
+  process.env.DOUGH_AI_MONTHLY_CAP_USD = "5";
+  process.env.ANTHROPIC_API_KEY = "sk-server";
+
+  assert.equal(await runWithHousehold(owner, () => runClaude("haiku", "hi", 5000)), "key=none");
+  assert.equal(runWithHousehold(owner, () => aiSpendThisMonth()), 0);
+  assert.equal(await runWithHousehold(other, () => runClaude("haiku", "hi", 5000)), "key=sk-server");
+  assert.ok(runWithHousehold(other, () => aiSpendThisMonth()) > 0);
+
+  delete process.env.ANTHROPIC_API_KEY;
+  await assert.rejects(runWithHousehold(other, () => runClaude("haiku", "hi", 5000)), /AI is not set up/);
+
+  delete process.env.DOUGH_OWNER_HOUSEHOLDS;
+  delete process.env.DOUGH_AI_MONTHLY_CAP_USD;
+  delete process.env.CLAUDE_PATH;
+});
+
+test("the logged command line never shows a key", async () => {
+  const { describeArgs } = await import("@/lib/ai/claude-cli");
+  const config = JSON.stringify({ mcpServers: { dough: { headers: { Authorization: "Bearer dough_abcdefghijklmnopqrstuvwxyz123456" } } } });
+  const shown = describeArgs(["-p", "--mcp-config", config, "-"]);
+  assert.ok(!shown.includes("abcdefghijklmnop"));
+  assert.ok(shown.includes("--mcp-config"));
+});
