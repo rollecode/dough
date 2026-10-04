@@ -13,7 +13,14 @@ export const POST = apiRoute("read", async (request) => {
     return NextResponse.json({ error: "image and image_media_type required" }, { status: 400 });
   }
 
-  const lines = await parseReceipt(image, mediaType);
+  let lines: Awaited<ReturnType<typeof parseReceipt>>;
+  try {
+    lines = await parseReceipt(image, mediaType);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("[api/v1/receipt] Reading failed:", message);
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
   const transactions = lines
     .map((line) => ({
       amount: Math.abs(parseFloat(String(line.amount).replace(",", "."))) || 0,

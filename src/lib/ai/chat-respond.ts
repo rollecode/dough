@@ -542,6 +542,8 @@ export async function respondToChat(
       }
     } catch (err) {
       console.warn("[chat] Auto-add expense failed:", err);
+      const reason = err instanceof Error ? err.message : String(err);
+      expenseContext = `SYSTEM NOTE: Reading the attached image failed: ${reason}. Nothing was added. Tell the person this plainly.`;
     }
   }
 

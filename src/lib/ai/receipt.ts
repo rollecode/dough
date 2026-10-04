@@ -31,6 +31,9 @@ Reply with ONLY a valid JSON array: [{"amount":"...","payee":"...","date":"YYYY-
     mediaType,
     timeoutMs
   );
+  if (result.error) {
+    throw new Error(result.error);
+  }
 
   try {
     const array = result.text.match(/\[[\s\S]*\]/);
