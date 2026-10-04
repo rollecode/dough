@@ -29,7 +29,7 @@ export interface ChatRequest {
 // advice a phone gets is the advice a browser gets. `origin` is the browser's own request, needed
 // only by the receipt path, which calls back into the cookie-authenticated routes.
 export async function respondToChat(
-  user: ChatUser | null,
+  user: ChatUser,
   input: ChatRequest,
   origin?: Request
 ): Promise<string> {

@@ -11,6 +11,9 @@ export async function POST(request: Request) {
     }
 
     const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
     const message = await respondToChat(user, body, request);
     return NextResponse.json({ message });
   } catch (error) {

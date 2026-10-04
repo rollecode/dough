@@ -42,6 +42,9 @@ export const POST = apiRoute("write", async (request, identity) => {
   const user = db
     .prepare("SELECT id, locale, display_name FROM users WHERE id = ?")
     .get(identity.userId) as ChatUser | undefined;
+  if (!user) {
+    return NextResponse.json({ error: "The key's user no longer exists" }, { status: 401 });
+  }
 
   const last = body.messages[body.messages.length - 1];
   if (last?.role === "user" && typeof last.content === "string") {
@@ -49,6 +52,6 @@ export const POST = apiRoute("write", async (request, identity) => {
       .run(identity.userId, "user", last.content);
   }
 
-  const message = await respondToChat(user ?? null, body, request);
+  const message = await respondToChat(user, body, request);
   return { message };
 });
