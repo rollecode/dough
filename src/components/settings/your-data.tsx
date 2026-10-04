@@ -27,6 +27,10 @@ export function YourDataCard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
+      if (response.status === 429) {
+        setError(fi ? "Liian monta yritystä, kokeile myöhemmin uudelleen" : "Too many attempts, try again later");
+        return;
+      }
       if (response.status === 403) {
         setError(fi ? "Väärä salasana" : "Wrong password");
         return;

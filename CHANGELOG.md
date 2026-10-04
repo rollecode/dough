@@ -1,5 +1,6 @@
 ### 4.7.3: 2026-10-04
 
+* Fix password guessing past the login limit
 * Add signing out connected apps in Settings
 * Fix API exports including saved keys and passwords
 * Change Dougie to leave accounts, settings and rules alone

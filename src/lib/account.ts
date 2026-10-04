@@ -3,7 +3,8 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
-import { getDb, eraseCurrentDatabase } from "./db";
+import { getDb, eraseCurrentDatabase, currentHousehold } from "./db";
+import { createLimiter } from "./rate-limit";
 import { SECRET_SETTINGS, openSecret } from "./secrets";
 import { localDateIso } from "./date-utils";
 
@@ -49,15 +50,27 @@ const PERSONAL = [
   "ai_summaries", "typing_status", "transactions_last_seen", "chat_last_seen",
 ];
 
-export type DeleteOutcome = "wrong-password" | "left-household" | "erased-household";
+export type DeleteOutcome = "wrong-password" | "too-many-attempts" | "left-household" | "erased-household";
+
+const MAX_PASSWORD_FAILURES = 5;
+const PASSWORD_WINDOW_MS = 15 * 60 * 1000;
+const passwordFailures = createLimiter(MAX_PASSWORD_FAILURES, PASSWORD_WINDOW_MS);
 
 // Deletes a person's account after they confirm their password. When others are left, the shared
 // records they added pass to the household's first remaining member; the last member takes the
 // whole household with them.
 export async function deleteAccount(userId: number, password: string): Promise<DeleteOutcome> {
   const db = getDb();
+  const attempts = `${currentHousehold()?.id ?? ""}|${userId}`;
+  if (passwordFailures.isLimited(attempts)) {
+    console.warn("[account] Throttled account deletion for user", userId);
+    return "too-many-attempts";
+  }
   const row = db.prepare("SELECT password_hash FROM users WHERE id = ?").get(userId) as { password_hash: string } | undefined;
-  if (!row || !(await bcrypt.compare(password, row.password_hash))) return "wrong-password";
+  if (!row || !(await bcrypt.compare(password, row.password_hash))) {
+    passwordFailures.record(attempts);
+    return "wrong-password";
+  }
 
   const heir = db.prepare("SELECT id FROM users WHERE id != ? ORDER BY id LIMIT 1").get(userId) as { id: number } | undefined;
   if (!heir) {

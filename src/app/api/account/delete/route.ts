@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   const { password } = (await request.json().catch(() => ({}))) as { password?: string };
   const outcome = await deleteAccount(user.id, String(password ?? ""));
   if (outcome === "wrong-password") return NextResponse.json({ error: "Wrong password" }, { status: 403 });
+  if (outcome === "too-many-attempts") return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   const response = NextResponse.json({ deleted: outcome });
   response.cookies.set(COOKIE_NAME, "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 0, path: "/" });
   return response;
