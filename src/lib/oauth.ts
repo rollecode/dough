@@ -235,8 +235,14 @@ export function refreshTokens(refreshToken: string, clientId: string): TokenSet 
     | { id: number; client_id: string; user_id: number; scope: string; refresh_expires_at: string; revoked_at: string | null }
     | undefined;
 
-  if (!row || row.revoked_at) {
-    console.warn("[oauth] Unknown or revoked refresh token");
+  if (!row) {
+    console.warn("[oauth] Unknown refresh token");
+    return { error: "invalid_grant" };
+  }
+  if (row.revoked_at) {
+    // A rotated refresh token used again means a copy is out there: end that whole grant.
+    if (row.client_id === clientId) revokeGrant(row.user_id, row.client_id);
+    console.warn("[oauth] Reused refresh token, revoked the grant for user", row.user_id);
     return { error: "invalid_grant" };
   }
   if (row.client_id !== clientId) {
@@ -251,6 +257,36 @@ export function refreshTokens(refreshToken: string, clientId: string): TokenSet 
   db.prepare("UPDATE oauth_tokens SET revoked_at = datetime('now') WHERE id = ?").run(row.id);
   console.info("[oauth] Rotated tokens for user", row.user_id);
   return mintTokens(row.client_id, row.user_id, row.scope.split(" ").filter(Boolean));
+}
+
+export interface Grant {
+  client_id: string;
+  client_name: string;
+  scope: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+// The apps a person has let in, one row per app, while any of its tokens can still be used.
+export function listGrants(userId: number): Grant[] {
+  return getDb()
+    .prepare(
+      `SELECT t.client_id, COALESCE(c.client_name, t.client_id) AS client_name, MAX(t.scope) AS scope,
+              MIN(t.created_at) AS created_at, MAX(t.last_used_at) AS last_used_at
+         FROM oauth_tokens t LEFT JOIN oauth_clients c ON c.client_id = t.client_id
+        WHERE t.user_id = ? AND t.revoked_at IS NULL AND t.refresh_expires_at > ?
+        GROUP BY t.client_id ORDER BY MAX(t.created_at) DESC`
+    )
+    .all(userId, new Date().toISOString()) as Grant[];
+}
+
+// Ends every token one app holds for one person. Returns how many were still live.
+export function revokeGrant(userId: number, clientId: string): number {
+  const result = getDb()
+    .prepare("UPDATE oauth_tokens SET revoked_at = datetime('now') WHERE user_id = ? AND client_id = ? AND revoked_at IS NULL")
+    .run(userId, clientId);
+  console.info("[oauth] Revoked", result.changes, "tokens of", clientId, "for user", userId);
+  return result.changes;
 }
 
 export function revokeToken(token: string): boolean {

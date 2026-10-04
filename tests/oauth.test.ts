@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "crypto";
 import { createUser } from "@/lib/auth";
-import { registerClient, issueCode, exchangeCode, refreshTokens, authenticateAccessToken, isAcceptableRedirectUri, isS256Challenge } from "@/lib/oauth";
+import { registerClient, issueCode, exchangeCode, refreshTokens, authenticateAccessToken, isAcceptableRedirectUri, isS256Challenge, listGrants, revokeGrant } from "@/lib/oauth";
 
 const REDIRECT = "com.example.app:/callback";
 const VERIFIER = "a".repeat(64);
@@ -60,4 +60,24 @@ test("only an S256 challenge is accepted", () => {
   assert.equal(isS256Challenge("plain", CHALLENGE), false);
   assert.equal(isS256Challenge("S256", VERIFIER), false);
   assert.equal(isS256Challenge("S256", ""), false);
+});
+
+test("reusing a rotated refresh token ends the whole grant", () => {
+  const client = registerClient("Reuse", [REDIRECT]);
+  const first = exchangeCode({ code: newCode(client.client_id), clientId: client.client_id, redirectUri: REDIRECT, codeVerifier: VERIFIER });
+  assert.ok("refresh_token" in first);
+  const second = refreshTokens(first.refresh_token, client.client_id);
+  assert.ok("access_token" in second);
+  assert.deepEqual(refreshTokens(first.refresh_token, client.client_id), { error: "invalid_grant" });
+  assert.equal(authenticateAccessToken(second.access_token), null);
+});
+
+test("a connected app is listed and can be signed out", () => {
+  const client = registerClient("Listed app", [REDIRECT]);
+  const tokens = exchangeCode({ code: newCode(client.client_id), clientId: client.client_id, redirectUri: REDIRECT, codeVerifier: VERIFIER });
+  assert.ok("access_token" in tokens);
+  assert.ok(listGrants(userId).some((g) => g.client_id === client.client_id && g.client_name === "Listed app"));
+  assert.ok(revokeGrant(userId, client.client_id) > 0);
+  assert.ok(!listGrants(userId).some((g) => g.client_id === client.client_id));
+  assert.equal(authenticateAccessToken(tokens.access_token), null);
 });

@@ -19,7 +19,7 @@ instance is its own OAuth 2.1 authorization server: a client reads
 `/.well-known/oauth-authorization-server`, registers itself at `/api/oauth/register`, and opens
 `/oauth/authorize`. Authorization code with PKCE (`S256`) is the only supported flow; there are no
 client secrets. Codes are single use and expire in two minutes, access tokens last an hour, and
-refresh tokens rotate on use. The resulting token authenticates `/api/v1` exactly as a key does.
+refresh tokens rotate on use. Presenting a refresh token that was already rotated ends that app's whole grant, since a copy of it is out there. The resulting token authenticates `/api/v1` exactly as a key does. Every app a person has let in is listed in Settings, under API keys, where it can be signed out.
 
 The full sequence is on the instance's own reference at `/api-docs`.
 

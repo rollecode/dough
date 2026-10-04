@@ -1,5 +1,6 @@
 ### 4.7.3: 2026-10-04
 
+* Add signing out connected apps in Settings
 * Fix API exports including saved keys and passwords
 * Change Dougie to leave accounts, settings and rules alone
 * Fix AI text loading outside images

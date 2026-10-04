@@ -11,6 +11,13 @@ import { useLocale } from "@/lib/locale-context";
 import { formatDate } from "@/lib/date-utils";
 import { API_KEYS_CHANGED } from "./mcp-connect";
 
+interface Grant {
+  client_id: string;
+  client_name: string;
+  scope: string;
+  last_used_at: string | null;
+}
+
 interface ApiKey {
   id: number;
   name: string;
@@ -25,6 +32,7 @@ interface ApiKey {
 export function ApiKeysCard() {
   const { locale } = useLocale();
   const [keys, setKeys] = useState<ApiKey[]>([]);
+  const [grants, setGrants] = useState<Grant[]>([]);
   const [name, setName] = useState("");
   const [canWrite, setCanWrite] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -40,6 +48,10 @@ export function ApiKeysCard() {
         .then((data) => setKeys(data.keys ?? []))
         .catch(() => setKeys([]));
     load();
+    fetch("/api/oauth/grants")
+      .then((response) => response.json())
+      .then((data) => setGrants(data.grants ?? []))
+      .catch(() => setGrants([]));
     // The MCP card mints keys too, and they belong in this list straight away.
     window.addEventListener(API_KEYS_CHANGED, load);
     return () => window.removeEventListener(API_KEYS_CHANGED, load);
@@ -73,6 +85,18 @@ export function ApiKeysCard() {
     const response = await fetch(`/api/api-keys/${id}`, { method: "DELETE" });
     if (!response.ok) return;
     setKeys((current) => current.filter((key) => key.id !== id));
+  }
+
+  async function revokeGrant(clientId: string) {
+    const response = await fetch(`/api/oauth/grants/${encodeURIComponent(clientId)}`, { method: "DELETE" });
+    if (!response.ok) return;
+    console.info("[settings] Signed out connected app", clientId);
+    setGrants((current) => current.filter((grant) => grant.client_id !== clientId));
+  }
+
+  function usedLabel(lastUsed: string | null) {
+    if (lastUsed) return `${locale === "fi" ? "Käytetty" : "Used"} ${formatDate(new Date(lastUsed))}`;
+    return locale === "fi" ? "Ei vielä käytössä" : "Not used yet";
   }
 
   function scopeLabel(scopes: string) {
@@ -159,13 +183,7 @@ export function ApiKeysCard() {
                   <span className="api-key-meta">
                     <code>{key.key_prefix}…</code>
                     <Badge variant="outline">{scopeLabel(key.scopes)}</Badge>
-                    <span>
-                      {key.last_used_at
-                        ? `${locale === "fi" ? "Käytetty" : "Used"} ${formatDate(new Date(key.last_used_at))}`
-                        : locale === "fi"
-                          ? "Ei vielä käytössä"
-                          : "Not used yet"}
-                    </span>
+                    <span>{usedLabel(key.last_used_at)}</span>
                   </span>
                 </div>
                 <button
@@ -180,6 +198,34 @@ export function ApiKeysCard() {
               </li>
             ))}
           </ul>
+        )}
+
+        {grants.length > 0 && (
+          <>
+            <Label>{locale === "fi" ? "Yhdistetyt sovellukset" : "Connected apps"}</Label>
+            <ul className="api-key-list">
+              {grants.map((grant) => (
+                <li key={grant.client_id} className="api-key-row">
+                  <div className="api-key-details">
+                    <span className="api-key-name">{grant.client_name}</span>
+                    <span className="api-key-meta">
+                      <Badge variant="outline">{scopeLabel(grant.scope)}</Badge>
+                      <span>{usedLabel(grant.last_used_at)}</span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="button"
+                    data-variant="outline"
+                    data-size="sm"
+                    onClick={() => revokeGrant(grant.client_id)}
+                  >
+                    {locale === "fi" ? "Kirjaa ulos" : "Sign out"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </CardContent>
     </Card>
