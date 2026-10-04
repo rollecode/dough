@@ -69,3 +69,17 @@ export function getSavingRate(): number {
 export function getSavingRateType(): "percent" | "fixed" {
   return (getHouseholdSetting("saving_rate_type") as "percent" | "fixed") || "fixed";
 }
+
+// The settings a member may change from the web app. Everything else in household_settings is kept
+// by the server itself (the month's AI spend, sync state), so a request can never rewrite it.
+export const WRITABLE_SETTINGS = new Set([
+  "ai_model_categorize", "ai_model_chat", "ai_model_vision", "ai_model_insight", "ai_summaries_disabled",
+  "anthropic_api_key", "gemini_api_key",
+  "budget_excluded_accounts", "budget_group_order", "budget_include_bills", "budget_threshold_good",
+  "budget_threshold_normal", "budget_threshold_tight", "burn_rate_excluded_payees", "last_reservation_month",
+  "reserve_next_month_saving", "saving_rate",
+  "date_format", "decimal_places", "time_format", "household_profile", "household_size",
+  "prompt_chat_guidelines", "prompt_summary_instructions", "prompt_debt_instructions",
+  "synci_account_mapping", "synci_accounts", "synci_api_token",
+  "ynab_access_token", "ynab_budget_id", "ynab_refresh_token", "ynab_sync_hour", "ynab_token_expires_at",
+]);

@@ -1,7 +1,7 @@
 import { ynabOAuthConfigured } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getHouseholdSettings, setHouseholdSetting } from "@/lib/household";
+import { getHouseholdSettings, setHouseholdSetting, WRITABLE_SETTINGS } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 
 export async function GET() {
@@ -66,6 +66,11 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     console.info("[household] Updating settings:", Object.keys(body));
+    const refused = Object.keys(body).filter((key) => !WRITABLE_SETTINGS.has(key));
+    if (refused.length) {
+      console.warn("[household] Refused settings:", refused);
+      return NextResponse.json({ error: `Not a setting that can be changed here: ${refused.join(", ")}` }, { status: 400 });
+    }
 
     for (const [key, value] of Object.entries(body)) {
       if (value === null || value === "") {
