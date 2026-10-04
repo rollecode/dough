@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getDb, currentHousehold } from "./db";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 
 // Fail closed: a missing SESSION_SECRET must never silently fall back to a default that is
 // visible in this public repository - that would let anyone forge a valid session.
@@ -35,6 +36,7 @@ export async function createSession(userId: number): Promise<string> {
   // household and is refused by any other.
   const token = await new SignJWT({ userId, sv, hid: currentHousehold()?.id ?? null })
     .setProtectedHeader({ alg: "HS256" })
+    .setJti(randomUUID())
     .setExpirationTime("30d")
     .sign(JWT_SECRET);
 
@@ -43,11 +45,15 @@ export async function createSession(userId: number): Promise<string> {
 }
 
 export async function getSession(): Promise<SessionUser | null> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(COOKIE_NAME)?.value;
-    if (!token) return null;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  return token ? verifySession(token) : null;
+}
 
+// The person a session token belongs to, or null when it is forged, expired, logged out, revoked
+// or issued for another household.
+export async function verifySession(token: string): Promise<SessionUser | null> {
+  try {
     const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
     const userId = payload.userId as number;
     if ((payload.hid ?? null) !== (currentHousehold()?.id ?? null)) {
@@ -56,6 +62,10 @@ export async function getSession(): Promise<SessionUser | null> {
     }
 
     const db = getDb();
+    if (payload.jti && db.prepare("SELECT 1 FROM ended_sessions WHERE jti = ?").get(payload.jti)) {
+      console.warn("[auth] Rejected a session that was logged out");
+      return null;
+    }
     const row = db
       .prepare("SELECT id, email, display_name, locale, ynab_access_token, ynab_budget_id, last_ynab_sync, session_version FROM users WHERE id = ?")
       .get(userId) as (SessionUser & { ynab_access_token: string | null; session_version: number }) | undefined;
@@ -82,6 +92,21 @@ export async function getSession(): Promise<SessionUser | null> {
   } catch (error) {
     console.debug("[auth] Invalid session:", error);
     return null;
+  }
+}
+
+// Logging out ends this one token for good, so a copy of the cookie stops working too. Other devices
+// stay signed in.
+export async function endSession(token: string): Promise<void> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
+    if (!payload.jti || !payload.exp) return;
+    const db = getDb();
+    db.prepare("DELETE FROM ended_sessions WHERE expires_at < ?").run(Math.floor(Date.now() / 1000));
+    db.prepare("INSERT OR IGNORE INTO ended_sessions (jti, expires_at) VALUES (?, ?)").run(payload.jti, payload.exp);
+    console.info("[auth] Session ended");
+  } catch (error) {
+    console.debug("[auth] Nothing to end:", error);
   }
 }
 

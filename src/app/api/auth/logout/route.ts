@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { COOKIE_NAME } from "@/lib/auth";
+import { COOKIE_NAME, endSession } from "@/lib/auth";
 
-function buildLogoutResponse(request: Request) {
+async function buildLogoutResponse(request: Request) {
+  const token = new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`).exec(request.headers.get("cookie") || "")?.[1];
+  if (token) await endSession(token);
+
   // Use the host from the request headers to build correct redirect URL
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost:3001";
   const proto = request.headers.get("x-forwarded-proto") || "http";

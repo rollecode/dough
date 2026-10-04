@@ -490,6 +490,11 @@ function initializeDb(db: Database.Database) {
       revoked_at TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_oauth_tokens_user ON oauth_tokens(user_id);
+
+    CREATE TABLE IF NOT EXISTS ended_sessions (
+      jti TEXT PRIMARY KEY,
+      expires_at INTEGER NOT NULL
+    );
   `);
 
   // Collapse net worth snapshots to one row per day. They were stamped per user, so a shared
