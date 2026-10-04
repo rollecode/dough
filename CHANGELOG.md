@@ -1,5 +1,6 @@
 ### 4.7.3: 2026-10-04
 
+* Fix attachments of any type and size reaching AI
 * Fix logged-out sessions staying valid
 * Fix password guessing past the login limit
 * Add signing out connected apps in Settings

@@ -101,6 +101,9 @@ export async function GET(request: Request) {
   }
 }
 
+// A thumbnail for the chat history, not the attachment itself.
+const MAX_THUMB_LENGTH = 500_000;
+
 export async function POST(request: Request) {
   try {
     const user = await getSession();
@@ -112,6 +115,12 @@ export async function POST(request: Request) {
 
     if (!role || !content) {
       return NextResponse.json({ error: "Role and content required" }, { status: 400 });
+    }
+    if (role !== "user" && role !== "assistant") {
+      return NextResponse.json({ error: "Role must be user or assistant" }, { status: 400 });
+    }
+    if (image_thumb && (typeof image_thumb !== "string" || image_thumb.length > MAX_THUMB_LENGTH || !(image_thumb === "pdf" || image_thumb.startsWith("data:image/")))) {
+      return NextResponse.json({ error: "image_thumb must be \"pdf\" or a small data:image URL" }, { status: 400 });
     }
 
     const db = getDb();

@@ -1,3 +1,4 @@
+import { attachmentProblem } from "./attachment";
 import { spawnClaude, aiBilling, aiAllowanceLeft, recordAiSpend, recordAiResult } from "@/lib/ai/claude-cli";
 import { getAiModel, isGeminiModel } from "./model";
 
@@ -35,6 +36,10 @@ export async function queryClaudeWithImage(
 
   console.debug("[claude-image] Sending image prompt, text length:", textPrompt.length, "image size:", Math.round(imageBase64.length / 1024), "KB");
 
+  const problem = attachmentProblem(imageBase64, mediaType);
+  if (problem) {
+    return { text: "", error: problem };
+  }
   const configured = getAiModel("vision");
   const visionModel = model ?? (isGeminiModel(configured) ? "opus" : configured);
   console.debug("[claude-image] Vision model:", visionModel);
