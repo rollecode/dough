@@ -4,17 +4,28 @@
   padding: 0;
 }
 
+/* The chat fills the window, so the version footer gets its own room below it instead of pushing
+   the page into a scroll, and lines up with the chat card's edge. */
+.l-main:has(.chat-page) {
+  --chat-footer-h: 2.75rem;
+}
+
 .chat-page {
-  height: calc(100dvh - 3.5rem);
+  height: calc(100dvh - 3.5rem - var(--chat-footer-h));
   display: flex;
   flex-direction: column;
 }
 
 @media (min-width: 768px) {
   .chat-page {
-    height: calc(100dvh - 0.5rem);
+    height: calc(100dvh - 0.5rem - var(--chat-footer-h));
     padding: 0.25rem 0;
   }
+}
+
+.l-main:has(.chat-page) .app-version {
+  height: var(--chat-footer-h);
+  padding: 0.75rem 0.25rem 0;
 }
 
 .chat-container {

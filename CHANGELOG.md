@@ -5,6 +5,7 @@
 * Add a self-hosted and cloud comparison to the README
 * Fix receipt reading hiding why it failed
 * Change AI except Dougie to Gemini 3 Flash
+* Fix the chat page footer alignment and gap
 
 ### 4.7.2: 2026-10-03
 
