@@ -682,7 +682,7 @@ export const SECTIONS: Section[] = [
         path: "/account/export",
         scope: "write",
         summary:
-          "The household's data as one SQLite file, the format Dough runs on, so it opens anywhere and can start a self-hosted instance. API keys and OAuth tokens are left out and saved credentials are readable. Needs write: the file holds every member's sign-in.",
+          "The household's data as one SQLite file, the format Dough runs on, so it opens anywhere and can start a self-hosted instance. Left out: API keys, OAuth tokens, the saved bank and AI keys and the members' passwords. The export in the app's Settings keeps the saved keys and passwords.",
       },
       {
         method: "POST",

@@ -7,11 +7,15 @@ import { getDb, eraseCurrentDatabase } from "./db";
 import { SECRET_SETTINGS, openSecret } from "./secrets";
 import { localDateIso } from "./date-utils";
 
+// Whether the copy carries the household's credentials: the bank and AI keys and the members'
+// password hashes. Only someone signed in to the app gets them; an API key or connected app does not.
+export type ExportCredentials = "with-credentials" | "without-credentials";
+
 // The household's data as one SQLite file, the same format Dough runs on, so it can be opened
 // anywhere or used to start a self-hosted instance. Left out: this instance's API keys and OAuth
 // tokens, which would only be a way in here. Credentials are decrypted so the copy works without
 // this instance's encryption key.
-export async function exportHousehold(): Promise<Buffer> {
+export async function exportHousehold(credentials: ExportCredentials): Promise<Buffer> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dough-export-"));
   const file = path.join(dir, "dough.db");
   try {
@@ -22,6 +26,11 @@ export async function exportHousehold(): Promise<Buffer> {
     const update = copy.prepare("UPDATE household_settings SET value = ? WHERE key = ?");
     for (const row of settings) {
       if (SECRET_SETTINGS.has(row.key)) update.run(openSecret(row.value), row.key);
+    }
+    if (credentials === "without-credentials") {
+      const remove = copy.prepare("DELETE FROM household_settings WHERE key = ?");
+      for (const key of SECRET_SETTINGS) remove.run(key);
+      copy.exec("UPDATE users SET password_hash = '', ynab_access_token = NULL");
     }
     copy.pragma("journal_mode = DELETE");
     copy.exec("VACUUM");
@@ -70,9 +79,9 @@ export async function deleteAccount(userId: number, password: string): Promise<D
 }
 
 // The export as a download, named for the day it was taken.
-export async function exportResponse(): Promise<Response> {
-  const file = await exportHousehold();
-  console.info("[account] Exported the household,", file.length, "bytes");
+export async function exportResponse(credentials: ExportCredentials): Promise<Response> {
+  const file = await exportHousehold(credentials);
+  console.info("[account] Exported the household", credentials, file.length, "bytes");
   return new Response(new Uint8Array(file), {
     headers: {
       "Content-Type": "application/vnd.sqlite3",

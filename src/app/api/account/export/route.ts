@@ -6,5 +6,5 @@ import { exportResponse } from "@/lib/account";
 export async function GET() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  return exportResponse();
+  return exportResponse("with-credentials");
 }

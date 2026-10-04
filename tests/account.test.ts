@@ -50,12 +50,20 @@ test("the export opens anywhere and carries no way back in", async () => {
     setHouseholdSetting("synci_api_token", "bank-token");
     getDb().prepare("INSERT INTO api_keys (user_id, name, key_prefix, key_hash, scopes) VALUES (?, 'k', 'dough_x', 'h', 'read')").run(a);
     const file = path.join(dir, "copy.db");
-    fs.writeFileSync(file, await exportHousehold());
+    fs.writeFileSync(file, await exportHousehold("with-credentials"));
     const copy = new Database(file, { readonly: true });
     assert.equal((copy.prepare("SELECT value FROM household_settings WHERE key = 'synci_api_token'").get() as { value: string }).value, "bank-token");
     assert.equal((copy.prepare("SELECT COUNT(*) AS n FROM api_keys").get() as { n: number }).n, 0);
     assert.equal((copy.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n, 1);
     copy.close();
+
+    const bare = path.join(dir, "bare.db");
+    fs.writeFileSync(bare, await exportHousehold("without-credentials"));
+    const api = new Database(bare, { readonly: true });
+    assert.equal(api.prepare("SELECT value FROM household_settings WHERE key = 'synci_api_token'").get(), undefined);
+    assert.equal((api.prepare("SELECT password_hash FROM users").get() as { password_hash: string }).password_hash, "");
+    assert.ok((api.prepare("SELECT COUNT(*) AS n FROM transactions").get() as { n: number }).n >= 0);
+    api.close();
   });
   delete process.env.DOUGH_ENCRYPTION_KEY;
 });
