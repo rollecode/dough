@@ -36,19 +36,35 @@ export function calculatePayoff(
   let month = 0;
   let totalInterest = 0;
 
+  // The month's whole payment stays the same as debts close: every minimum plus the extra. Each open
+  // debt gets its minimum first; what is left goes to the first open debt in order, then the next.
+  const monthlyPool = minPayments.reduce((s, p) => s + p, 0) + extraPayment;
+
   while (balances.some((b) => b > 0) && month < HORIZON_MONTHS) {
-    let extra = extraPayment;
     for (let i = 0; i < balances.length; i++) {
       if (balances[i] <= 0) {
-        extra += minPayments[i];
         continue;
       }
       const interest = balances[i] * rates[i];
       totalInterest += interest;
-      let payment = minPayments[i] + (i === balances.findIndex((b) => b > 0) ? extra : 0);
-      payment = Math.min(payment, balances[i] + interest);
-      balances[i] = balances[i] + interest - payment;
-      if (balances[i] < 1) balances[i] = 0;
+      balances[i] += interest;
+    }
+
+    let pool = monthlyPool;
+    for (let i = 0; i < balances.length; i++) {
+      const payment = Math.min(minPayments[i], balances[i], pool);
+      balances[i] -= payment;
+      pool -= payment;
+    }
+    for (let i = 0; i < balances.length && pool > 0; i++) {
+      const payment = Math.min(balances[i], pool);
+      balances[i] -= payment;
+      pool -= payment;
+    }
+    for (let i = 0; i < balances.length; i++) {
+      if (balances[i] < 1) {
+        balances[i] = 0;
+      }
     }
     const date = new Date();
     date.setMonth(date.getMonth() + month);
