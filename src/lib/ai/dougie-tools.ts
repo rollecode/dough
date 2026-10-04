@@ -5,12 +5,16 @@ import { generateApiKey } from "@/lib/api-auth";
 // it can do exactly what that person could do through the API and nothing more. The key exists only
 // for one answer.
 //
-// Never offered: anything that deletes or merges, because a payee or memo written to look like an
-// instruction must not be able to destroy data, and Dougie asking itself.
+// Never offered: anything that deletes or merges, rewrites account balances, settings or the rules
+// later syncs follow, or moves the whole budget at once, because a payee or memo written to look like
+// an instruction must not be able to do lasting damage. Nor Dougie asking itself.
 export const DOUGIE_DENIED = [
   "dough_delete_transaction", "dough_delete_bill", "dough_delete_subscription", "dough_delete_savings_goal",
   "dough_delete_account", "dough_delete_category", "dough_delete_income", "dough_delete_payee_match",
   "dough_delete_my_account", "dough_merge_payees", "dough_ask_dougie",
+  "dough_create_account", "dough_update_account", "dough_reconcile_account", "dough_update_settings",
+  "dough_update_profile", "dough_add_payee_match", "dough_set_budget_link", "dough_auto_assign_apply",
+  "dough_reorder_accounts", "dough_reorder_categories", "dough_reorder_debts", "dough_reorder_investments",
 ];
 
 export async function withDougieTools<T>(userId: number, origin: string, run: (args: string[]) => Promise<T>): Promise<T> {

@@ -1,5 +1,6 @@
 ### 4.7.3: 2026-10-04
 
+* Change Dougie to leave accounts, settings and rules alone
 * Fix AI text loading outside images
 * Fix members resetting the AI spending limit
 * Fix Dougie answering without a valid session

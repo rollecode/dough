@@ -30,3 +30,12 @@ test("Dougie acts through the household's MCP with a key that lives for one answ
   assert.equal((db.prepare("SELECT COUNT(*) AS n FROM api_keys WHERE user_id = 7").get() as { n: number }).n, 0, "the key is gone afterwards");
   delete process.env.CLAUDE_PATH;
 });
+
+test("every tool Dougie is denied exists, so a renamed tool cannot slip through", async () => {
+  const { DOUGIE_DENIED } = await import("@/lib/ai/dougie-tools");
+  const tools = readFileSync("src/lib/mcp/tools.ts", "utf8");
+  for (const name of DOUGIE_DENIED) assert.ok(tools.includes(`"${name}"`), name);
+  for (const name of ["dough_update_account", "dough_update_settings", "dough_add_payee_match", "dough_auto_assign_apply"]) {
+    assert.ok(DOUGIE_DENIED.includes(name), name);
+  }
+});
