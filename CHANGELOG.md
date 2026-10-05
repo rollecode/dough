@@ -1,3 +1,10 @@
+### 4.7.4: 2026-10-05
+
+* List hidden categories with money in them in the API
+* Count hidden categories' money in the app's budget totals
+* Choose default transfer accounts in Settings
+* Swap the transfer's accounts with one button
+
 ### 4.7.3: 2026-10-04
 
 * Fix attachments of any type and size reaching AI
