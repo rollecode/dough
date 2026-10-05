@@ -745,6 +745,13 @@ function initializeDb(db: Database.Database) {
     console.info("[db] Adding budget_share column to users");
     db.exec("ALTER TABLE users ADD COLUMN budget_share INTEGER NOT NULL DEFAULT 0");
   }
+  // The accounts a person's transfers usually go from and to, picked when the add dialog switches
+  // to a transfer. Per person: one moves money from savings, another from a shared account.
+  if (!userCols.some((c) => c.name === "default_transfer_from")) {
+    console.info("[db] Adding default transfer account columns to users");
+    db.exec("ALTER TABLE users ADD COLUMN default_transfer_from TEXT");
+    db.exec("ALTER TABLE users ADD COLUMN default_transfer_to TEXT");
+  }
 
   // Migrate payee_matches/monthly_matches to support 'investment' and 'subscription' source_type
   const payeeCheck = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'payee_matches'").get() as { sql: string } | undefined;

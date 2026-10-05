@@ -85,6 +85,18 @@ export default function SettingsPage() {
   const [accountNotes, setAccountNotes] = useState<Record<string, string>>({});
   const [notesSaved, setNotesSaved] = useState(false);
   const [personalBudgetShare, setPersonalBudgetShare] = useState("");
+  const [transferFrom, setTransferFrom] = useState("");
+  const [transferTo, setTransferTo] = useState("");
+  const [transferSaved, setTransferSaved] = useState(false);
+  const saveTransferDefaults = async (from: string, to: string) => {
+    await fetch("/api/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ default_transfer_from: from, default_transfer_to: to }),
+    });
+    setTransferSaved(true);
+    setTimeout(() => setTransferSaved(false), 2000);
+  };
   const [personalShareSaved, setPersonalShareSaved] = useState(false);
   const [decimalPlaces, setDecimalPlaces] = useState("0");
   const [decimalSaved, setDecimalSaved] = useState(false);
@@ -201,6 +213,8 @@ export default function SettingsPage() {
           if (profileData.profile) {
             setDisplayName(profileData.profile.display_name || "");
             if (profileData.profile.budget_share) setPersonalBudgetShare(String(profileData.profile.budget_share));
+            setTransferFrom(profileData.profile.default_transfer_from || "");
+            setTransferTo(profileData.profile.default_transfer_to || "");
           }
           if (profileData.linkedAccountIds) {
             setLinkedAccountIds(profileData.linkedAccountIds);
@@ -464,6 +478,35 @@ export default function SettingsPage() {
                   : "Manage accounts, your spending account, daily-budget exclusions and notes on the Accounts page."}
               </p>
               <a href="/accounts" className="settings-link-btn">{locale === "fi" ? "Avaa Tilit" : "Open Accounts"}</a>
+            </div>
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Oletussiirto" : "Default transfer"}</Label>
+              <div className="settings-row">
+                <select
+                  className="input settings-input"
+                  value={transferFrom}
+                  aria-label={locale === "fi" ? "Miltä tililtä" : "From account"}
+                  onChange={(e) => { setTransferFrom(e.target.value); saveTransferDefaults(e.target.value, transferTo); }}
+                >
+                  <option value="">{locale === "fi" ? "Miltä tililtä" : "From account"}</option>
+                  {allAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <select
+                  className="input settings-input"
+                  value={transferTo}
+                  aria-label={locale === "fi" ? "Mille tilille" : "To account"}
+                  onChange={(e) => { setTransferTo(e.target.value); saveTransferDefaults(transferFrom, e.target.value); }}
+                >
+                  <option value="">{locale === "fi" ? "Mille tilille" : "To account"}</option>
+                  {allAccounts.filter((a) => a.id !== transferFrom).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                {transferSaved && <span className="settings-saved">{t.common.saved}</span>}
+              </div>
+              <p className="settings-help">
+                {locale === "fi"
+                  ? "Tilit, jotka valitaan valmiiksi, kun lisäät siirron. Vain sinulle."
+                  : "The accounts picked for you when you add a transfer. Yours only."}
+              </p>
             </div>
             <div className="form-field">
               <Label>{locale === "fi" ? "Oma osuus päiväbudjetista (%)" : "Your share of daily budget (%)"}</Label>

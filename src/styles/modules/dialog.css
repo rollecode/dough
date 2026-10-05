@@ -141,3 +141,34 @@
 .dialog-description a:hover {
   color: var(--foreground);
 }
+
+/* The transfer's To label, with the button that swaps the two accounts at its end. */
+.transfer-to-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.transfer-swap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 150ms, border-color 150ms;
+}
+
+.transfer-swap:hover:not(:disabled) {
+  color: var(--foreground);
+  border-color: var(--primary);
+}
+
+.transfer-swap:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

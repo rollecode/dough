@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Paperclip, X, Sparkles } from "lucide-react";
+import { Loader2, Paperclip, X, Sparkles, ArrowUpDown } from "lucide-react";
 import { useLocale } from "@/lib/locale-context";
 import { useYnab } from "@/lib/ynab-context";
 import { titleCasePayee } from "@/lib/text-utils";
@@ -84,6 +84,8 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
   const [batchLoading, setBatchLoading] = useState(false);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [allAccounts, setAllAccounts] = useState<{ id: string; name: string }[]>([]);
+  // The person's usual transfer, from Settings, picked when the dialog switches to a transfer.
+  const [transferDefaults, setTransferDefaults] = useState<{ from: string; to: string }>({ from: "", to: "" });
   const [payees, setPayees] = useState<string[]>([]);
   const [memos, setMemos] = useState<string[]>([]);
   const [dupCandidates, setDupCandidates] = useState<{ id: string; date: string; payee: string; amount: number; account: string }[]>([]);
@@ -108,6 +110,10 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
       if (accountsData.accounts) {
         setAllAccounts(accountsData.accounts.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
       }
+      setTransferDefaults({
+        from: profileData.profile?.default_transfer_from || "",
+        to: profileData.profile?.default_transfer_to || "",
+      });
       const ids = profileData.linkedAccountIds || [];
       if (ids.length > 0 && accountsData.accounts) {
         setLinkedAccountId(ids[0]);
@@ -116,6 +122,24 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
       }
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (txType !== "transfer") return;
+    const { from, to } = transferDefaults;
+    if (from && allAccounts.some((a) => a.id === from)) {
+      setLinkedAccountId(from);
+      setLinkedAccountName(allAccounts.find((a) => a.id === from)?.name || "");
+    }
+    if (to && to !== from && allAccounts.some((a) => a.id === to)) setToAccountId(to);
+  }, [txType, transferDefaults, allAccounts]);
+
+  const swapTransfer = () => {
+    if (!toAccountId) return;
+    const from = linkedAccountId;
+    setLinkedAccountId(toAccountId);
+    setLinkedAccountName(allAccounts.find((a) => a.id === toAccountId)?.name || "");
+    setToAccountId(from);
+  };
 
   // Preselect the account when opened while the transactions list is filtered to one account.
   useEffect(() => {
@@ -499,7 +523,14 @@ export function AddExpenseDialog({ open, onOpenChange, initialDate, initialAccou
 
               {txType === "transfer" && (
                 <div className="form-field">
-                  <Label>{locale === "fi" ? "Mille tilille" : "To account"}</Label>
+                  <div className="transfer-to-label">
+                    <Label>{locale === "fi" ? "Mille tilille" : "To account"}</Label>
+                    <button type="button" className="transfer-swap" onClick={swapTransfer} disabled={!toAccountId}
+                      aria-label={locale === "fi" ? "Vaihda tilit päittäin" : "Swap the accounts"}
+                      title={locale === "fi" ? "Vaihda tilit päittäin" : "Swap the accounts"}>
+                      <ArrowUpDown className="icon-sm" />
+                    </button>
+                  </div>
                   <SearchableSelect
                     value={toAccountId}
                     onChange={(v) => v && setToAccountId(v)}

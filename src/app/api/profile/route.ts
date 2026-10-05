@@ -9,8 +9,11 @@ export async function GET() {
 
     const db = getDb();
     const profile = db
-      .prepare("SELECT id, email, display_name, locale, budget_share FROM users WHERE id = ?")
-      .get(user.id) as { id: number; email: string; display_name: string; locale: string; budget_share: number } | undefined;
+      .prepare("SELECT id, email, display_name, locale, budget_share, default_transfer_from, default_transfer_to FROM users WHERE id = ?")
+      .get(user.id) as {
+        id: number; email: string; display_name: string; locale: string; budget_share: number;
+        default_transfer_from: string | null; default_transfer_to: string | null;
+      } | undefined;
 
     const linkedAccounts = db
       .prepare("SELECT ynab_account_id FROM user_linked_accounts WHERE user_id = ?")
@@ -46,6 +49,11 @@ export async function PUT(request: Request) {
       console.info("[profile] Updating budget share for user", user.id, "to", body.budget_share);
       db.prepare("UPDATE users SET budget_share = ?, updated_at = datetime('now') WHERE id = ?")
         .run(parseInt(body.budget_share, 10) || 0, user.id);
+    }
+
+    for (const key of ["default_transfer_from", "default_transfer_to"] as const) {
+      if (body[key] === undefined) continue;
+      db.prepare(`UPDATE users SET ${key} = ?, updated_at = datetime('now') WHERE id = ?`).run(body[key] ? String(body[key]) : null, user.id);
     }
 
     if (body.linked_account_ids !== undefined) {
