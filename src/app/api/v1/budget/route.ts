@@ -14,6 +14,7 @@ import { savedGroupOrder, sortByGroupOrder } from "@/lib/category-order";
 interface CategoryRow {
   id: number;
   name: string;
+  is_active: number;
   group_name: string | null;
   description: string | null;
   budget_excluded: number;
@@ -26,8 +27,10 @@ interface CategoryRow {
 
 // GET /api/v1/budget?month=YYYY-MM - the month's budget: income, total budgeted, Ready to Assign,
 // age of money, and every active category with its budgeted / activity / available, what it carries
-// in, its target, what it is linked to and whether it is snoozed. Same helpers as the budget page,
-// so the two cannot disagree.
+// in, its target, what it is linked to and whether it is snoozed. A hidden category is listed too
+// while money moves through it (activity, an assignment or an overspend), with is_active false, as
+// the budget page shows it with a Hidden badge. Same helpers as the budget page, so the two cannot
+// disagree.
 export const GET = apiRoute("read", (request) => {
   const db = getDb();
   const month = resolveMonth(request);
@@ -35,9 +38,9 @@ export const GET = apiRoute("read", (request) => {
   // In the order the budget page shows them, which is the order the reorder endpoint saves.
   const cats = sortByGroupOrder(db
     .prepare(
-      "SELECT id, name, group_name, COALESCE(description, '') AS description, budget_excluded, " +
+      "SELECT id, name, is_active, group_name, COALESCE(description, '') AS description, budget_excluded, " +
         "subscription_id, bill_id, debt_account_id, savings_goal_id, investment_account_id " +
-        "FROM categories WHERE is_active = 1 ORDER BY group_name, sort_order, name"
+        "FROM categories ORDER BY group_name, sort_order, name"
     )
     .all() as CategoryRow[], savedGroupOrder());
   const budgetedRows = db
@@ -67,6 +70,7 @@ export const GET = apiRoute("read", (request) => {
     return {
       id: c.id,
       name: c.name,
+      is_active: !!c.is_active,
       group: c.group_name || "",
       description: c.description || "",
       budgeted,
@@ -90,9 +94,10 @@ export const GET = apiRoute("read", (request) => {
       investment_account_id: c.investment_account_id ?? null,
       tx_count: txCounts.get(c.name) || 0,
     };
-  });
+  }).filter((c) => c.is_active || c.activity !== 0 || c.budgeted !== 0 || c.available < -0.005);
 
-  // The categories the budget page lists under "Hidden categories", so a client can unhide them.
+  // Every hidden category, so a client can unhide them. The ones with no footprint this month are
+  // the ones the budget page lists under "Hidden categories".
   const hiddenCategories = sortByGroupOrder(db
     .prepare("SELECT id, name, group_name FROM categories WHERE is_active = 0 ORDER BY group_name, sort_order, name")
     .all() as { id: number; name: string; group_name: string | null }[], savedGroupOrder())
