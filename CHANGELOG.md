@@ -1,13 +1,17 @@
+### 4.8.1: 2026-10-08
+
+* Add a daily budget cap
+* Change trimming of big daily budgets to its own amount
+* Fix Settings scrolling sideways on phones
+* Fix AI status heading spacing
+* Move YNAB sync hour into the YNAB card
+
 ### 4.8.0: 2026-10-08
 
 * Change the pace line to follow the daily budget
 * Change the savings streak to match the pace line
 * Fix web month status counting yearly bills monthly
 * Add trimming of big daily budgets
-* Add a daily budget cap
-* Fix Settings scrolling sideways on phones
-* Fix AI status heading spacing
-* Move YNAB sync hour into the YNAB card
 
 ### 4.7.5: 2026-10-07
 
