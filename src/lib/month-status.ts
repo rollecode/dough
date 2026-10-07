@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import { getHouseholdSettings } from "@/lib/household";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
 import { monthCommitments } from "@/lib/commitments";
+import type { BillCadenceFields } from "@/lib/bills";
 import { monthStatus, type MonthStatus } from "@/lib/dashboard-model";
 
 // The month's income and its end-of-month cost, assembled from the database rather than from
@@ -14,11 +15,11 @@ export function currentMonthStatus(now = new Date()): MonthStatus {
   const data = buildLocalFinancialData(db);
 
   const billRows = db
-    .prepare("SELECT id, amount, is_active FROM recurring_bills")
-    .all() as { id: number; amount: number; is_active: number }[];
+    .prepare("SELECT id, amount, is_active, cadence, due_month, interval_months FROM recurring_bills")
+    .all() as ({ id: number; amount: number; is_active: number } & BillCadenceFields)[];
   const subscriptionRows = db
-    .prepare("SELECT id, amount, is_active FROM subscriptions")
-    .all() as { id: number; amount: number; is_active: number }[];
+    .prepare("SELECT id, amount, is_active, due_month, interval_months FROM subscriptions")
+    .all() as ({ id: number; amount: number; is_active: number } & BillCadenceFields)[];
 
   const manualPaid = new Map(
     (db.prepare("SELECT bill_id, is_paid FROM bill_manual_status WHERE month = ?").all(month) as {
@@ -42,6 +43,9 @@ export function currentMonthStatus(now = new Date()): MonthStatus {
     ...billRows.map((b) => ({
       amount: b.amount,
       is_active: !!b.is_active,
+      cadence: b.cadence,
+      due_month: b.due_month,
+      interval_months: b.interval_months,
       is_paid: manualPaid.has(b.id) ? manualPaid.get(b.id)! : matchedBills.has(b.id),
     })),
     ...subscriptionRows.map((s) => {
@@ -49,6 +53,8 @@ export function currentMonthStatus(now = new Date()): MonthStatus {
       return {
         amount: s.amount,
         is_active: !!s.is_active,
+        due_month: s.due_month,
+        interval_months: s.interval_months,
         is_paid: manualPaid.has(key) ? manualPaid.get(key)! : matchedSubscriptions.has(s.id),
       };
     }),
