@@ -1,3 +1,10 @@
+### 4.8.0: 2026-10-08
+
+* Change the pace line to follow the daily budget
+* Change the savings streak to match the pace line
+* Fix web month status counting yearly bills monthly
+* Add saving in good months to the daily budget
+
 ### 4.7.5: 2026-10-07
 
 * Change the pace line to count overspending once
