@@ -701,7 +701,7 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="settings-row">
+            <div className="settings-model-grid">
               {([
                 ["categorize", locale === "fi" ? "Kategorisointi" : "Categorizing"],
                 ["chat", locale === "fi" ? "Dougie-keskustelu" : "Dougie chat"],

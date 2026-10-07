@@ -3004,6 +3004,7 @@
 /* Settings */
 .settings-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
 }
 
@@ -3178,6 +3179,18 @@
 .settings-row .settings-input,
 .settings-row .select-trigger {
   flex: 1;
+  min-width: 0;
+}
+
+/* One dropdown per AI task: side by side when there is room, stacked on a phone. */
+.settings-model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.settings-model-grid .select-trigger {
+  width: 100%;
   min-width: 0;
 }
 
