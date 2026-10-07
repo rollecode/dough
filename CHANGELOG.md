@@ -4,6 +4,10 @@
 * Change the savings streak to match the pace line
 * Fix web month status counting yearly bills monthly
 * Add saving in good months to the daily budget
+* Add a daily budget cap
+* Fix Settings scrolling sideways on phones
+* Fix AI status heading spacing
+* Move YNAB sync hour into the YNAB card
 
 ### 4.7.5: 2026-10-07
 
