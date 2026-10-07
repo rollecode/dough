@@ -15,6 +15,8 @@ const NUMBERS = [
   "budget_threshold_tight",
   "budget_threshold_normal",
   "budget_threshold_good",
+  "good_month_level",
+  "daily_cap",
 ] as const;
 
 function excludedPayees(raw: string | undefined): string[] {
@@ -37,6 +39,9 @@ export const GET = apiRoute("read", () => {
     budget_threshold_good: parseInt(settings.budget_threshold_good || "50", 10),
     reserve_next_month_saving: settings.reserve_next_month_saving === "1",
     good_month_saving: settings.good_month_saving === "1",
+    good_month_level: parseFloat(settings.good_month_level || "50") || 0,
+    daily_cap_enabled: settings.daily_cap_enabled === "1",
+    daily_cap: parseFloat(settings.daily_cap || "0") || 0,
     household_size: parseInt(settings.household_size || "1", 10),
     burn_rate_excluded_payees: excludedPayees(settings.burn_rate_excluded_payees),
   };
@@ -70,9 +75,10 @@ export const POST = apiRoute("write", async (request) => {
     written.push("reserve_next_month_saving");
   }
 
-  if (body.good_month_saving !== undefined) {
-    setHouseholdSetting("good_month_saving", body.good_month_saving ? "1" : "0");
-    written.push("good_month_saving");
+  for (const key of ["good_month_saving", "daily_cap_enabled"] as const) {
+    if (body[key] === undefined) continue;
+    setHouseholdSetting(key, body[key] ? "1" : "0");
+    written.push(key);
   }
 
   if (body.burn_rate_excluded_payees !== undefined) {

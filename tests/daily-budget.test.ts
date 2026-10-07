@@ -73,3 +73,21 @@ test("good-month saving leaves a budget under the good level alone", () => {
   assert.equal(result.dailyBudget, 40);
   assert.equal(result.heldBack, 0);
 });
+
+test("the daily cap is the most a day is offered, and the rest is held back", () => {
+  const result = budget(1, 1400, { dailyCap: 70 });
+  assert.equal(result.dailyBudget, 70);
+  assert.equal(result.heldBack, 30);
+});
+
+test("the cap applies after good-month saving", () => {
+  const result = budget(1, 1400, { goodMonthLevel: 50, dailyCap: 70 });
+  assert.equal(result.dailyBudget, 70);
+  const loose = budget(1, 1400, { goodMonthLevel: 50, dailyCap: 90 });
+  assert.equal(loose.dailyBudget, 75);
+});
+
+test("what the cap held back comes out only to keep a tight stretch at the cap", () => {
+  const result = budget(1, 900, { dailyCap: 50, heldBackThisMonth: 400 });
+  assert.equal(result.dailyBudget, 50);
+});

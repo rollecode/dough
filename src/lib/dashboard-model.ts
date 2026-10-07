@@ -94,9 +94,10 @@ export interface DashboardInput {
   thresholds: DashThresholds;
   reserveNextMonthSaving: boolean;
   lastReservationMonth: string;
-  // Good-month saving: the level above which half the extra is held back (0 when off), and what this
-  // month's earlier days held back.
+  // Good-month saving: the level above which half the extra is held back (0 when off). Daily cap:
+  // the most a day is offered (0 when off). And what this month's earlier days held back.
   goodMonthLevel?: number;
+  dailyCap?: number;
   heldBackThisMonth?: number;
   monthlyHistory: { month: string; income: number; expenses: number }[];
   trends: { category: string; thisMonth: number; lastMonth: number }[];
@@ -127,7 +128,7 @@ export interface DashboardModel {
   daily_budget: {
     amount: number;
     tomorrow: number;
-    // What good-month saving kept out of today's budget, 0 when it is off or the day is not a good one.
+    // What good-month saving and the daily cap kept out of today's budget.
     held_back: number;
     with_bills: number;
     without_bills: number;
@@ -339,7 +340,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     debtMonthly, investmentMonthly, commitmentCategories, topCategories = 6,
     excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
-    goodMonthLevel = 0, heldBackThisMonth = 0,
+    goodMonthLevel = 0, dailyCap = 0, heldBackThisMonth = 0,
     monthlyHistory, trends, budgetByDay, streakHistory, burnRateExcludedPayees = [],
   } = input;
 
@@ -438,6 +439,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     extraSavingReserve: shouldReserveNow ? savingRate : 0,
     skipCurrentMonthSaving: lastReservationMonth === month,
     goodMonthLevel,
+    dailyCap,
     heldBackThisMonth,
     unpaidBills,
     debts: debts.map((d) => ({ amount: d.amount, dueDay: d.dueDay })),

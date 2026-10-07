@@ -35,7 +35,7 @@ interface BudgetDebt {
 
 export interface DailyBudgetResult {
   dailyBudget: number;
-  // What good-month saving kept out of today's budget.
+  // What good-month saving and the daily cap kept out of today's budget.
   heldBack: number;
   tightestSegment: {
     startDay: number;
@@ -64,12 +64,13 @@ export function calculateDailyBudget(params: {
   resolveDay: (day: number) => number;
   extraSavingReserve?: number;
   skipCurrentMonthSaving?: boolean;
-  // Good-month saving: the daily level above which half the extra is held back (0 = off), and what
-  // the month's earlier days already held back.
+  // Good-month saving: the daily level above which half the extra is held back (0 = off). Daily cap:
+  // the most a day is offered (0 = off). And what the month's earlier days already held back.
   goodMonthLevel?: number;
+  dailyCap?: number;
   heldBackThisMonth?: number;
 }): DailyBudgetResult {
-  const { balance, savingGoal, today, daysInMonth, unpaidBills, debts, unreceivedIncomes, allIncomes, allBills, allDebts, resolveDay, extraSavingReserve = 0, skipCurrentMonthSaving = false, goodMonthLevel = 0, heldBackThisMonth = 0 } = params;
+  const { balance, savingGoal, today, daysInMonth, unpaidBills, debts, unreceivedIncomes, allIncomes, allBills, allDebts, resolveDay, extraSavingReserve = 0, skipCurrentMonthSaving = false, goodMonthLevel = 0, dailyCap = 0, heldBackThisMonth = 0 } = params;
 
   // Build a 14-day minimum window, extending to cover at least one significant income
   // This prevents spending everything before a small income and starving the next period
@@ -178,18 +179,23 @@ export function calculateDailyBudget(params: {
   // it arrives in time to cover. This keeps the daily rate sustainable.
   const fullPool = balance - windowObligations - windowSaving;
 
-  // What earlier good days held back stays out of the pool, except what a tight stretch needs to
-  // reach the good level again.
-  const kept = goodMonthLevel > 0 ? Math.max(0, Math.min(heldBackThisMonth, fullPool - goodMonthLevel * totalDays)) : 0;
+  // What earlier days held back stays out of the pool, except what a tight stretch needs to reach
+  // the lower of the good-month level and the cap again.
+  const floors = [goodMonthLevel, dailyCap].filter((v) => v > 0);
+  const floor = floors.length > 0 ? Math.min(...floors) : 0;
+  const kept = floor > 0 ? Math.max(0, Math.min(heldBackThisMonth, fullPool - floor * totalDays)) : 0;
   const pool = fullPool - kept;
   const fullDaily = pool / totalDays;
-  const offered = goodMonthLevel > 0 && fullDaily > goodMonthLevel
+  let offered = goodMonthLevel > 0 && fullDaily > goodMonthLevel
     ? goodMonthLevel + (fullDaily - goodMonthLevel) * GOOD_MONTH_SPEND_SHARE
     : fullDaily;
+  if (dailyCap > 0) {
+    offered = Math.min(offered, dailyCap);
+  }
   const dailyBudget = Math.max(0, Math.round(offered * 100) / 100);
   const heldBack = Math.round((Math.max(0, fullDaily) - Math.max(0, offered)) * 100) / 100;
-  if (goodMonthLevel > 0) {
-    console.debug("[daily-budget] Good-month saving: kept", Math.round(kept), "of", Math.round(heldBackThisMonth), "held back today", heldBack);
+  if (floor > 0) {
+    console.debug("[daily-budget] Held back: kept", Math.round(kept), "of", Math.round(heldBackThisMonth), "today", heldBack, "level", goodMonthLevel, "cap", dailyCap);
   }
 
   console.info("[daily-budget] balance:", Math.round(balance), "reservedObligations:", Math.round(windowObligations), "saving:", Math.round(windowSaving), "pool:", Math.round(pool), "days:", totalDays, "daily:", dailyBudget);

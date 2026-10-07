@@ -3,7 +3,7 @@ import { ynabToken } from "@/lib/ynab/oauth";
 import { getFinancialAdvice } from "@/lib/ai/finance-advisor";
 import { issuerFor } from "@/lib/oauth";
 import { getDb } from "@/lib/db";
-import { getYnabToken, getYnabBudgetId, goodMonthSaving } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, budgetHoldBack } from "@/lib/household";
 import { localDateIso } from "@/lib/date-utils";
 import { eventBus } from "@/lib/event-bus";
 import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
@@ -269,10 +269,11 @@ export async function respondToChat(
         const largestDay = largestInc ? Math.min(resolveDay(largestInc.expected_day), daysInMonth) : 0;
         const reserveActive = reserveSetting && largestDay >= daysInMonth - 2 && today >= largestDay && lastReservationMonth !== nextYM;
         const allDebtItems = debts.map((d: any) => ({ amount: d.minimumPayment || 0, dueDay: d.dueDay || 0 }));
-        const goodMonth = goodMonthSaving(now);
+        const holdBack = budgetHoldBack(now);
         const budgetParams = {
-          goodMonthLevel: goodMonth.level,
-          heldBackThisMonth: goodMonth.heldBack,
+          goodMonthLevel: holdBack.level,
+          dailyCap: holdBack.cap,
+          heldBackThisMonth: holdBack.heldBack,
           balance: checkingSavings,
           savingGoal: savingRate,
           today,
@@ -363,7 +364,7 @@ export async function respondToChat(
         const tomorrowParams = {
           ...budgetParams,
           today: today + 1,
-          heldBackThisMonth: today === daysInMonth ? 0 : goodMonth.heldBack + heldBackToday,
+          heldBackThisMonth: today === daysInMonth ? 0 : holdBack.heldBack + heldBackToday,
         };
         const tomorrowWithBills = calculateDailyBudget(tomorrowParams);
         const tomorrowWithoutBills = calculateDailyBudget({ ...tomorrowParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });

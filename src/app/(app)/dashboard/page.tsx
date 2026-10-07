@@ -81,7 +81,8 @@ export default function DashboardPage() {
   const [budgetIncludeBills, setBudgetIncludeBills] = useState<boolean | "auto">("auto");
   const [reserveNextMonthSaving, setReserveNextMonthSaving] = useState(false);
   const [lastReservationMonth, setLastReservationMonth] = useState<string>("");
-  const [goodMonthSaving, setGoodMonthSaving] = useState(false);
+  const [goodMonthLevel, setGoodMonthLevel] = useState(0);
+  const [dailyCap, setDailyCap] = useState(0);
   const [heldBackThisMonth, setHeldBackThisMonth] = useState(0);
   const [thresholds, setThresholds] = useState({ tight: 20, normal: 30, good: 50 });
   const [householdSize, setHouseholdSize] = useState(1);
@@ -120,8 +121,9 @@ export default function DashboardPage() {
       }
       if (householdData.settings?.reserve_next_month_saving === "1") setReserveNextMonthSaving(true);
       if (householdData.settings?.last_reservation_month) setLastReservationMonth(householdData.settings.last_reservation_month);
-      setGoodMonthSaving(householdData.settings?.good_month_saving === "1");
-      setHeldBackThisMonth(Number(householdData.settings?.good_month_held_back) || 0);
+      setGoodMonthLevel(householdData.settings?.good_month_saving === "1" ? Number(householdData.settings?.good_month_level) || 0 : 0);
+      setDailyCap(householdData.settings?.daily_cap_enabled === "1" ? Number(householdData.settings?.daily_cap) || 0 : 0);
+      setHeldBackThisMonth(Number(householdData.settings?.held_back_this_month) || 0);
       setThresholds({
         tight: parseInt(householdData.settings?.budget_threshold_tight) || 20,
         normal: parseInt(householdData.settings?.budget_threshold_normal) || 30,
@@ -325,7 +327,8 @@ export default function DashboardPage() {
     daysInMonth,
     extraSavingReserve,
     skipCurrentMonthSaving,
-    goodMonthLevel: goodMonthSaving ? thresholds.good : 0,
+    goodMonthLevel,
+    dailyCap,
     heldBackThisMonth,
     unpaidBills: bills.filter((b) => b.is_active && !b.is_paid && billDueInMonth(b, curMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
     debts: debtItems,

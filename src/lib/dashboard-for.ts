@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { getHouseholdSettings, goodMonthSaving } from "@/lib/household";
+import { getHouseholdSettings, budgetHoldBack } from "@/lib/household";
 import { NOT_BUDGET_EXCLUDED, cashFlowHistory } from "@/lib/budget-math";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
 import { buildDashboard, type DashBill, type DashDebt, type DashIncome } from "@/lib/dashboard-model";
@@ -186,7 +186,7 @@ export function dashboardFor(userId: number) {
     .prepare("SELECT date, budget, spent FROM daily_budget_history WHERE date >= ? AND date < ?")
     .all(localDateIso(weekAgo), localDateIso(now)) as { date: string; budget: number; spent: number }[];
 
-  const goodMonth = goodMonthSaving(now);
+  const holdBack = budgetHoldBack(now);
 
   // The month status this answers with is the same figure lib/month-status assembles for the web
   // page, from the same rows. Change one and change the other.
@@ -219,8 +219,9 @@ export function dashboardFor(userId: number) {
       good: parseInt(settings.budget_threshold_good || "50", 10),
     },
     reserveNextMonthSaving: settings.reserve_next_month_saving === "1",
-    goodMonthLevel: goodMonth.level,
-    heldBackThisMonth: goodMonth.heldBack,
+    goodMonthLevel: holdBack.level,
+    dailyCap: holdBack.cap,
+    heldBackThisMonth: holdBack.heldBack,
     lastReservationMonth: settings.last_reservation_month || "",
     monthlyHistory: monthlyHistory.reverse(),
     trends,

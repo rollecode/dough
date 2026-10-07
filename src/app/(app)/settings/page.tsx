@@ -71,6 +71,10 @@ export default function SettingsPage() {
   const [reserveSaved, setReserveSaved] = useState(false);
   const [goodMonthSaving, setGoodMonthSaving] = useState(false);
   const [goodMonthSaved, setGoodMonthSaved] = useState(false);
+  const [goodMonthLevel, setGoodMonthLevel] = useState("50");
+  const [dailyCapEnabled, setDailyCapEnabled] = useState(false);
+  const [dailyCap, setDailyCap] = useState("");
+  const [dailyCapSaved, setDailyCapSaved] = useState(false);
   const [ynabSyncHour, setYnabSyncHour] = useState("6");
   const [syncHourSaved, setSyncHourSaved] = useState(false);
   const [aiSummariesDisabled, setAiSummariesDisabled] = useState(false);
@@ -186,6 +190,9 @@ export default function SettingsPage() {
             try { setBurnExcluded(JSON.parse(householdData.settings.burn_rate_excluded_payees) as string[]); } catch {}
           }
           setGoodMonthSaving(householdData.settings?.good_month_saving === "1");
+          setGoodMonthLevel(householdData.settings?.good_month_level || "50");
+          setDailyCapEnabled(householdData.settings?.daily_cap_enabled === "1");
+          setDailyCap(householdData.settings?.daily_cap || "");
           if (householdData.settings?.reserve_next_month_saving !== undefined) {
             setReserveNextMonthSaving(householdData.settings.reserve_next_month_saving === "1");
           }
@@ -1013,12 +1020,60 @@ export default function SettingsPage() {
                     setTimeout(() => setGoodMonthSaved(false), 2000);
                   }}
                 />
+                <Input type="number" step="1" min="0" value={goodMonthLevel} onChange={(e) => setGoodMonthLevel(e.target.value)} className="settings-input" disabled={!goodMonthSaving} />
+                <Button size="sm" variant="outline" disabled={!goodMonthSaving} onClick={async () => {
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ good_month_level: goodMonthLevel || "0" }),
+                    });
+                    setGoodMonthSaved(true);
+                    setTimeout(() => setGoodMonthSaved(false), 2000);
+                  }}>
+                  {t.common.save}
+                </Button>
                 {goodMonthSaved && <span className="settings-saved">{t.common.saved}</span>}
               </div>
               <p className="settings-help">
                 {locale === "fi"
-                  ? `Kun päiväbudjetti nousisi yli hyvän rajan (${thresholds.good} €), siitä näytetään vain puolet ylimenevästä osasta. Loput jää tilille kuukauden säästöksi. Tiukkoina aikoina säästöä käytetään vain sen verran, että budjetti pysyy hyvällä rajalla.`
-                  : `When the daily budget would rise above the good level (${thresholds.good} €), only half of the extra is shown. The rest stays in the account as the month's saving. In a tight stretch it is used only to keep the budget at the good level.`}
+                  ? `Kun päiväbudjetti nousisi yli ${goodMonthLevel || 0} € päivässä, siitä näytetään vain puolet ylimenevästä osasta. Loput jää tilille kuukauden säästöksi. Tiukkoina aikoina säästöä käytetään vain sen verran, että budjetti pysyy tällä tasolla.`
+                  : `When the daily budget would rise above ${goodMonthLevel || 0} € a day, only half of the extra is shown. The rest stays in the account as the month's saving. In a tight stretch it is used only to keep the budget at this level.`}
+              </p>
+            </div>
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Päiväbudjetin yläraja" : "Daily budget cap"}</Label>
+              <div className="settings-row">
+                <Switch
+                  checked={dailyCapEnabled}
+                  onCheckedChange={async (v) => {
+                    setDailyCapEnabled(v);
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ daily_cap_enabled: v ? "1" : "0" }),
+                    });
+                    setDailyCapSaved(true);
+                    setTimeout(() => setDailyCapSaved(false), 2000);
+                  }}
+                />
+                <Input type="number" step="1" min="0" value={dailyCap} onChange={(e) => setDailyCap(e.target.value)} placeholder="0" className="settings-input" disabled={!dailyCapEnabled} />
+                <Button size="sm" variant="outline" disabled={!dailyCapEnabled} onClick={async () => {
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ daily_cap: dailyCap || "0" }),
+                    });
+                    setDailyCapSaved(true);
+                    setTimeout(() => setDailyCapSaved(false), 2000);
+                  }}>
+                  {t.common.save}
+                </Button>
+                {dailyCapSaved && <span className="settings-saved">{t.common.saved}</span>}
+              </div>
+              <p className="settings-help">
+                {locale === "fi"
+                  ? "Päiväbudjetti ei koskaan näytä tätä enempää. Ylimenevä osa jää tilille kuukauden säästöksi."
+                  : "The daily budget never shows more than this. The rest stays in the account as the month's saving."}
               </p>
             </div>
             <div className="form-field">

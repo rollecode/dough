@@ -2,7 +2,7 @@ import { ynabToken } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { getYnabToken, getYnabBudgetId, getHouseholdSetting, getBudgetMode, goodMonthSaving } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, getHouseholdSetting, getBudgetMode, budgetHoldBack } from "@/lib/household";
 import { DEFAULT_SUMMARY_INSTRUCTIONS } from "@/lib/ai/default-prompts";
 import { resolveDayInMonth, dateForDayInMonth, formatDate } from "@/lib/date-utils";
 import { cashFlowHistory, NOT_BUDGET_EXCLUDED } from "@/lib/budget-math";
@@ -255,10 +255,11 @@ export async function GET(request: Request) {
       .all() as { id: number; amount: number; expected_day: number }[];
 
     const allDebtItems = debtAccounts.map((d) => ({ amount: d.payment, dueDay: d.dueDay }));
-    const goodMonth = goodMonthSaving(now);
+    const holdBack = budgetHoldBack(now);
     const budgetParams = {
-      goodMonthLevel: goodMonth.level,
-      heldBackThisMonth: goodMonth.heldBack,
+      goodMonthLevel: holdBack.level,
+      dailyCap: holdBack.cap,
+      heldBackThisMonth: holdBack.heldBack,
       balance: checkingSavings,
       savingGoal,
       today: daysPassed,

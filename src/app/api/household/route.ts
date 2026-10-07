@@ -1,7 +1,7 @@
 import { ynabOAuthConfigured } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getHouseholdSettings, goodMonthSaving, setHouseholdSetting, WRITABLE_SETTINGS } from "@/lib/household";
+import { getHouseholdSettings, budgetHoldBack, setHouseholdSetting, WRITABLE_SETTINGS } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 
 export async function GET() {
@@ -34,7 +34,10 @@ export async function GET() {
         burn_rate_excluded_payees: settings.burn_rate_excluded_payees || "[]",
         reserve_next_month_saving: settings.reserve_next_month_saving || "0",
         good_month_saving: settings.good_month_saving || "0",
-        good_month_held_back: goodMonthSaving().heldBack,
+        good_month_level: settings.good_month_level || "50",
+        daily_cap_enabled: settings.daily_cap_enabled || "0",
+        daily_cap: settings.daily_cap || "",
+        held_back_this_month: budgetHoldBack().heldBack,
         last_reservation_month: settings.last_reservation_month || "",
         ynab_sync_hour: settings.ynab_sync_hour || "6",
         ai_summaries_disabled: settings.ai_summaries_disabled || "0",
