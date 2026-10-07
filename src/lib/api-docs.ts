@@ -422,6 +422,7 @@ export const SECTIONS: Section[] = [
           { name: "monthly_amount", type: "number", description: "Required unless clearing." },
           { name: "cadence", type: "string", description: "daily, weekly, monthly, yearly or by_date." },
           { name: "target_date", type: "YYYY-MM-DD", description: "With cadence by_date." },
+          { name: "due_day", type: "number", description: "With cadence monthly: the day of the month it is due by, 1-31. null clears it." },
           { name: "snooze_until_month", type: "YYYY-MM", description: "" },
           { name: "clear", type: "boolean", description: "true removes the target." },
         ],

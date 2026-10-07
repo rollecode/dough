@@ -1699,6 +1699,8 @@
   display: flex;
   align-items: center;
   gap: 0.4375rem;
+  max-width: 100%;
+  min-width: 0;
   font-size: 0.8125rem;
 }
 
@@ -1720,8 +1722,14 @@
 }
 
 .budget-target-text {
+  min-width: 0;
   color: var(--muted-foreground);
   white-space: nowrap;
+}
+
+/* A phone's name column is narrow: the target line wraps rather than running under the amounts. */
+@media (max-width: 540px) {
+  .budget-target-text { white-space: normal; }
 }
 
 .budget-target-text.is-snoozed {

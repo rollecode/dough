@@ -70,6 +70,11 @@ export function computeAutoAssign(
 
   // Greedily fund in order, never exceeding Ready to Assign
   queue ??= cats.filter((c) => desired.has(c.id)).map((c) => ({ id: c.id, want: desired.get(c.id)! }));
+  if (mode === "underfunded") {
+    // Targets due by a day of the month go first, earliest day first, when money runs short.
+    const dueDay = new Map((db.prepare("SELECT category_id, due_day FROM category_targets WHERE due_day IS NOT NULL").all() as { category_id: number; due_day: number }[]).map((r) => [r.category_id, r.due_day]));
+    queue.sort((a, b) => (dueDay.get(a.id) ?? 99) - (dueDay.get(b.id) ?? 99));
+  }
   const names = new Map(cats.map((c) => [c.id, c.name]));
   const plan: { id: number; name: string; add: number }[] = [];
   let total = 0;

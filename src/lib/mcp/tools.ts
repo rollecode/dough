@@ -488,12 +488,13 @@ export function buildMcpServer(api: DoughApi): McpServer {
   server.registerTool(
     "dough_set_category_target",
     {
-      description: "Set (or clear) a category's budget target. cadence: monthly/weekly/daily/yearly/by_date. For by_date set target_date. Pass clear=true to remove the target. Requires a write-scoped key.",
+      description: "Set (or clear) a category's budget target. cadence: monthly/weekly/daily/yearly/by_date. For by_date set target_date. A monthly target can be due by a day of the month (due_day). Pass clear=true to remove the target. Requires a write-scoped key.",
       inputSchema: {
         category_id: z.number().int(),
         monthly_amount: z.number().optional().describe("Target amount for the cadence"),
         cadence: z.string().optional().describe("monthly (default), weekly, daily, yearly, by_date"),
         target_date: z.string().optional().describe("Target date YYYY-MM-DD for by_date targets"),
+        due_day: z.number().int().min(1).max(31).nullable().optional().describe("Monthly targets: the day of the month it is due by; null clears it"),
         snooze_until_month: z.string().optional().describe("YYYY-MM to pause the target until"),
         clear: z.boolean().optional().describe("true removes the target"),
       },

@@ -160,6 +160,8 @@ export interface CategoryTargetSet {
   monthly_amount?: number;
   cadence?: string;
   target_date?: string;
+  // Day of the month a monthly target is due by, 1-31; null clears it.
+  due_day?: number | null;
   snooze_until_month?: string;
 }
 
@@ -168,8 +170,8 @@ export function setCategoryTarget(p: CategoryTargetSet): { ok: boolean } | { err
   if (!category_id) return { error: "category_id required", code: 400 };
   const db = getDb();
   const existing = db
-    .prepare("SELECT id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, snooze_until_month FROM category_targets WHERE category_id = ?")
-    .get(category_id) as { id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string } | undefined;
+    .prepare("SELECT id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, due_day, snooze_until_month FROM category_targets WHERE category_id = ?")
+    .get(category_id) as { id: number; monthly_amount: number; cadence: string; target_date: string; due_day: number | null; snooze_until_month: string } | undefined;
 
   const monthly = p.monthly_amount !== undefined
     ? (isFinite(Number(p.monthly_amount)) ? Math.round(Number(p.monthly_amount) * 100) / 100 : 0)
@@ -181,18 +183,23 @@ export function setCategoryTarget(p: CategoryTargetSet): { ok: boolean } | { err
   const target_date = cadence === "by_date"
     ? (p.target_date !== undefined ? String(p.target_date || "") : existing?.target_date || "")
     : "";
+  if (p.due_day != null && !(Number.isInteger(Number(p.due_day)) && Number(p.due_day) >= 1 && Number(p.due_day) <= 31)) {
+    return { error: "due_day must be a whole number from 1 to 31", code: 400 };
+  }
+  const requestedDay = p.due_day !== undefined ? (p.due_day === null ? null : Number(p.due_day)) : existing?.due_day ?? null;
+  const due_day = cadence === "monthly" ? requestedDay : null;
   const snooze = p.snooze_until_month !== undefined
     ? String(p.snooze_until_month || "")
     : existing?.snooze_until_month || "";
 
   if (existing) {
-    db.prepare("UPDATE category_targets SET monthly_amount = ?, cadence = ?, target_date = ?, snooze_until_month = ?, updated_at = datetime('now') WHERE category_id = ?")
-      .run(monthly, cadence, target_date, snooze, category_id);
+    db.prepare("UPDATE category_targets SET monthly_amount = ?, cadence = ?, target_date = ?, due_day = ?, snooze_until_month = ?, updated_at = datetime('now') WHERE category_id = ?")
+      .run(monthly, cadence, target_date, due_day, snooze, category_id);
   } else {
-    db.prepare("INSERT INTO category_targets (category_id, monthly_amount, cadence, target_date, snooze_until_month) VALUES (?, ?, ?, ?, ?)")
-      .run(category_id, monthly, cadence, target_date, snooze);
+    db.prepare("INSERT INTO category_targets (category_id, monthly_amount, cadence, target_date, due_day, snooze_until_month) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(category_id, monthly, cadence, target_date, due_day, snooze);
   }
-  console.info("[targets] Set category", category_id, "amount:", monthly, "cadence:", cadence);
+  console.info("[targets] Set category", category_id, "amount:", monthly, "cadence:", cadence, "due day:", due_day);
   eventBus.emit("data:updated", { source: "targets-changed" });
   return { ok: true };
 }

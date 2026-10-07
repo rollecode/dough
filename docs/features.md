@@ -78,7 +78,8 @@
 - Assigning money to a future month lowers the current Ready to Assign (single global figure, like YNAB)
 - Age of Money box: YNAB's own per-month figure with a 12-month history line chart in YNAB mode; in local mode (no YNAB sync) it falls back to the live local runway (how long your money lasts at the current spending rate) so it keeps updating with cash and spending instead of freezing at the last sync
 - Activity is net: refunds and other inflows to a category reduce its spending and raise available, like YNAB
-- Per-category targets per day, week, month or year; the amount is distributed into the month's need, with progress, single-month snooze and clear
+- Per-category targets per day, week, month or year, or a sum by a date; the amount is distributed into the month's need, with progress, single-month snooze and clear
+- A monthly target can be due by a day of the month; the row shows the day, and Fund to targets funds the earliest days first
 - Auto-assign (Quick Budget): fund to targets, copy last month's assigned, or copy last month's spending
 - Inline assigned editor with a calculator popover
 - Category inspector (right sheet): inline-editable name, group and description, available breakdown, target editing, snooze, hide and delete

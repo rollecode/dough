@@ -381,6 +381,7 @@ function initializeDb(db: Database.Database) {
       monthly_amount REAL NOT NULL DEFAULT 0,
       cadence TEXT NOT NULL DEFAULT 'monthly',
       target_date TEXT DEFAULT '',
+      due_day INTEGER DEFAULT NULL,
       snooze_until_month TEXT DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -632,6 +633,11 @@ function initializeDb(db: Database.Database) {
   if (targetCols.length > 0 && !targetCols.some((c) => c.name === "target_date")) {
     console.info("[db] Adding target_date column to category_targets");
     db.exec("ALTER TABLE category_targets ADD COLUMN target_date TEXT DEFAULT ''");
+  }
+  // A monthly target can be due by a day of the month
+  if (targetCols.length > 0 && !targetCols.some((c) => c.name === "due_day")) {
+    console.info("[db] Adding due_day column to category_targets");
+    db.exec("ALTER TABLE category_targets ADD COLUMN due_day INTEGER DEFAULT NULL");
   }
 
   // Add link columns to categories (a category can be linked to a subscription, bill or debt,

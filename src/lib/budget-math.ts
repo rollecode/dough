@@ -404,6 +404,8 @@ export interface ResolvedTarget {
   target_amount: number;
   target_cadence: string;
   target_date: string;
+  // Day of the month a monthly target is due by, or null.
+  target_due_day: number | null;
   target_monthly: number;
   target_active: boolean;
   linked_type: "" | "subscription" | "bill" | "debt" | "investment" | "savings";
@@ -419,8 +421,8 @@ export function makeTargetResolver(
 ): (cat: CategoryTargetInput, carry: number) => ResolvedTarget {
   const round = (n: number) => Math.round(n * 100) / 100;
   const targets = db.prepare(
-    "SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, snooze_until_month FROM category_targets"
-  ).all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
+    "SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, due_day, snooze_until_month FROM category_targets"
+  ).all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; due_day: number | null; snooze_until_month: string }[];
   const targetMap = new Map(targets.map((t) => [t.category_id, t]));
   const subMap = new Map(
     (db.prepare("SELECT id, name, amount, COALESCE(interval_months, 1) AS interval_months, due_month FROM subscriptions").all() as { id: number; name: string; amount: number; interval_months: number; due_month: number | null }[]).map((s) => [s.id, s])
@@ -480,6 +482,7 @@ export function makeTargetResolver(
       target_amount: round(target_amount),
       target_cadence,
       target_date,
+      target_due_day: !linked && !linkedGoal && target_cadence === "monthly" ? t?.due_day ?? null : null,
       target_monthly: round(target_monthly),
       target_active,
       linked_type,

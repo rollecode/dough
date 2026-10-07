@@ -83,6 +83,7 @@ export const GET = apiRoute("read", (request) => {
       target_amount: target.target_amount,
       target_cadence: target.target_cadence,
       target_date: target.target_date,
+      target_due_day: target.target_due_day,
       target_active: !!target.target_active,
       snooze_until_month: target.snooze_until_month,
       linked_type: target.linked_type,

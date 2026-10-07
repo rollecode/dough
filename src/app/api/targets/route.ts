@@ -10,8 +10,8 @@ export async function GET() {
 
     const db = getDb();
     const rows = db
-      .prepare("SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, snooze_until_month FROM category_targets")
-      .all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; snooze_until_month: string }[];
+      .prepare("SELECT category_id, monthly_amount, COALESCE(cadence, 'monthly') AS cadence, COALESCE(target_date, '') AS target_date, due_day, snooze_until_month FROM category_targets")
+      .all() as { category_id: number; monthly_amount: number; cadence: string; target_date: string; due_day: number | null; snooze_until_month: string }[];
 
     console.debug("[targets] Loaded", rows.length, "targets");
     return NextResponse.json({ targets: rows });

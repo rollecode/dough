@@ -114,6 +114,7 @@ export async function GET(request: Request) {
         target_amount: t.target_amount,
         target_cadence: t.target_cadence,
         target_date: t.target_date,
+        target_due_day: t.target_due_day,
         snooze_until_month: t.snooze_until_month,
         target_active: t.target_active,
         subscription_id: c.subscription_id ?? null,

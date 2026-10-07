@@ -50,6 +50,7 @@ interface BudgetCategory {
   target_amount: number;
   target_cadence: string;
   target_date: string;
+  target_due_day: number | null;
   snooze_until_month: string;
   target_active: boolean;
   subscription_id: number | null;
@@ -136,6 +137,12 @@ function formatIsoDate(iso: string): string {
   return `${Number(p[2])}.${Number(p[1])}.${p[0]}`;
 }
 
+// The day a monthly target is due by in the viewed month, as d.m. (clamped to the month's length).
+function dueDayLabel(month: string, day: number): string {
+  const [y, m] = month.split("-").map(Number);
+  return `${Math.min(day, new Date(y, m, 0).getDate())}.${m}.`;
+}
+
 function cadenceSuffix(cadence: string, locale: string): string {
   const fi: Record<string, string> = { daily: "/ pv", weekly: "/ vko", monthly: "/ kk", yearly: "/ v" };
   const en: Record<string, string> = { daily: "/ day", weekly: "/ wk", monthly: "/ mo", yearly: "/ yr" };
@@ -175,6 +182,7 @@ export default function BudgetPage() {
   const [targetDraft, setTargetDraft] = useState<string>("");
   const [targetCadence, setTargetCadence] = useState<string>("monthly");
   const [targetDate, setTargetDate] = useState<string>("");
+  const [targetDueDay, setTargetDueDay] = useState<string>("");
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveDir, setMoveDir] = useState<"in" | "out">("out");
   const [moveOther, setMoveOther] = useState<string>("");
@@ -487,6 +495,11 @@ export default function BudgetPage() {
       console.warn("[budget] by_date target needs a target date");
       return;
     }
+    const dueDay = targetCadence === "monthly" && targetDueDay.trim() ? Number(targetDueDay) : null;
+    if (dueDay !== null && !(Number.isInteger(dueDay) && dueDay >= 1 && dueDay <= 31)) {
+      console.warn("[budget] due day must be 1-31:", targetDueDay);
+      return;
+    }
     try {
       await fetch("/api/targets", {
         method: "PUT",
@@ -496,11 +509,13 @@ export default function BudgetPage() {
           monthly_amount: value,
           cadence: targetCadence,
           target_date: targetCadence === "by_date" ? targetDate : "",
+          due_day: dueDay,
         }),
       });
       setTargetEditing(false);
       setTargetDraft("");
       setTargetDate("");
+      setTargetDueDay("");
       load(month);
     } catch (err) {
       console.error("[budget] Save target error:", err);
@@ -1387,6 +1402,12 @@ export default function BudgetPage() {
                             </SelectContent>
                           </Select>
                         </div>
+                        {targetCadence === "monthly" && (
+                          <div className="insp-target-date">
+                            <Label className="insp-target-date-label">{locale === "fi" ? "Mihin päivään mennessä joka kuu (valinnainen)" : "By which day each month (optional)"}</Label>
+                            <Input value={targetDueDay} onChange={(e) => setTargetDueDay(e.target.value)} placeholder={locale === "fi" ? "esim. 15" : "e.g. 15"} inputMode="numeric" className="insp-target-amount" />
+                          </div>
+                        )}
                         {targetCadence === "by_date" && (
                           <div className="insp-target-date">
                             <Label className="insp-target-date-label">{locale === "fi" ? "Mihin päivään mennessä" : "By which date"}</Label>
@@ -1405,7 +1426,9 @@ export default function BudgetPage() {
                                   : `Needs about ${fmt(Math.round(need * 100) / 100)} € / mo to reach ${fmt(goal)} € by ${formatIsoDate(targetDate)}.`;
                               })()
                             : targetCadence === "monthly"
-                            ? (locale === "fi" ? "Summa, joka varataan tälle joka kuukausi." : "Amount assigned here every month.")
+                            ? (locale === "fi"
+                                ? "Summa, joka varataan tälle joka kuukausi. Päivä kertoo, mihin mennessä sen pitää olla kasassa; Tavoitteet täyteen rahoittaa aikaisimmat ensin."
+                                : "Amount assigned here every month. A day says when it must be ready by; Fund to targets funds the earliest first.")
                             : (() => {
                                 const amt = evalExpression(targetDraft) || 0;
                                 const eq = targetMonthlyEq(amt, targetCadence, month);
@@ -1415,7 +1438,7 @@ export default function BudgetPage() {
                         <div className="insp-actions">
                           <Button type="button" size="sm" onClick={saveTarget}>{locale === "fi" ? "Tallenna" : "Save"}</Button>
                           {hasTarget && <Button type="button" variant="destructive" size="sm" onClick={() => clearTarget(c.id)}>{locale === "fi" ? "Poista" : "Clear"}</Button>}
-                          <Button type="button" variant="ghost" size="sm" onClick={() => { setTargetEditing(false); setTargetDraft(""); setTargetDate(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => { setTargetEditing(false); setTargetDraft(""); setTargetDate(""); setTargetDueDay(""); }}>{locale === "fi" ? "Peruuta" : "Cancel"}</Button>
                         </div>
                       </div>
                     ) : hasTarget ? (
@@ -1432,12 +1455,13 @@ export default function BudgetPage() {
                           ) : (
                             <>
                               <F v={c.target_amount} s=" €" /> {cadenceSuffix(c.target_cadence, locale)}
+                              {c.target_due_day && <span className="text-muted"> · {locale === "fi" ? "viimeistään" : "by"} {dueDayLabel(month, c.target_due_day)}</span>}
                               {c.target_cadence !== "monthly" && <span className="text-muted"> · <F v={c.target_monthly} s=" €" /> {cadenceSuffix("monthly", locale)}</span>}
                             </>
                           )}
                         </p>
                         <div className="insp-actions">
-                          <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(c.target_amount ? fmt(c.target_amount) : ""); setTargetCadence(c.target_cadence || "monthly"); setTargetDate(c.target_date || ""); setTargetEditing(true); }}>{locale === "fi" ? "Muokkaa" : "Edit"}</Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(c.target_amount ? fmt(c.target_amount) : ""); setTargetCadence(c.target_cadence || "monthly"); setTargetDate(c.target_date || ""); setTargetDueDay(c.target_due_day ? String(c.target_due_day) : ""); setTargetEditing(true); }}>{locale === "fi" ? "Muokkaa" : "Edit"}</Button>
                           {isSnoozed ? (
                             <Button type="button" variant="outline" size="sm" onClick={() => unsnoozeTarget(c.id)}>{locale === "fi" ? "Jatka" : "Resume"}</Button>
                           ) : (
@@ -1446,7 +1470,7 @@ export default function BudgetPage() {
                         </div>
                       </div>
                     ) : (
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetCadence("monthly"); setTargetDate(""); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setTargetDraft(""); setTargetCadence("monthly"); setTargetDate(""); setTargetDueDay(""); setTargetEditing(true); }}>{locale === "fi" ? "Aseta tavoite" : "Set a target"}</Button>
                     )}
                   </div>
 
@@ -1716,7 +1740,7 @@ function BudgetRow({ cat, saving, onSave, onOpen, fmt, month, locale, siblings, 
               {isSnoozedThisMonth
                 ? (locale === "fi" ? "tauolla" : "paused")
                 : underfunded
-                ? <><F v={stillNeeded} /> {locale === "fi" ? "lisää" : "to go"}</>
+                ? <><F v={stillNeeded} /> {locale === "fi" ? "lisää" : "to go"}{cat.target_due_day ? ` ${locale === "fi" ? "viimeistään" : "by"} ${dueDayLabel(month, cat.target_due_day)}` : ""}</>
                 : (locale === "fi" ? "valmis" : "funded")}
             </span>
           </span>
