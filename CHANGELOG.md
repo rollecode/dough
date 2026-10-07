@@ -3,7 +3,7 @@
 * Change the pace line to follow the daily budget
 * Change the savings streak to match the pace line
 * Fix web month status counting yearly bills monthly
-* Add saving in good months to the daily budget
+* Add trimming of big daily budgets
 * Add a daily budget cap
 * Fix Settings scrolling sideways on phones
 * Fix AI status heading spacing

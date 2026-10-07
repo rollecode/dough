@@ -72,6 +72,7 @@ export default function SettingsPage() {
   const [goodMonthSaving, setGoodMonthSaving] = useState(false);
   const [goodMonthSaved, setGoodMonthSaved] = useState(false);
   const [goodMonthLevel, setGoodMonthLevel] = useState("50");
+  const trimLevel = Math.round(Number(goodMonthLevel) || 0);
   const [dailyCapEnabled, setDailyCapEnabled] = useState(false);
   const [dailyCap, setDailyCap] = useState("");
   const [dailyCapSaved, setDailyCapSaved] = useState(false);
@@ -1005,7 +1006,7 @@ export default function SettingsPage() {
               </p>
             </div>
             <div className="form-field">
-              <Label>{locale === "fi" ? "Säästä hyvinä kuukausina" : "Save in good months"}</Label>
+              <Label>{locale === "fi" ? "Leikkaa isoja päiväbudjetteja" : "Trim big daily budgets"}</Label>
               <div className="settings-row">
                 <Switch
                   checked={goodMonthSaving}
@@ -1036,8 +1037,8 @@ export default function SettingsPage() {
               </div>
               <p className="settings-help">
                 {locale === "fi"
-                  ? `Kun päiväbudjetti nousisi yli ${goodMonthLevel || 0} € päivässä, siitä näytetään vain puolet ylimenevästä osasta. Loput jää tilille kuukauden säästöksi. Tiukkoina aikoina säästöä käytetään vain sen verran, että budjetti pysyy tällä tasolla.`
-                  : `When the daily budget would rise above ${goodMonthLevel || 0} € a day, only half of the extra is shown. The rest stays in the account as the month's saving. In a tight stretch it is used only to keep the budget at this level.`}
+                  ? `Jos päiväbudjetti olisi yli ${trimLevel} €, saat ${trimLevel} € ja puolet sen ylittävästä osasta. Esimerkki: päiväbudjetti olisi ${trimLevel + 40} €. ${trimLevel + 40} − ${trimLevel} = 40, puolet siitä on 20, joten näet ${trimLevel + 20} €. Käyttämättä jäävät 20 € jäävät tilille.`
+                  : `If your daily budget would be above ${trimLevel} €, you get ${trimLevel} € plus half of what's above it. Example: the daily budget would be ${trimLevel + 40} €. ${trimLevel + 40} − ${trimLevel} = 40, half of that is 20, so you see ${trimLevel + 20} €. The 20 € you don't get to spend stays in the account.`}
               </p>
             </div>
             <div className="form-field">
