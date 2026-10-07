@@ -1,3 +1,7 @@
+### 4.7.5: 2026-10-07
+
+* Change the pace line to count overspending once
+
 ### 4.7.4: 2026-10-05
 
 * List hidden categories with money in them in the API
