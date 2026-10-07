@@ -1,6 +1,6 @@
 import { calculateDailyBudget, type DailyBudgetResult } from "./daily-budget";
 import { fixedCostMatcher } from "./fixed-costs";
-import { currentPerDay, spendingFlow } from "./spending-flow";
+import { spendingFlow } from "./spending-flow";
 import { billDueInMonth, type BillCadenceFields } from "./bills";
 import { isTransfer } from "./transaction-utils";
 import { streakWeek, type StreakDay, type StreakRecord } from "./savings-streak";
@@ -608,7 +608,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     const day = parseInt(t.date.split("-")[2], 10);
     incomeByDay[day] = round((incomeByDay[day] ?? 0) + t.amount);
   }
-  const flowByDay = spendingFlow({
+  const flow = spendingFlow({
     daysInMonth,
     today,
     spentByDay: discretionaryPerDay,
@@ -756,9 +756,9 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     next_income: nextIncome,
     spending_flow: {
       daily_discretionary: dailyDiscretionary,
-      target_per_day: currentPerDay(flowByDay, today),
+      target_per_day: flow.perDay,
       pace_target: paceTarget,
-      by_day: flowByDay,
+      by_day: flow.days,
     },
     spending_chart: spendingChart,
     categories,

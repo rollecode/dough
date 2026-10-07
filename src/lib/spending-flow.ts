@@ -4,7 +4,9 @@
 // Spent is the month's discretionary spending, summed day by day. The target grows by a fixed
 // amount a day within a stretch. A stretch starts on the 1st and again whenever real money arrives,
 // and its daily amount is the money on hand that day, less bills and the saving goal, spread until
-// payday. Your own spending never lowers it, so an overspend is counted once, in the gap.
+// payday. Your own spending never lowers it, so an overspend is counted once, in the gap. A new
+// stretch restarts the line from what has been spent: what came before already shows in its
+// smaller or larger daily amount.
 //
 // A past stretch uses the figure recorded on its first day, or the day after when that is higher
 // (money that landed after the dashboard was opened). A stretch nobody recorded falls back to the
@@ -41,7 +43,13 @@ const STRETCH_INCOME_DAYS = 3;
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
-export function spendingFlow(input: SpendingFlowInput): SpendingFlowDay[] {
+export interface SpendingFlow {
+  days: SpendingFlowDay[];
+  // The daily amount the stretch running today allows, which the API reports as target_per_day.
+  perDay: number;
+}
+
+export function spendingFlow(input: SpendingFlowInput): SpendingFlow {
   const { daysInMonth, today, spentByDay, dailyDiscretionary, paceTarget, paceByDay, budgetByDay, incomeByDay } = input;
 
   const valueOn = (day: number): number | undefined => {
@@ -69,6 +77,7 @@ export function spendingFlow(input: SpendingFlowInput): SpendingFlowDay[] {
   for (let day = 1; day <= daysInMonth; day++) {
     if (day > 1 && day <= today && (incomeByDay[day] ?? 0) >= perDay * STRETCH_INCOME_DAYS) {
       perDay = anchorFor(day);
+      target = spent;
       console.debug("[spending-flow] Money arrived on day", day, "new stretch at", perDay, "a day");
     }
     target += perDay;
@@ -85,12 +94,5 @@ export function spendingFlow(input: SpendingFlowInput): SpendingFlowDay[] {
     days.push({ day, spent: null, projected: round(projected), target: round(target) });
   }
 
-  return days;
-}
-
-// The daily amount the stretch running today allows, which the API reports as target_per_day.
-export function currentPerDay(days: SpendingFlowDay[], today: number): number {
-  const now = days[today - 1]?.target ?? 0;
-  const before = today > 1 ? days[today - 2]?.target ?? 0 : 0;
-  return round(now - before);
+  return { days, perDay: round(perDay) };
 }
