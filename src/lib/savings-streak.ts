@@ -1,6 +1,6 @@
 // The savings streak both the web card and the API report: the last six days, each judged against
-// the budget recorded for it, a missing record breaking the run, and today counted while it is
-// still under today's budget.
+// the budget the pace line gave it (the recorded daily budget for days before this month), a
+// missing record breaking the run, and today counted while it is still under its budget.
 
 export interface StreakRecord {
   date: string;
@@ -29,8 +29,11 @@ export function streakWeek(input: {
   spentByDate: Record<string, number>;
   dailyBudget: number;
   todaySpent: number;
+  // This month's days as the pace line budgets them, which outranks the recorded daily budget.
+  lineBudgetByDate?: Record<string, number>;
 }): { days: StreakDay[]; current: number } {
-  const { now, history, spentByDate, dailyBudget, todaySpent } = input;
+  const { now, history, spentByDate, todaySpent, lineBudgetByDate = {} } = input;
+  const dailyBudget = lineBudgetByDate[isoDate(now)] ?? input.dailyBudget;
   const days: StreakDay[] = [];
   let current = 0;
 
@@ -55,12 +58,13 @@ export function streakWeek(input: {
     // The stored row is a snapshot taken whenever the dashboard was last open that day, so it can
     // sit at zero for a day that had spending. Transactions are the record.
     const spent = spentByDate[key] ?? entry.spent;
-    if (entry.budget > 0 && spent <= entry.budget) {
+    const budget = lineBudgetByDate[key] ?? entry.budget;
+    if (budget > 0 && spent <= budget) {
       current++;
-      days.push({ day, month, status: "fire", budget: entry.budget, spent });
+      days.push({ day, month, status: "fire", budget, spent });
     } else {
       current = 0;
-      days.push({ day, month, status: "fail", budget: entry.budget, spent });
+      days.push({ day, month, status: "fail", budget, spent });
     }
   }
 

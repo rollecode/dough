@@ -636,7 +636,11 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     .map((c) => ({ name: c.name, amount: round(Math.abs(c.activity)) }));
 
   // The same streak the web card shows, from the same rows.
-  const streak = streakWeek({ now, history: streakHistory, spentByDate, dailyBudget, todaySpent });
+  const lineBudgetByDate: Record<string, number> = {};
+  for (const d of flowByDay.slice(0, today)) {
+    lineBudgetByDate[`${month}-${String(d.day).padStart(2, "0")}`] = d.budget;
+  }
+  const streak = streakWeek({ now, history: streakHistory, spentByDate, dailyBudget, todaySpent, lineBudgetByDate });
 
   const personalShare = (() => {
     if (personalBudgetShare > 0) return personalBudgetShare / 100;

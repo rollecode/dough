@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/locale-context";
+import { useDashboardModel } from "@/lib/use-dashboard-model";
 import { useTooltipTrigger } from "@/lib/use-tooltip-trigger";
 import { bubbleWidth, BUBBLE_FONT_SIZE } from "@/lib/chart-bubble";
 import { useTouchTooltip } from "@/components/charts/use-touch-tooltip";
@@ -16,12 +16,6 @@ import {
 } from "recharts";
 
 // The slice of the dashboard model this chart draws: the same object /api/v1/dashboard gives the app.
-interface FlowModel {
-  today: { day: number };
-  daily_budget: { amount: number };
-  spending_flow: { by_day: { day: number; spent: number | null; projected: number | null; target: number }[] };
-}
-
 function ratioToColor(r: number): string {
   // r = actual/target. Under 1.0 = good, over = bad
   // 0-0.95 green, 0.95-1.0 green→yellow, 1.0-1.03 yellow→red, 1.03+ red
@@ -45,16 +39,9 @@ function ratioToColor(r: number): string {
 export function SpendingFlow() {
   const { locale, fmt } = useLocale();
   const tooltipTrigger = useTooltipTrigger();
-  const [model, setModel] = useState<FlowModel | null>(null);
-
   // Drawn from the server's model rather than recomputed here: the page used to build this line
   // from its own copy of bills, accounts and transactions, and the phone read a different total.
-  useEffect(() => {
-    fetch("/api/dashboard-model")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d?.spending_flow) setModel(d); })
-      .catch((err) => console.error("[spending-flow] Load error:", err));
-  }, []);
+  const model = useDashboardModel();
 
   const flow = model?.spending_flow.by_day ?? [];
   const daysInMonth = flow.length;

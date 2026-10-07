@@ -6,6 +6,7 @@ import { Flame } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useDailyHistory } from "@/lib/use-daily-history";
 import { streakWeek } from "@/lib/savings-streak";
+import { useDashboardModel } from "@/lib/use-dashboard-model";
 
 interface SavingsStreakProps {
   dailyBudget: number;
@@ -35,9 +36,13 @@ export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget, sp
     }).catch(() => {});
   }, [dailyBudget, todaySpent, discretionaryTarget]);
 
-  const { days, current: currentStreak } = streakWeek({
-    now, history, spentByDate: spentByDate ?? {}, dailyBudget, todaySpent,
-  });
+  // The model judges each day against the pace line's budget, as the app does; the local reading
+  // from history only fills in while it loads.
+  const model = useDashboardModel();
+  const local = streakWeek({ now, history, spentByDate: spentByDate ?? {}, dailyBudget, todaySpent });
+  const days = model?.streak.week ?? local.days;
+  const currentStreak = model?.streak.days ?? local.current;
+  const todayBudget = days[days.length - 1]?.budget ?? dailyBudget;
 
   // Bar height is the day's spending against that day's budget, so the row reads as a chart of
   // how close each day ran rather than as a row of pass/fail badges.
@@ -56,7 +61,7 @@ export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget, sp
           <div className="streak-bars" aria-hidden="true">
             {days.map((d, i) => {
               const isToday = d.status === "today";
-              const over = isToday ? dailyBudget > 0 && d.spent > dailyBudget : d.status === "fail";
+              const over = isToday ? todayBudget > 0 && todaySpent > todayBudget : d.status === "fail";
               const none = d.status === "nodata";
               return (
                 <span
@@ -77,7 +82,7 @@ export function SavingsStreak({ dailyBudget, todaySpent, discretionaryTarget, sp
           <p className="metric-card-note">
             {currentStreak > 0
               ? (locale === "fi" ? `Olet onnistunut selviämään alle päiväbudjetin ${currentStreak} päivää putkeen.` : `You've stayed under budget ${currentStreak} days in a row.`)
-              : todaySpent > dailyBudget
+              : todaySpent > todayBudget
               ? (locale === "fi" ? "Päiväbudjetti ylitetty. Huomenna uusi mahdollisuus!" : "Over budget today. Tomorrow is a fresh start!")
               : (locale === "fi" ? "Ei putkea vielä. Pysy budjetissa tänään!" : "No streak yet. Stay under budget today!")}
           </p>

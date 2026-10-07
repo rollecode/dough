@@ -23,3 +23,14 @@ test("a day with no record breaks the run", () => {
   assert.equal(week.current, 1);
   assert.equal(week.days.length, 7);
 });
+
+test("the pace line's budget outranks the recorded one, so an earlier overspend is not held twice", () => {
+  // The recorded budget fell to 48 after overspending; the line still allows 88 that day.
+  const history = [row(22, 48, 57)];
+  const lineBudgetByDate = { "2026-09-22": 88, "2026-09-23": 87 };
+  const week = streakWeek({ now, history, spentByDate: {}, dailyBudget: 60, todaySpent: 63, lineBudgetByDate });
+  assert.equal(week.days[5].status, "fire");
+  assert.equal(week.days[5].budget, 88);
+  assert.equal(week.days[6].budget, 87);
+  assert.equal(week.current, 2);
+});
