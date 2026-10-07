@@ -135,7 +135,7 @@ Rolling window over the current balance (`src/lib/daily-budget.ts`):
 The dashboard's spent-against-target line (`src/lib/spending-flow.ts`):
 
 1. A stretch starts on the 1st and on any day real money arrives, when it covers at least three days of the current target. Transfers do not count
-2. Each stretch's daily target is the money on hand that day, less the bills and debts due before the next salary and the saving goal, spread until payday plus one spare day. No income before payday is counted
+2. Each stretch's daily target is the money on hand that day, less the bills and debts due before the next salary and the saving goal, spread until payday plus one spare day. An income before payday only covers bills due after it, never spending
 3. The figure is recorded daily in `daily_budget_history.pace_target`. A stretch keeps the figure from its first day, or the day after when that is higher, so spending never lowers its own target and an overspend shows once
 4. Days before the column existed fall back to the recorded daily budget
 

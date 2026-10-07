@@ -50,8 +50,10 @@ test("without any income the window stays fourteen days", () => {
   assert.equal(result.tightestSegment?.days, 14);
 });
 
-test("until payday the money has to last to the salary and earlier income is not counted", () => {
-  const result = budget(6, 1250, { unpaidBills: [{ amount: 99, dueDay: 28 }], window: "until-payday" });
-  assert.equal(result.tightestSegment?.days, 25);
-  assert.equal(result.dailyBudget, 46.04);
+test("until payday the money lasts to the salary and an earlier income only covers bills after it", () => {
+  const covered = budget(6, 1250, { unpaidBills: [{ amount: 99, dueDay: 28 }], window: "until-payday" });
+  assert.equal(covered.tightestSegment?.days, 25);
+  assert.equal(covered.dailyBudget, 50);
+  const uncovered = budget(6, 1250, { unpaidBills: [{ amount: 99, dueDay: 20 }], window: "until-payday" });
+  assert.equal(uncovered.dailyBudget, 46.04);
 });

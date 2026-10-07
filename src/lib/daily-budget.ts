@@ -16,7 +16,7 @@ const PAYDAY_SPARE_DAYS = 1;
 const SALARY_SHARE = 0.5;
 
 // Rolling: the 14-day window the daily budget uses. Until payday: the money on hand has to last
-// until the next salary, and no income before it is counted, which the pace line reads.
+// until the next salary, which the pace line reads.
 export type BudgetWindow = "rolling" | "until-payday";
 
 interface BudgetIncome {
@@ -99,12 +99,6 @@ export function calculateDailyBudget(params: {
   const windowDays = untilPayday ? daysToPayday : Math.min(minWindowDays, daysToPayday);
   if (payday) {
     console.debug("[daily-budget] Next payday on abs day", payday.absDay, "window", windowDays, "days", window);
-  }
-  if (untilPayday) {
-    // Nothing before payday is counted on: only the salary itself covers what falls due with it.
-    const before = incomeEvents.length;
-    incomeEvents.splice(0, incomeEvents.length, ...incomeEvents.filter((e) => e.absDay >= payday.absDay));
-    console.debug("[daily-budget] Left out", before - incomeEvents.length, "incomes before payday");
   }
   const endAbsDay = today + windowDays;
 
