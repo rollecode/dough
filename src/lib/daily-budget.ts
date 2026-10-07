@@ -15,6 +15,10 @@ const PAYDAY_SPARE_DAYS = 1;
 // small refund or side income does not end the window early.
 const SALARY_SHARE = 0.5;
 
+// Rolling: the 14-day window the daily budget uses. Until payday: the money on hand has to last
+// until the next salary, and no income before it is counted, which the pace line reads.
+export type BudgetWindow = "rolling" | "until-payday";
+
 interface BudgetIncome {
   amount: number;
   expectedDay: number;
@@ -59,8 +63,9 @@ export function calculateDailyBudget(params: {
   resolveDay: (day: number) => number;
   extraSavingReserve?: number;
   skipCurrentMonthSaving?: boolean;
+  window?: BudgetWindow;
 }): DailyBudgetResult {
-  const { balance, savingGoal, today, daysInMonth, unpaidBills, debts, unreceivedIncomes, allIncomes, allBills, allDebts, resolveDay, extraSavingReserve = 0, skipCurrentMonthSaving = false } = params;
+  const { balance, savingGoal, today, daysInMonth, unpaidBills, debts, unreceivedIncomes, allIncomes, allBills, allDebts, resolveDay, extraSavingReserve = 0, skipCurrentMonthSaving = false, window = "rolling" } = params;
 
   // Build a 14-day minimum window, extending to cover at least one significant income
   // This prevents spending everything before a small income and starving the next period
@@ -89,9 +94,17 @@ export function calculateDailyBudget(params: {
 
   const largestIncome = Math.max(0, ...(allIncomes ?? unreceivedIncomes).map((i) => i.amount));
   const payday = incomeEvents.find((e) => e.absDay > today && e.amount >= largestIncome * SALARY_SHARE);
-  const windowDays = payday ? Math.min(minWindowDays, payday.absDay - today + PAYDAY_SPARE_DAYS) : minWindowDays;
+  const untilPayday = window === "until-payday" && !!payday;
+  const daysToPayday = payday ? payday.absDay - today + PAYDAY_SPARE_DAYS : minWindowDays;
+  const windowDays = untilPayday ? daysToPayday : Math.min(minWindowDays, daysToPayday);
   if (payday) {
-    console.debug("[daily-budget] Next payday on abs day", payday.absDay, "window", windowDays, "days");
+    console.debug("[daily-budget] Next payday on abs day", payday.absDay, "window", windowDays, "days", window);
+  }
+  if (untilPayday) {
+    // Nothing before payday is counted on: only the salary itself covers what falls due with it.
+    const before = incomeEvents.length;
+    incomeEvents.splice(0, incomeEvents.length, ...incomeEvents.filter((e) => e.absDay >= payday.absDay));
+    console.debug("[daily-budget] Left out", before - incomeEvents.length, "incomes before payday");
   }
   const endAbsDay = today + windowDays;
 

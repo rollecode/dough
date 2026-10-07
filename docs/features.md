@@ -9,7 +9,7 @@
 - Tomorrow's budget projection with cross-month awareness
 - Upcoming obligations total shown in budget note
 - AI-generated financial summary with relative age display, shared across users
-- Spending flow hero chart with gradient line, bubble flips on month edges
+- Spending flow hero chart with gradient line, bubble flips on month edges, target set when money arrives and spread until payday
 - Spending heatmap (44 weeks, scrollable, tooltip with top transactions)
 - Spending trends card showing daily category comparison
 - Spending chart (cumulative, excludes transfers) with savings target line

@@ -1,6 +1,6 @@
 import { calculateDailyBudget, type DailyBudgetResult } from "./daily-budget";
 import { fixedCostMatcher } from "./fixed-costs";
-import { spendingFlow } from "./spending-flow";
+import { currentPerDay, spendingFlow } from "./spending-flow";
 import { billDueInMonth, type BillCadenceFields } from "./bills";
 import { isTransfer } from "./transaction-utils";
 import { streakWeek, type StreakDay, type StreakRecord } from "./savings-streak";
@@ -98,6 +98,8 @@ export interface DashboardInput {
   trends: { category: string; thisMonth: number; lastMonth: number }[];
   // Day of month to the daily budget recorded on that day, from daily_budget_history.
   budgetByDay: Record<number, number>;
+  // Day of month to the pace line's own figure recorded that day: money on hand spread until payday.
+  paceByDay: Record<number, number>;
   // The last week of daily_budget_history rows, which the savings streak judges each day against.
   streakHistory: StreakRecord[];
   // How many of the month's biggest spending categories to report. Six fills the browser's donut;
@@ -163,6 +165,8 @@ export interface DashboardModel {
   spending_flow: {
     daily_discretionary: number;
     target_per_day: number;
+    // Today's money on hand spread until payday, recorded so a stretch keeps the figure it began with.
+    pace_target: number;
     // The whole month: what was actually spent up to today, where the current rate lands after it,
     // and the steady line both are read against.
     by_day: { day: number; spent: number | null; projected: number | null; target: number }[];
@@ -333,7 +337,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     debtMonthly, investmentMonthly, commitmentCategories, topCategories = 6,
     excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
-    monthlyHistory, trends, budgetByDay, streakHistory, burnRateExcludedPayees = [],
+    monthlyHistory, trends, budgetByDay, paceByDay, streakHistory, burnRateExcludedPayees = [],
   } = input;
 
   const month = ym(now);
@@ -442,13 +446,14 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
   };
 
   const withBills = calculateDailyBudget(budgetParams);
-  const withoutBills = calculateDailyBudget({
+  const withoutBillsParams = {
     ...budgetParams,
     unpaidBills: priorityBills,
     debts: priorityDebts.map((d) => ({ amount: d.amount, dueDay: d.dueDay })),
     allBills: allPriorityBills,
     allDebts: priorityDebts.map((d) => ({ amount: d.amount, dueDay: d.dueDay })),
-  });
+  };
+  const withoutBills = calculateDailyBudget(withoutBillsParams);
 
   // Auto: include the bills only when the balance covers them and the day still leaves something to
   // live on. Otherwise the honest answer is the budget with the bills delayed.
@@ -463,6 +468,10 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
 
   const budgetResult = useBills ? withBills : withoutBills;
   const dailyBudget = budgetResult.dailyBudget;
+  const paceTarget = calculateDailyBudget({
+    ...(useBills ? budgetParams : withoutBillsParams),
+    window: "until-payday",
+  }).dailyBudget;
 
   // Income landing tomorrow has, from tomorrow's vantage point, arrived, so it belongs in tomorrow's
   // starting balance rather than in the still-future list.
@@ -593,13 +602,21 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     discCumulative += Math.abs(t.amount);
     discretionaryPerDay[day] = round(discCumulative);
   }
+  const incomeByDay: Record<number, number> = {};
+  for (const t of monthTx) {
+    if (t.amount <= 0 || t.excluded || isTransfer(t.payee, t.category)) continue;
+    const day = parseInt(t.date.split("-")[2], 10);
+    incomeByDay[day] = round((incomeByDay[day] ?? 0) + t.amount);
+  }
   const flowByDay = spendingFlow({
     daysInMonth,
     today,
     spentByDay: discretionaryPerDay,
     dailyDiscretionary,
-    dailyBudget,
+    paceTarget,
+    paceByDay,
     budgetByDay,
+    incomeByDay,
   });
 
   const totalTargetPerDay =
@@ -739,7 +756,8 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     next_income: nextIncome,
     spending_flow: {
       daily_discretionary: dailyDiscretionary,
-      target_per_day: round(dailyBudget),
+      target_per_day: currentPerDay(flowByDay, today),
+      pace_target: paceTarget,
       by_day: flowByDay,
     },
     spending_chart: spendingChart,
