@@ -14,6 +14,9 @@ const PAYDAY_SPARE_DAYS = 1;
 // An income counts as payday only when it is at least this share of the largest income, so a
 // small refund or side income does not end the window early.
 const SALARY_SHARE = 0.5;
+// Good-month saving: above the good level, this share of the extra is offered to spend and the rest
+// is held back for the month.
+const GOOD_MONTH_SPEND_SHARE = 0.5;
 
 interface BudgetIncome {
   amount: number;
@@ -32,6 +35,8 @@ interface BudgetDebt {
 
 export interface DailyBudgetResult {
   dailyBudget: number;
+  // What good-month saving kept out of today's budget.
+  heldBack: number;
   tightestSegment: {
     startDay: number;
     endDay: number;
@@ -59,8 +64,12 @@ export function calculateDailyBudget(params: {
   resolveDay: (day: number) => number;
   extraSavingReserve?: number;
   skipCurrentMonthSaving?: boolean;
+  // Good-month saving: the daily level above which half the extra is held back (0 = off), and what
+  // the month's earlier days already held back.
+  goodMonthLevel?: number;
+  heldBackThisMonth?: number;
 }): DailyBudgetResult {
-  const { balance, savingGoal, today, daysInMonth, unpaidBills, debts, unreceivedIncomes, allIncomes, allBills, allDebts, resolveDay, extraSavingReserve = 0, skipCurrentMonthSaving = false } = params;
+  const { balance, savingGoal, today, daysInMonth, unpaidBills, debts, unreceivedIncomes, allIncomes, allBills, allDebts, resolveDay, extraSavingReserve = 0, skipCurrentMonthSaving = false, goodMonthLevel = 0, heldBackThisMonth = 0 } = params;
 
   // Build a 14-day minimum window, extending to cover at least one significant income
   // This prevents spending everything before a small income and starving the next period
@@ -96,7 +105,7 @@ export function calculateDailyBudget(params: {
   const endAbsDay = today + windowDays;
 
   const totalDays = endAbsDay - today;
-  if (totalDays <= 0) return { dailyBudget: 0, tightestSegment: null, segmentCount: 0 };
+  if (totalDays <= 0) return { dailyBudget: 0, heldBack: 0, tightestSegment: null, segmentCount: 0 };
 
   // Collect obligations in window with absolute due day (clamp to last day of month)
   const obligationEvents: { absDay: number; amount: number }[] = [];
@@ -167,8 +176,21 @@ export function calculateDailyBudget(params: {
   // Pool = current balance - obligations-net-of-coverage - savings
   // Future income is NOT added to raise the pool; it only offsets obligations
   // it arrives in time to cover. This keeps the daily rate sustainable.
-  const pool = balance - windowObligations - windowSaving;
-  const dailyBudget = Math.max(0, Math.round((pool / totalDays) * 100) / 100);
+  const fullPool = balance - windowObligations - windowSaving;
+
+  // What earlier good days held back stays out of the pool, except what a tight stretch needs to
+  // reach the good level again.
+  const kept = goodMonthLevel > 0 ? Math.max(0, Math.min(heldBackThisMonth, fullPool - goodMonthLevel * totalDays)) : 0;
+  const pool = fullPool - kept;
+  const fullDaily = pool / totalDays;
+  const offered = goodMonthLevel > 0 && fullDaily > goodMonthLevel
+    ? goodMonthLevel + (fullDaily - goodMonthLevel) * GOOD_MONTH_SPEND_SHARE
+    : fullDaily;
+  const dailyBudget = Math.max(0, Math.round(offered * 100) / 100);
+  const heldBack = Math.round((Math.max(0, fullDaily) - Math.max(0, offered)) * 100) / 100;
+  if (goodMonthLevel > 0) {
+    console.debug("[daily-budget] Good-month saving: kept", Math.round(kept), "of", Math.round(heldBackThisMonth), "held back today", heldBack);
+  }
 
   console.info("[daily-budget] balance:", Math.round(balance), "reservedObligations:", Math.round(windowObligations), "saving:", Math.round(windowSaving), "pool:", Math.round(pool), "days:", totalDays, "daily:", dailyBudget);
 
@@ -184,5 +206,5 @@ export function calculateDailyBudget(params: {
   };
 
   console.info("[daily-budget] Result:", dailyBudget, "€/day over", totalDays, "day window");
-  return { dailyBudget, tightestSegment, segmentCount: 1 };
+  return { dailyBudget, heldBack, tightestSegment, segmentCount: 1 };
 }

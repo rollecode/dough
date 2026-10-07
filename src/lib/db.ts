@@ -226,6 +226,7 @@ function initializeDb(db: Database.Database) {
       budget REAL NOT NULL DEFAULT 0,
       spent REAL NOT NULL DEFAULT 0,
       discretionary_target REAL NOT NULL DEFAULT 0,
+      held_back REAL NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -708,6 +709,10 @@ function initializeDb(db: Database.Database) {
   if (dbhCols.length > 0 && !dbhCols.some((c) => c.name === "discretionary_target")) {
     console.info("[db] Adding discretionary_target column to daily_budget_history");
     db.exec("ALTER TABLE daily_budget_history ADD COLUMN discretionary_target REAL NOT NULL DEFAULT 0");
+  }
+  if (dbhCols.length > 0 && !dbhCols.some((c) => c.name === "held_back")) {
+    console.info("[db] Adding held_back column to daily_budget_history");
+    db.exec("ALTER TABLE daily_budget_history ADD COLUMN held_back REAL NOT NULL DEFAULT 0");
   }
 
   // Add image_thumb column to chat_messages if missing

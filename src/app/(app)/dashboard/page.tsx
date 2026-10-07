@@ -81,6 +81,8 @@ export default function DashboardPage() {
   const [budgetIncludeBills, setBudgetIncludeBills] = useState<boolean | "auto">("auto");
   const [reserveNextMonthSaving, setReserveNextMonthSaving] = useState(false);
   const [lastReservationMonth, setLastReservationMonth] = useState<string>("");
+  const [goodMonthSaving, setGoodMonthSaving] = useState(false);
+  const [heldBackThisMonth, setHeldBackThisMonth] = useState(0);
   const [thresholds, setThresholds] = useState({ tight: 20, normal: 30, good: 50 });
   const [householdSize, setHouseholdSize] = useState(1);
   const [personalBudgetShare, setPersonalBudgetShare] = useState(0);
@@ -118,6 +120,8 @@ export default function DashboardPage() {
       }
       if (householdData.settings?.reserve_next_month_saving === "1") setReserveNextMonthSaving(true);
       if (householdData.settings?.last_reservation_month) setLastReservationMonth(householdData.settings.last_reservation_month);
+      setGoodMonthSaving(householdData.settings?.good_month_saving === "1");
+      setHeldBackThisMonth(Number(householdData.settings?.good_month_held_back) || 0);
       setThresholds({
         tight: parseInt(householdData.settings?.budget_threshold_tight) || 20,
         normal: parseInt(householdData.settings?.budget_threshold_normal) || 30,
@@ -321,6 +325,8 @@ export default function DashboardPage() {
     daysInMonth,
     extraSavingReserve,
     skipCurrentMonthSaving,
+    goodMonthLevel: goodMonthSaving ? thresholds.good : 0,
+    heldBackThisMonth,
     unpaidBills: bills.filter((b) => b.is_active && !b.is_paid && billDueInMonth(b, curMonth1)).map((b) => ({ amount: b.amount, dueDay: b.due_day })),
     debts: debtItems,
     unreceivedIncomes: incomes
@@ -365,6 +371,7 @@ export default function DashboardPage() {
     balance: availableBalance + incomeArrivingTomorrow,
     today: today + 1,
     unreceivedIncomes: budgetParams.unreceivedIncomes.filter((i) => resolveDay(i.expectedDay) > today + 1),
+    heldBackThisMonth: today === daysInMonth ? 0 : heldBackThisMonth + budgetResult.heldBack,
   };
   const tomorrowWithBills = calculateDailyBudget(tomorrowParams);
   const tomorrowWithoutBills = calculateDailyBudget({ ...tomorrowParams, unpaidBills: priorityBills, debts: priorityDebts, allBills: allPriorityBills, allDebts: priorityDebts });

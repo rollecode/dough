@@ -69,6 +69,8 @@ export default function SettingsPage() {
   const [payeesOpen, setPayeesOpen] = useState(false);
   const [payeeNames, setPayeeNames] = useState<string[]>([]);
   const [reserveSaved, setReserveSaved] = useState(false);
+  const [goodMonthSaving, setGoodMonthSaving] = useState(false);
+  const [goodMonthSaved, setGoodMonthSaved] = useState(false);
   const [ynabSyncHour, setYnabSyncHour] = useState("6");
   const [syncHourSaved, setSyncHourSaved] = useState(false);
   const [aiSummariesDisabled, setAiSummariesDisabled] = useState(false);
@@ -183,6 +185,7 @@ export default function SettingsPage() {
           if (householdData.settings?.burn_rate_excluded_payees) {
             try { setBurnExcluded(JSON.parse(householdData.settings.burn_rate_excluded_payees) as string[]); } catch {}
           }
+          setGoodMonthSaving(householdData.settings?.good_month_saving === "1");
           if (householdData.settings?.reserve_next_month_saving !== undefined) {
             setReserveNextMonthSaving(householdData.settings.reserve_next_month_saving === "1");
           }
@@ -992,6 +995,30 @@ export default function SettingsPage() {
                 {locale === "fi"
                   ? "Käytä jos suurin palkka tulee kuun viimeisinä päivinä. Varaa palkkapäivänä koko ensi kuun säästötavoitteen, jolloin päiväbudjetti ei näytä liian runsaalta. Ensi kuussa säästötavoite vähennetään automaattisesti, koska se on jo varattu."
                   : "Use if your largest paycheck arrives in the last days of the month. Reserves next month's full saving goal on payday so the daily budget doesn't look overly generous. Next month skips the proportional saving deduction since it's already reserved."}
+              </p>
+            </div>
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Säästä hyvinä kuukausina" : "Save in good months"}</Label>
+              <div className="settings-row">
+                <Switch
+                  checked={goodMonthSaving}
+                  onCheckedChange={async (v) => {
+                    setGoodMonthSaving(v);
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ good_month_saving: v ? "1" : "0" }),
+                    });
+                    setGoodMonthSaved(true);
+                    setTimeout(() => setGoodMonthSaved(false), 2000);
+                  }}
+                />
+                {goodMonthSaved && <span className="settings-saved">{t.common.saved}</span>}
+              </div>
+              <p className="settings-help">
+                {locale === "fi"
+                  ? `Kun päiväbudjetti nousisi yli hyvän rajan (${thresholds.good} €), siitä näytetään vain puolet ylimenevästä osasta. Loput jää tilille kuukauden säästöksi. Tiukkoina aikoina säästöä käytetään vain sen verran, että budjetti pysyy hyvällä rajalla.`
+                  : `When the daily budget would rise above the good level (${thresholds.good} €), only half of the extra is shown. The rest stays in the account as the month's saving. In a tight stretch it is used only to keep the budget at the good level.`}
               </p>
             </div>
             <div className="form-field">

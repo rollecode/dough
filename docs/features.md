@@ -3,6 +3,7 @@
 ### Dashboard
 
 - Daily budget over a 14-day window of the current balance, shortened to the next salary plus one spare day when payday is sooner
+- Save in good months: above the good threshold, half of the extra daily budget is held back as the month's saving
 - Must-pay priority obligations always subtracted from budget regardless of mode
 - Bill, debt, and investment payments excluded from discretionary daily spending
 - Personal greeting with today's spending (personal + household)

@@ -729,7 +729,7 @@ export function buildMcpServer(api: DoughApi): McpServer {
 
   server.registerTool(
     "dough_update_settings",
-    { description: "Change the daily budget settings. Only the fields sent change. Requires a write-scoped key.", inputSchema: { saving_rate: z.number().min(0).optional(), budget_threshold_tight: z.number().min(0).optional(), budget_threshold_normal: z.number().min(0).optional(), budget_threshold_good: z.number().min(0).optional(), budget_include_bills: z.enum(["auto", "1", "0"]).optional(), reserve_next_month_saving: z.boolean().optional() } },
+    { description: "Change the daily budget settings. Only the fields sent change. Requires a write-scoped key.", inputSchema: { saving_rate: z.number().min(0).optional(), budget_threshold_tight: z.number().min(0).optional(), budget_threshold_normal: z.number().min(0).optional(), budget_threshold_good: z.number().min(0).optional(), budget_include_bills: z.enum(["auto", "1", "0"]).optional(), reserve_next_month_saving: z.boolean().optional(), good_month_saving: z.boolean().optional() } },
     (args) => reply(api.post("settings", args))
   );
 

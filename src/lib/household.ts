@@ -66,6 +66,21 @@ export function getSavingRate(): number {
   return val ? parseFloat(val) : 0;
 }
 
+// Good-month saving for the daily budget: the level above which half the extra is held back (0 when
+// off), and what this month's earlier days already held back.
+export function goodMonthSaving(now = new Date()): { level: number; heldBack: number } {
+  if (getHouseholdSetting("good_month_saving") !== "1") {
+    return { level: 0, heldBack: 0 };
+  }
+  const level = parseInt(getHouseholdSetting("budget_threshold_good") || "50", 10) || 0;
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const row = getDb()
+    .prepare("SELECT COALESCE(SUM(held_back), 0) AS total FROM daily_budget_history WHERE date >= ? AND date < ?")
+    .get(iso(new Date(now.getFullYear(), now.getMonth(), 1)), iso(now)) as { total: number };
+  console.debug("[household] Good-month saving level", level, "held back so far", row.total);
+  return { level, heldBack: Math.round(row.total * 100) / 100 };
+}
+
 export function getSavingRateType(): "percent" | "fixed" {
   return (getHouseholdSetting("saving_rate_type") as "percent" | "fixed") || "fixed";
 }
@@ -77,7 +92,7 @@ export const WRITABLE_SETTINGS = new Set([
   "anthropic_api_key", "gemini_api_key",
   "budget_excluded_accounts", "budget_group_order", "budget_include_bills", "budget_threshold_good",
   "budget_threshold_normal", "budget_threshold_tight", "burn_rate_excluded_payees", "last_reservation_month",
-  "reserve_next_month_saving", "saving_rate",
+  "reserve_next_month_saving", "saving_rate", "good_month_saving",
   "date_format", "decimal_places", "time_format", "household_profile", "household_size",
   "prompt_chat_guidelines", "prompt_summary_instructions", "prompt_debt_instructions",
   "synci_account_mapping", "synci_accounts", "synci_api_token",

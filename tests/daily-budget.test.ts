@@ -49,3 +49,27 @@ test("without any income the window stays fourteen days", () => {
   const result = budget(24, 350, { unreceivedIncomes: [], allIncomes: [] });
   assert.equal(result.tightestSegment?.days, 14);
 });
+
+test("good-month saving offers half of what is above the good level", () => {
+  const result = budget(1, 1400, { goodMonthLevel: 50 });
+  assert.equal(result.dailyBudget, 75);
+  assert.equal(result.heldBack, 25);
+});
+
+test("what good days held back stays out of the budget", () => {
+  const result = budget(1, 1400 + 280, { goodMonthLevel: 50, heldBackThisMonth: 280 });
+  assert.equal(result.dailyBudget, 75);
+});
+
+test("a tight stretch can use what was held back to reach the good level, never more", () => {
+  const result = budget(1, 560, { goodMonthLevel: 50, heldBackThisMonth: 400 });
+  assert.equal(result.dailyBudget, 40);
+  const lifted = budget(1, 900, { goodMonthLevel: 50, heldBackThisMonth: 400 });
+  assert.equal(lifted.dailyBudget, 50);
+});
+
+test("good-month saving leaves a budget under the good level alone", () => {
+  const result = budget(1, 560, { goodMonthLevel: 50 });
+  assert.equal(result.dailyBudget, 40);
+  assert.equal(result.heldBack, 0);
+});

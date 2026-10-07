@@ -94,6 +94,10 @@ export interface DashboardInput {
   thresholds: DashThresholds;
   reserveNextMonthSaving: boolean;
   lastReservationMonth: string;
+  // Good-month saving: the level above which half the extra is held back (0 when off), and what this
+  // month's earlier days held back.
+  goodMonthLevel?: number;
+  heldBackThisMonth?: number;
   monthlyHistory: { month: string; income: number; expenses: number }[];
   trends: { category: string; thisMonth: number; lastMonth: number }[];
   // Day of month to the daily budget recorded on that day, from daily_budget_history.
@@ -123,6 +127,8 @@ export interface DashboardModel {
   daily_budget: {
     amount: number;
     tomorrow: number;
+    // What good-month saving kept out of today's budget, 0 when it is off or the day is not a good one.
+    held_back: number;
     with_bills: number;
     without_bills: number;
     bills_included: boolean;
@@ -333,6 +339,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     debtMonthly, investmentMonthly, commitmentCategories, topCategories = 6,
     excludedAccountIds, linkedAccountIds, personalBudgetShare,
     budgetIncludeBills, thresholds, reserveNextMonthSaving, lastReservationMonth,
+    goodMonthLevel = 0, heldBackThisMonth = 0,
     monthlyHistory, trends, budgetByDay, streakHistory, burnRateExcludedPayees = [],
   } = input;
 
@@ -430,6 +437,8 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     daysInMonth,
     extraSavingReserve: shouldReserveNow ? savingRate : 0,
     skipCurrentMonthSaving: lastReservationMonth === month,
+    goodMonthLevel,
+    heldBackThisMonth,
     unpaidBills,
     debts: debts.map((d) => ({ amount: d.amount, dueDay: d.dueDay })),
     unreceivedIncomes: unreceived.map((i) => ({ amount: i.amount, expectedDay: i.expected_day })),
@@ -476,6 +485,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     balance: availableBalance + arrivingTomorrow,
     today: today + 1,
     unreceivedIncomes: budgetParams.unreceivedIncomes.filter((i) => resolveDay(i.expectedDay) > today + 1),
+    heldBackThisMonth: today === daysInMonth ? 0 : heldBackThisMonth + budgetResult.heldBack,
   };
   const tomorrowBudget = (
     useBills
@@ -716,6 +726,7 @@ export function buildDashboard(input: DashboardInput): DashboardModel {
     daily_budget: {
       amount: dailyBudget,
       tomorrow: tomorrowBudget,
+      held_back: budgetResult.heldBack,
       with_bills: withBills.dailyBudget,
       without_bills: withoutBills.dailyBudget,
       bills_included: useBills,

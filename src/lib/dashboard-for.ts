@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { getHouseholdSettings } from "@/lib/household";
+import { getHouseholdSettings, goodMonthSaving } from "@/lib/household";
 import { NOT_BUDGET_EXCLUDED, cashFlowHistory } from "@/lib/budget-math";
 import { buildLocalFinancialData } from "@/lib/local-financial-data";
 import { buildDashboard, type DashBill, type DashDebt, type DashIncome } from "@/lib/dashboard-model";
@@ -186,6 +186,8 @@ export function dashboardFor(userId: number) {
     .prepare("SELECT date, budget, spent FROM daily_budget_history WHERE date >= ? AND date < ?")
     .all(localDateIso(weekAgo), localDateIso(now)) as { date: string; budget: number; spent: number }[];
 
+  const goodMonth = goodMonthSaving(now);
+
   // The month status this answers with is the same figure lib/month-status assembles for the web
   // page, from the same rows. Change one and change the other.
   const model = buildDashboard({
@@ -217,6 +219,8 @@ export function dashboardFor(userId: number) {
       good: parseInt(settings.budget_threshold_good || "50", 10),
     },
     reserveNextMonthSaving: settings.reserve_next_month_saving === "1",
+    goodMonthLevel: goodMonth.level,
+    heldBackThisMonth: goodMonth.heldBack,
     lastReservationMonth: settings.last_reservation_month || "",
     monthlyHistory: monthlyHistory.reverse(),
     trends,
@@ -227,9 +231,9 @@ export function dashboardFor(userId: number) {
   // Record today's figures as the web's savings streak does, so a day spent only in the app still
   // leaves the history the pace line reads. The web's own discretionary target is left as it is.
   db.prepare(
-    "INSERT INTO daily_budget_history (date, budget, spent) VALUES (?, ?, ?) " +
-      "ON CONFLICT(date) DO UPDATE SET budget = excluded.budget, spent = excluded.spent"
-  ).run(localDateIso(), model.daily_budget.amount, model.today.spent);
+    "INSERT INTO daily_budget_history (date, budget, spent, held_back) VALUES (?, ?, ?, ?) " +
+      "ON CONFLICT(date) DO UPDATE SET budget = excluded.budget, spent = excluded.spent, held_back = excluded.held_back"
+  ).run(localDateIso(), model.daily_budget.amount, model.today.spent, model.daily_budget.held_back);
 
   console.info("[v1/dashboard] Daily budget", model.daily_budget.amount, "for", model.month);
   return model;

@@ -129,6 +129,7 @@ Rolling window over the current balance (`src/lib/daily-budget.ts`):
 5. Daily budget = (balance - reserved obligations - saving) / window days
 6. Must-pay priority items always subtracted regardless of auto mode
 7. Non-priority items optionally included based on settings
+8. Good-month saving (optional): above the good threshold only half of the extra is offered. What each day held back is recorded in `daily_budget_history.held_back` and kept out of the pool for the rest of the month, except what a tight stretch needs to stay at the good threshold
 
 ### Pace line
 
