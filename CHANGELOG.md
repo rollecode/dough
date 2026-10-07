@@ -1,3 +1,7 @@
+### 4.8.2: 2026-10-08
+
+* Update packages with security fixes
+
 ### 4.8.1: 2026-10-08
 
 * Add a daily budget cap
