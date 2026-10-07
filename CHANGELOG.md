@@ -1,3 +1,7 @@
+### 4.8.4: 2026-10-08
+
+* Fix YNAB sync timer sent to the login page
+
 ### 4.8.3: 2026-10-08
 
 * Add a server-wide secret for sync timers
