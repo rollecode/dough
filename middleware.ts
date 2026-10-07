@@ -63,7 +63,8 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === "/api/oauth/revoke";
   // The reference is public wherever it is asked for: it holds no data, only the API's shape.
   const isApiDocs = request.nextUrl.pathname === "/api-docs";
-  const isSynciSync = request.nextUrl.pathname === "/api/synci/sync";
+  // Sync timers carry no session; both routes check the timer secret or a session themselves.
+  const isSyncRoute = request.nextUrl.pathname === "/api/synci/sync" || request.nextUrl.pathname === "/api/ynab/sync";
   // The public v1 API authenticates with an API key inside each route (see lib/api-auth), not the
   // session cookie, so it must bypass this cookie gate and never be redirected to /login.
   const isApiV1 = request.nextUrl.pathname.startsWith("/api/v1");
@@ -71,7 +72,7 @@ export async function middleware(request: NextRequest) {
   const isMcp = request.nextUrl.pathname === "/mcp";
 
   // Allow auth API, the key-authed public API, SSE events, cron endpoints, and static assets
-  if (isApiAuth || isApiV1 || isMcp || isApiDocs || isOAuthPublic || isEvents || isSynciSync) {
+  if (isApiAuth || isApiV1 || isMcp || isApiDocs || isOAuthPublic || isEvents || isSyncRoute) {
     return NextResponse.next();
   }
 
