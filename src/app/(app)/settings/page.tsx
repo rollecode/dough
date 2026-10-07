@@ -1022,36 +1022,6 @@ export default function SettingsPage() {
               </p>
             </div>
             <div className="form-field">
-              <Label>{locale === "fi" ? "YNAB-synkronoinnin tunti" : "YNAB sync hour"}</Label>
-              <div className="settings-row">
-                <Input
-                  type="number"
-                  min="0"
-                  max="23"
-                  value={ynabSyncHour}
-                  onChange={(e) => setYnabSyncHour(e.target.value)}
-                  className="settings-input"
-                />
-                <Button size="sm" variant="outline" onClick={async () => {
-                  const h = String(Math.min(23, Math.max(0, parseInt(ynabSyncHour, 10) || 6)));
-                  setYnabSyncHour(h);
-                  await fetch("/api/household", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ynab_sync_hour: h }),
-                  });
-                  setSyncHourSaved(true);
-                  setTimeout(() => setSyncHourSaved(false), 2000);
-                }}>{t.common.save}</Button>
-                {syncHourSaved && <span className="settings-saved">{t.common.saved}</span>}
-              </div>
-              <p className="settings-help">
-                {locale === "fi"
-                  ? "Tunti (0–23, Helsingin aika), jolloin YNAB synkronoidaan automaattisesti kerran päivässä."
-                  : "Hour (0–23, Helsinki time) when YNAB is synced automatically once a day."}
-              </p>
-            </div>
-            <div className="form-field">
               <Label>{locale === "fi" ? "Budjettirajat (€)" : "Budget thresholds (€)"}</Label>
               <div className="list-edit-row">
                 <div className="list-edit-field">
@@ -1203,6 +1173,36 @@ export default function SettingsPage() {
                       ? `${t.settings.lastSync}: ${fmtDate(profile.last_ynab_sync)}`
                       : t.common.neverSynced)}
                   </span>
+                </div>
+                <div className="form-field">
+                  <Label>{locale === "fi" ? "YNAB-synkronoinnin tunti" : "YNAB sync hour"}</Label>
+                  <div className="settings-row">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="23"
+                      value={ynabSyncHour}
+                      onChange={(e) => setYnabSyncHour(e.target.value)}
+                      className="settings-input"
+                    />
+                    <Button size="sm" variant="outline" onClick={async () => {
+                      const h = String(Math.min(23, Math.max(0, parseInt(ynabSyncHour, 10) || 6)));
+                      setYnabSyncHour(h);
+                      await fetch("/api/household", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ynab_sync_hour: h }),
+                      });
+                      setSyncHourSaved(true);
+                      setTimeout(() => setSyncHourSaved(false), 2000);
+                    }}>{t.common.save}</Button>
+                    {syncHourSaved && <span className="settings-saved">{t.common.saved}</span>}
+                  </div>
+                  <p className="settings-help">
+                    {locale === "fi"
+                      ? "Tunti (0–23, Helsingin aika), jolloin YNAB synkronoidaan automaattisesti kerran päivässä. Synkronoi nyt -painike hakee muutokset milloin tahansa."
+                      : "Hour (0–23, Helsinki time) when YNAB is synced automatically once a day. Sync now fetches changes any time."}
+                  </p>
                 </div>
                 <Button
                   variant="destructive"
