@@ -140,7 +140,9 @@ systemctl --user start dough
 ### Periodic Synci sync (systemd timer)
 
 Synci sync is idempotent (it skips anything already imported or added manually), so it is safe to
-run on a timer. Set a `cron_secret` household setting, then install a service + timer that polls it:
+run on a timer. Set a `cron_secret` household setting, then install a service + timer that polls it.
+A server hosting several households can instead set `DOUGH_CRON_SECRET` in its environment once:
+the sync routes accept it for every household.
 
 ```bash
 # ~/.config/systemd/user/dough-synci.service

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { getHouseholdSetting, setHouseholdSetting, getBudgetMode, secretsEqual } from "@/lib/household";
+import { getHouseholdSetting, setHouseholdSetting, getBudgetMode, isCronRequest } from "@/lib/household";
 import { getAllPatterns } from "@/lib/matching";
 import { eventBus } from "@/lib/event-bus";
 import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "@/lib/transaction-utils";
@@ -38,10 +38,7 @@ function patternToMatcher(pattern: string): (payee: string) => boolean {
 
 export async function POST(request: Request) {
   try {
-    // Allow cron calls with X-Cron-Secret header matching household setting
-    const cronSecret = request.headers.get("x-cron-secret");
-    const expectedSecret = getHouseholdSetting("cron_secret");
-    const isCron = secretsEqual(cronSecret, expectedSecret);
+    const isCron = isCronRequest(request);
 
     if (!isCron) {
       const user = await getSession();

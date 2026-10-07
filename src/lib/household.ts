@@ -12,6 +12,13 @@ export function secretsEqual(a: string | null | undefined, b: string | null | un
   return timingSafeEqual(bufA, bufB);
 }
 
+// A timer's sync request: it carries the household's own cron_secret, or DOUGH_CRON_SECRET, which a
+// server hosting several households sets once so one timer can sync them all.
+export function isCronRequest(request: Request): boolean {
+  const sent = request.headers.get("x-cron-secret");
+  return secretsEqual(sent, getHouseholdSetting("cron_secret")) || secretsEqual(sent, process.env.DOUGH_CRON_SECRET);
+}
+
 export function getHouseholdSetting(key: string): string | null {
   const db = getDb();
   const row = db.prepare("SELECT value FROM household_settings WHERE key = ?").get(key) as { value: string } | undefined;

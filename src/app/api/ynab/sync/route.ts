@@ -1,7 +1,7 @@
 import { ynabToken } from "@/lib/ynab/oauth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getYnabToken, getYnabBudgetId, setHouseholdSetting, secretsEqual, getBudgetMode } from "@/lib/household";
+import { getYnabToken, getYnabBudgetId, setHouseholdSetting, getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { localDateIso } from "@/lib/date-utils";
 import { cashFlowForMonth, localMonthCategories } from "@/lib/budget-math";
@@ -123,11 +123,8 @@ function recentTransactions(db: import("better-sqlite3").Database) {
 
 export async function POST(request: Request) {
   try {
-    const { getHouseholdSetting } = await import("@/lib/household");
-    // Allow cron calls with X-Cron-Secret header matching household setting
-    const cronSecret = request.headers.get("x-cron-secret");
-    const expectedSecret = getHouseholdSetting("cron_secret");
-    const isCron = secretsEqual(cronSecret, expectedSecret);
+    const { getHouseholdSetting, isCronRequest } = await import("@/lib/household");
+    const isCron = isCronRequest(request);
 
     let user = await getSession();
     if (!user && isCron) {
