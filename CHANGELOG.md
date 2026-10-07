@@ -1,3 +1,7 @@
+### 4.8.5: 2026-10-08
+
+* Add monthly targets due by a day
+
 ### 4.8.4: 2026-10-08
 
 * Fix YNAB sync timer sent to the login page
