@@ -9,7 +9,7 @@
 - Tomorrow's budget projection with cross-month awareness
 - Upcoming obligations total shown in budget note
 - AI-generated financial summary with relative age display, shared across users
-- Spending flow hero chart with gradient line, bubble flips on month edges, target set when money arrives and spread until payday
+- Spending flow hero chart with gradient line, bubble flips on month edges, target set by the daily budget when money arrives
 - Spending heatmap (44 weeks, scrollable, tooltip with top transactions)
 - Spending trends card showing daily category comparison
 - Spending chart (cumulative, excludes transfers) with savings target line
@@ -17,7 +17,7 @@
 - Monthly cash flow bar chart (5 months + upcoming income as striped bar)
 - Recent transactions list (excludes transfers)
 - Net worth section with investments and debts
-- Savings streak with emoji flames, greyscale for older days
+- Savings streak with emoji flames, greyscale for older days, each day judged against the pace line's budget
 - Entry reminder after 6 hours of no new transactions
 - Burn rate and projected month-end balance
 - Configurable budget thresholds (tight/normal/good)

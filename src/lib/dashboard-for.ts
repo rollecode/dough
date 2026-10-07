@@ -172,16 +172,11 @@ export function dashboardFor(userId: number) {
 
   // The daily budget each past day was actually given: the pace line is read against these.
   const budgetByDay: Record<number, number> = {};
-  const paceByDay: Record<number, number> = {};
   for (const row of db
-    .prepare("SELECT date, budget, pace_target FROM daily_budget_history WHERE date >= ? AND date <= ?")
-    .all(`${month}-01`, `${month}-31`) as { date: string; budget: number; pace_target: number | null }[]) {
-    const day = parseInt(row.date.slice(8, 10), 10);
+    .prepare("SELECT date, budget FROM daily_budget_history WHERE date >= ? AND date <= ?")
+    .all(`${month}-01`, `${month}-31`) as { date: string; budget: number }[]) {
     if (row.budget > 0) {
-      budgetByDay[day] = row.budget;
-    }
-    if (row.pace_target !== null) {
-      paceByDay[day] = row.pace_target;
+      budgetByDay[parseInt(row.date.slice(8, 10), 10)] = row.budget;
     }
   }
 
@@ -226,16 +221,15 @@ export function dashboardFor(userId: number) {
     monthlyHistory: monthlyHistory.reverse(),
     trends,
     budgetByDay,
-    paceByDay,
     streakHistory,
   });
 
   // Record today's figures as the web's savings streak does, so a day spent only in the app still
   // leaves the history the pace line reads. The web's own discretionary target is left as it is.
   db.prepare(
-    "INSERT INTO daily_budget_history (date, budget, spent, pace_target) VALUES (?, ?, ?, ?) " +
-      "ON CONFLICT(date) DO UPDATE SET budget = excluded.budget, spent = excluded.spent, pace_target = excluded.pace_target"
-  ).run(localDateIso(), model.daily_budget.amount, model.today.spent, model.spending_flow.pace_target);
+    "INSERT INTO daily_budget_history (date, budget, spent) VALUES (?, ?, ?) " +
+      "ON CONFLICT(date) DO UPDATE SET budget = excluded.budget, spent = excluded.spent"
+  ).run(localDateIso(), model.daily_budget.amount, model.today.spent);
 
   console.info("[v1/dashboard] Daily budget", model.daily_budget.amount, "for", model.month);
   return model;
