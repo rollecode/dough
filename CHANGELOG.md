@@ -1,3 +1,7 @@
+### 4.8.3: 2026-10-08
+
+* Add a server-wide secret for sync timers
+
 ### 4.8.2: 2026-10-08
 
 * Update packages with security fixes
