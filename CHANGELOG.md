@@ -2,6 +2,7 @@
 
 * Add PixelUnion icon
 * Fix oversized subscription logos
+* Change the subscriptions total label to active monthly subscriptions
 
 ### 4.8.5: 2026-10-08
 

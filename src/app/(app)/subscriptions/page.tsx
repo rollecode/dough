@@ -239,7 +239,7 @@ export default function SubscriptionsPage() {
 
       <div className="page-grid-2-sm">
         <Card className="metric-card">
-          <p className="metric-card-label">{locale === "fi" ? "Kuukaudessa" : "Monthly"}</p>
+          <p className="metric-card-label">{locale === "fi" ? "Aktiiviset kuukausitilaukset" : "Active monthly subscriptions"}</p>
           <p className="metric-card-value-3xl text-negative"><F v={monthlyTotal} /></p>
         </Card>
         <Card className="metric-card">
