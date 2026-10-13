@@ -62,6 +62,14 @@
   display: block;
 }
 
+/* A transparent mark keeps the brand colour around it, as the inline marks did. */
+.brand-img.brand-mark {
+  width: 56%;
+  height: 56%;
+  object-fit: contain;
+  border-radius: 0;
+}
+
 .subscription-card-info {
   flex: 1;
   min-width: 0;

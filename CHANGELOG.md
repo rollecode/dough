@@ -1,6 +1,7 @@
 ### 4.8.6: 2026-10-13
 
 * Add PixelUnion icon
+* Fix oversized subscription logos
 
 ### 4.8.5: 2026-10-08
 
