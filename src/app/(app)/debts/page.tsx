@@ -301,6 +301,7 @@ export default function DebtsPage() {
           original_amount: debt.originalAmount,
         }),
       });
+      loadDebts(); // a changed balance adds an adjustment to the payments list
     } catch (err) {
       console.error("[debts] Save error:", err);
     } finally {

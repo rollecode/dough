@@ -398,6 +398,7 @@ export function buildMcpServer(api: DoughApi): McpServer {
         notes: z.string().optional(),
         original_amount: z.number().optional().describe("Original loan amount, for payoff progress"),
         is_priority: z.boolean().optional(),
+        balance: z.number().optional().describe("What is owed now, as the lender shows it. Booked as a dated adjustment; payments dated before it are not booked again"),
       },
     },
     (args) => reply(api.post("debts/update", args))
@@ -421,7 +422,7 @@ export function buildMcpServer(api: DoughApi): McpServer {
         expected_return: z.number().optional().describe("Expected annual return % (default 7)"),
         notes: z.string().optional(),
         ticker: z.string().optional(),
-        value: z.number().optional().describe("Current market value (updates the account balance)"),
+        value: z.number().optional().describe("Current market value. Booked as a dated adjustment on the account"),
         added: z.number().optional().describe("New money contributed now (grows cost basis)"),
         init_contributed: z.number().optional().describe("Seed the total cost basis directly"),
       },

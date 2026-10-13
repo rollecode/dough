@@ -163,7 +163,7 @@ export async function PUT(request: Request) {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     const body = await request.json().catch(() => ({}));
     if (!body.ynab_account_id) return NextResponse.json({ error: "Account ID required" }, { status: 400 });
-    const result = updateDebtOverride(body);
+    const result = updateDebtOverride(body, user.id);
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch (error) {

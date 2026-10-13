@@ -3,6 +3,7 @@
 // debt_overrides keyed by ynab_account_id.
 import { getDb } from "./db";
 import { eventBus } from "./event-bus";
+import { reconcileBalance } from "./accounts-write";
 
 export interface DebtOverrideUpdate {
   ynab_account_id: string;
@@ -12,11 +13,12 @@ export interface DebtOverrideUpdate {
   notes?: string;
   original_amount?: number;
   is_priority?: boolean;
+  balance?: number; // what is owed now, as the lender shows it; booked as a dated adjustment
 }
 
 // Only the fields sent change; the rest keep what they were, so a client can change one figure
 // without restating the others.
-export function updateDebtOverride(p: DebtOverrideUpdate): { ok: true } | { error: string } {
+export function updateDebtOverride(p: DebtOverrideUpdate, userId: number): { ok: true } | { error: string } {
   if (!p.ynab_account_id) return { error: "ynab_account_id required" };
   const db = getDb();
 
@@ -41,6 +43,10 @@ export function updateDebtOverride(p: DebtOverrideUpdate): { ok: true } | { erro
   if (p.original_amount !== undefined) {
     db.prepare("UPDATE debt_overrides SET original_amount = ?, updated_at = datetime('now') WHERE ynab_account_id = ?")
       .run(Math.abs(Number(p.original_amount) || 0), p.ynab_account_id);
+  }
+
+  if (p.balance !== undefined && isFinite(Number(p.balance))) {
+    reconcileBalance(userId, p.ynab_account_id, -Math.abs(Number(p.balance)));
   }
 
   console.info("[debts] Override saved for", p.ynab_account_id);

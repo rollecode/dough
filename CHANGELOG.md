@@ -2,6 +2,7 @@
 
 * Fix linked payments not lowering debts and investments
 * Show payments under each debt and investment
+* Add debt balance reconciling to the API
 
 ### 4.8.6: 2026-10-13
 

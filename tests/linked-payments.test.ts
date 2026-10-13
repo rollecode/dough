@@ -92,3 +92,12 @@ test("unlinking a category keeps the payments already booked on the debt", () =>
 test("a household starts booking linked payments from the day it first runs them", () => {
   assert.match(firstRunDay ?? "", /^\d{4}-\d{2}-\d{2}$/);
 });
+
+test("a debt's balance sent with its terms is booked as a dated adjustment", async () => {
+  const { updateDebtOverride } = await import("@/lib/debts-write");
+  const before = balance("loan");
+  updateDebtOverride({ ynab_account_id: "loan", balance: 500 }, 1);
+  assert.equal(balance("loan"), -500);
+  const adj = db.prepare("SELECT amount FROM transactions WHERE account_id = 'loan' AND payee LIKE 'Reconciliation%' ORDER BY id DESC LIMIT 1").get() as { amount: number };
+  assert.equal(adj.amount, Math.round((-500 - before) * 100) / 100);
+});
