@@ -28,6 +28,13 @@ export function createAccount(userId: number, p: AccountCreate): { id: string } 
     "INSERT INTO ynab_accounts (id, name, type, balance, cleared_balance, on_budget, closed, source, sort_order, updated_at) " +
       "VALUES (?, ?, ?, ?, ?, ?, 0, 'manual', ?, datetime('now'))"
   ).run(id, name, type, balance, balance, onBudget, maxOrder + 1);
+  // Dates the opening balance, so payments made before the account existed are never booked on it.
+  if (balance !== 0) {
+    db.prepare(
+      "INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) " +
+        "VALUES (?, ?, ?, ?, 'Starting Balance', '', '', ?, 1, 'reconciled')"
+    ).run(userId, `start_${randomUUID()}`, localDateIso(), balance, id);
+  }
   console.info("[accounts] Created manual account", name, id);
   eventBus.emit("data:updated", { source: "accounts-added" });
   return { id };
@@ -53,34 +60,39 @@ export function updateAccount(userId: number, p: AccountUpdate): { found: boolea
   const values: (string | number)[] = [];
   if (p.name !== undefined) { updates.push("name = ?"); values.push(String(p.name).trim()); }
   if (p.type !== undefined) { updates.push("type = ?"); values.push(String(p.type).trim()); }
-  let reconcileDiff = 0;
-  if (p.balance !== undefined) {
-    const bal = Math.round(Number(p.balance) * 100) / 100;
-    reconcileDiff = Math.round((bal - (exists.balance ?? 0)) * 100) / 100;
-    updates.push("balance = ?"); values.push(bal);
-    updates.push("cleared_balance = ?"); values.push(bal);
-  }
   if (p.on_budget !== undefined) { updates.push("on_budget = ?"); values.push(p.on_budget ? 1 : 0); }
   if (p.closed !== undefined) { updates.push("closed = ?"); values.push(p.closed ? 1 : 0); }
   if (p.sort_order !== undefined) { updates.push("sort_order = ?"); values.push(parseInt(String(p.sort_order), 10) || 0); }
-  if (updates.length === 0) return { found: true };
-
-  updates.push("updated_at = datetime('now')");
-  values.push(String(p.id));
-  db.prepare(`UPDATE ynab_accounts SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-
-  // Reconciliation adjustment so the transaction history matches the new balance. Payee starts with
-  // "Reconciliation" so it is excluded from spending/income stats.
-  if (Math.abs(reconcileDiff) > 0.005) {
-    db.prepare(
-      "INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'reconciled')"
-    ).run(userId, `recon_${randomUUID()}`, localDateIso(), reconcileDiff, "Reconciliation Balance Adjustment", "", "", String(p.id));
-    console.info("[accounts] Reconciliation adjustment", reconcileDiff, "for account", p.id);
+  if (updates.length === 0 && p.balance === undefined) return { found: true };
+  if (p.balance !== undefined) reconcileBalance(userId, String(p.id), Number(p.balance));
+  if (updates.length > 0) {
+    updates.push("updated_at = datetime('now')");
+    values.push(String(p.id));
+    db.prepare(`UPDATE ynab_accounts SET ${updates.join(", ")} WHERE id = ?`).run(...values);
   }
   console.info("[accounts] Updated account", p.id);
   eventBus.emit("data:updated", { source: "accounts-updated" });
   return { found: true };
+}
+
+// Set an account to the balance the user sees at the bank or lender, booking the difference as a
+// dated adjustment so history adds up. Payee starts with "Reconciliation" so it stays out of
+// spending and income, and payments dated before it are not booked on the account again.
+export function reconcileBalance(userId: number, accountId: string, balance: number): number {
+  const db = getDb();
+  const bal = Math.round(balance * 100) / 100;
+  const prev = db.prepare("SELECT balance FROM ynab_accounts WHERE id = ?").get(accountId) as { balance: number } | undefined;
+  if (!prev || !isFinite(bal)) return 0;
+  const diff = Math.round((bal - prev.balance) * 100) / 100;
+  db.prepare("UPDATE ynab_accounts SET balance = ?, cleared_balance = ?, updated_at = datetime('now') WHERE id = ?").run(bal, bal, accountId);
+  if (Math.abs(diff) > 0.005) {
+    db.prepare(
+      "INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'reconciled')"
+    ).run(userId, `recon_${randomUUID()}`, localDateIso(), diff, "Reconciliation Balance Adjustment", "", "", accountId);
+    console.info("[accounts] Reconciliation adjustment", diff, "for account", accountId);
+  }
+  return diff;
 }
 
 // Manual accounts are hard-deleted; synced accounts are soft-closed (closed=1).

@@ -70,13 +70,13 @@ All endpoints require authentication via `dough-session` cookie (except `/api/au
 
 ### Debts
 
-- `GET /api/debts` — list debts from YNAB with overrides and AI suggestions
+- `GET /api/debts` — list debts with overrides, AI suggestions and each debt's `payments` (everything booked on it, newest first)
 - `PUT /api/debts` — save interest rate and payment overrides
 - `GET /api/debts/suggestion` — AI debt payoff suggestion
 
 ### Investments
 
-- `GET /api/investments` — list investment accounts from YNAB cache with overrides and monthly transfer amounts
+- `GET /api/investments` — list investment accounts with overrides, monthly transfer amounts and each one's `payments`
 - `PUT /api/investments` — save monthly contribution and expected return overrides
 
 ### Subscriptions

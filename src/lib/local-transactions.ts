@@ -4,6 +4,7 @@ import { getHouseholdSetting, setHouseholdSetting } from "./household";
 import { eventBus } from "./event-bus";
 import { localDateIso } from "./date-utils";
 import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "./transaction-utils";
+import { syncLinkedLeg } from "./linked-payments";
 
 // Local-mode transaction mutations shared by the internal session-authenticated route and the
 // key-authenticated v1 API. A field left undefined keeps the stored value, so API callers can
@@ -143,6 +144,7 @@ export function updateLocalTransaction(
   if (transferAcct && transferAcct !== newAccount && newCategory === INTERNAL_TRANSFER_CATEGORY) {
     reconcileCounterpartLeg(db, userId, params.transaction_id, newAccount, transferAcct, signed, newDate);
   }
+  syncLinkedLeg(db, userId, params.transaction_id);
 
   eventBus.emit("data:updated", { source: "transaction-updated", userId });
   console.info("[local-transactions] Local transaction updated:", params.transaction_id);
@@ -197,6 +199,7 @@ export function createLocalTransaction(
   if (transferAcct && transferAcct !== account && category === INTERNAL_TRANSFER_CATEGORY) {
     reconcileCounterpartLeg(db, userId, id, account, transferAcct, signed, date);
   }
+  syncLinkedLeg(db, userId, id);
 
   eventBus.emit("data:updated", { source: "transaction-created", userId });
   console.info("[local-transactions] Local transaction created:", id);
@@ -216,13 +219,15 @@ export function deleteLocalTransaction(userId: number, transactionId: string): {
   }
   const group = row.split_group || "";
   if (group) {
-    const rows = db.prepare("SELECT amount, account_id FROM transactions WHERE split_group = ?").all(group) as { amount: number; account_id: string }[];
+    const rows = db.prepare("SELECT ynab_id, amount, account_id FROM transactions WHERE split_group = ?").all(group) as { ynab_id: string; amount: number; account_id: string }[];
     for (const r of rows) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(r.amount, r.account_id);
     db.prepare("DELETE FROM transactions WHERE split_group = ?").run(group);
+    for (const r of rows) syncLinkedLeg(db, userId, r.ynab_id);
   } else {
     const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transactionId) as { amount: number; account_id: string } | undefined;
     db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transactionId);
     if (prev) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
+    syncLinkedLeg(db, userId, transactionId);
   }
   eventBus.emit("data:updated", { source: "transaction-deleted", userId });
   console.info("[local-transactions] Local transaction deleted:", transactionId, group ? "(split group)" : "");

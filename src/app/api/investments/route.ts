@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { updateInvestment, reorderInvestments } from "@/lib/investments-write";
+import { accountEntries } from "@/lib/linked-payments";
 
 export async function GET() {
   try {
@@ -21,7 +22,7 @@ export async function GET() {
     // Get transactions for monthly transfer detection
     const now2 = new Date();
     const monthStr2 = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, "0")}`;
-    const transactions = db.prepare("SELECT amount, account_id, date FROM transactions WHERE date >= ?").all(monthStr2 + "-01") as { amount: number; account_id: string; date: string }[];
+    const transactions = db.prepare("SELECT amount, account_id, date FROM transactions WHERE date >= ? AND payee NOT LIKE 'Reconciliation%'").all(monthStr2 + "-01") as { amount: number; account_id: string; date: string }[];
 
     // Load overrides from DB
     const overrides = db.prepare("SELECT * FROM investment_overrides").all() as any[];
@@ -56,6 +57,7 @@ export async function GET() {
         notes: override?.notes ?? "",
         ticker: override?.ticker ?? "",
         sortOrder: override?.sort_order ?? 999,
+        payments: accountEntries(db, a.id),
       };
     });
 
@@ -87,7 +89,7 @@ export async function PUT(request: Request) {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     const body = await request.json().catch(() => ({}));
     if (!body.ynab_account_id) return NextResponse.json({ error: "Account ID required" }, { status: 400 });
-    const result = updateInvestment(body);
+    const result = updateInvestment(body, user.id);
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch (error) {

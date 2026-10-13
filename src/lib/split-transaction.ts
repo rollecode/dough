@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDb } from "@/lib/db";
 import { eventBus } from "@/lib/event-bus";
+import { syncLinkedLegs } from "@/lib/linked-payments";
 
 // Splitting a transaction across categories, stored as child rows sharing the parent's id as their
 // split_group. Each child is a normal categorised row, so budget activity and the account balance
@@ -75,6 +76,7 @@ export function splitTransaction(
     }
   });
   run();
+  syncLinkedLegs(db, userId);
 
   console.info("[split]", transactionId, lines.length === 1 ? "unsplit" : `split into ${lines.length}`);
   eventBus.emit("data:updated", { source: "transaction-split", userId });

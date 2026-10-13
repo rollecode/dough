@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import { getYnabToken, getYnabBudgetId } from "@/lib/household";
 import { localMonthCategories } from "@/lib/budget-math";
 import { updateDebtOverride, reorderDebts } from "@/lib/debts-write";
+import { accountEntries, linkedCategoryName } from "@/lib/linked-payments";
 
 // Reconstruct a debt's balance over the last 12 months from its transactions and current balance.
 // balance(month-end) = current - sum(transactions booked after that month-end). Returned as a
@@ -71,18 +72,21 @@ export async function GET() {
     // works in both YNAB and local mode and does not depend on a matching budget category.
     const paidRows = db.prepare(
       "SELECT account_id, COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS paid " +
-        "FROM transactions WHERE date >= date('now', 'start of month') GROUP BY account_id"
+        "FROM transactions WHERE date >= date('now', 'start of month') AND payee NOT LIKE 'Reconciliation%' GROUP BY account_id"
     ).all() as { account_id: string; paid: number }[];
     const paidMonthMap: Record<string, number> = {};
     for (const r of paidRows) paidMonthMap[r.account_id] = r.paid;
 
     const debts = debtAccounts.map((a: any) => {
       const override = overrideMap[a.id];
-      // Find matching category for payment info
-      const matchingCat = monthBudget.categories.find((c: any) =>
-        c.name.toLowerCase().includes(a.name.split("(")[0].trim().toLowerCase()) ||
-        a.name.toLowerCase().includes(c.name.split("(")[0].trim().toLowerCase())
-      );
+      // The category linked to this debt pays it; name matching is only the fallback without a link.
+      const linkedName = linkedCategoryName(db, a.id);
+      const matchingCat = linkedName
+        ? monthBudget.categories.find((c: any) => c.name === linkedName)
+        : monthBudget.categories.find((c: any) =>
+            c.name.toLowerCase().includes(a.name.split("(")[0].trim().toLowerCase()) ||
+            a.name.toLowerCase().includes(c.name.split("(")[0].trim().toLowerCase())
+          );
 
       const monthlyTarget = matchingCat ? Math.abs(matchingCat.budgeted) : 0;
       const balance = Math.abs(a.balance);
@@ -114,6 +118,7 @@ export async function GET() {
         sortOrder: override?.sort_order ?? 999,
         isPriority: override?.is_priority ?? 0,
         history,
+        payments: accountEntries(db, a.id),
       };
     });
 

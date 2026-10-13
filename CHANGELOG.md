@@ -1,3 +1,7 @@
+### 4.8.7: 2026-10-14
+
+* Fix linked payments not lowering debts and investments
+
 ### 4.8.6: 2026-10-13
 
 * Add PixelUnion icon

@@ -2,6 +2,7 @@ import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { localMonthCategories } from "@/lib/budget-math";
 import { snowball, avalanche, HORIZON_MONTHS } from "@/lib/debt-payoff";
+import { accountEntries, linkedCategoryName } from "@/lib/linked-payments";
 
 interface DebtRow {
   id: string; name: string; balance: number;
@@ -50,16 +51,19 @@ export const GET = apiRoute("read", (request) => {
   // What went toward each debt this month: on a debt account a payment is a positive amount.
   const paidRows = db.prepare(
     "SELECT account_id, COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS paid " +
-      "FROM transactions WHERE date >= date('now', 'start of month') GROUP BY account_id"
+      "FROM transactions WHERE date >= date('now', 'start of month') AND payee NOT LIKE 'Reconciliation%' GROUP BY account_id"
   ).all() as { account_id: string; paid: number }[];
   const paidThisMonth = new Map(paidRows.map((r) => [r.account_id, r.paid]));
 
   const debts = rows.map((d) => {
-    const matching = categories.find(
-      (c) =>
-        c.name.toLowerCase().includes(d.name.split("(")[0].trim().toLowerCase()) ||
-        d.name.toLowerCase().includes(c.name.split("(")[0].trim().toLowerCase())
-    );
+    const linkedName = linkedCategoryName(db, d.id);
+    const matching = linkedName
+      ? categories.find((c) => c.name === linkedName)
+      : categories.find(
+          (c) =>
+            c.name.toLowerCase().includes(d.name.split("(")[0].trim().toLowerCase()) ||
+            d.name.toLowerCase().includes(c.name.split("(")[0].trim().toLowerCase())
+        );
     const balance = Math.abs(d.balance);
     const history = debtHistory(db, d.id, d.balance);
     const peak = history.reduce((m, p) => Math.max(m, p.balance), 0);
@@ -85,6 +89,7 @@ export const GET = apiRoute("read", (request) => {
       notes: d.notes ?? "",
       is_priority: !!d.is_priority,
       history,
+      payments: accountEntries(db, d.id),
     };
   });
 

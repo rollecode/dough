@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { localDateIso } from "./date-utils";
+import { reconcileBalance } from "./accounts-write";
 
 // Investment writes, shared by the session-authed /api/investments route and the key-authed
 // /api/v1/investments routes. Investments are ynab_accounts of type 'otherAsset' with a per-account
@@ -19,7 +20,7 @@ export interface InvestmentUpdate {
   init_contributed?: number | string; // seed the cost basis directly (new investment)
 }
 
-export function updateInvestment(p: InvestmentUpdate): { ok: true } | { error: string } {
+export function updateInvestment(p: InvestmentUpdate, userId: number): { ok: true } | { error: string } {
   const id = String(p.ynab_account_id || "");
   if (!id) return { error: "ynab_account_id required" };
   const db = getDb();
@@ -41,9 +42,7 @@ export function updateInvestment(p: InvestmentUpdate): { ok: true } | { error: s
   }
 
   const apply = db.transaction(() => {
-    if (hasValue) {
-      db.prepare("UPDATE ynab_accounts SET balance = ?, updated_at = datetime('now') WHERE id = ?").run(newValue, id);
-    }
+    if (hasValue) reconcileBalance(userId, id, newValue);
     db.prepare(
       "INSERT INTO investment_overrides (ynab_account_id, monthly_contribution, expected_return, notes, ticker, contributed) VALUES (?, ?, ?, ?, ?, ?) " +
         "ON CONFLICT(ynab_account_id) DO UPDATE SET monthly_contribution = excluded.monthly_contribution, expected_return = excluded.expected_return, notes = excluded.notes, ticker = excluded.ticker, contributed = excluded.contributed, updated_at = datetime('now')"

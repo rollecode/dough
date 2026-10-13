@@ -9,6 +9,7 @@ import { eventBus } from "@/lib/event-bus";
 import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "@/lib/transaction-utils";
 import { categoryByPayeeAmount } from "@/lib/categorize-history";
 import { localDateIso } from "@/lib/date-utils";
+import { syncLinkedLegs } from "@/lib/linked-payments";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -560,6 +561,9 @@ export async function POST(request: Request) {
         if (categorized > 0) console.info("[synci/sync] AI-categorized", categorized, "imported expenses");
       }
     }
+
+    // Payments now filed under a debt's or investment's category move that account too.
+    if (mode === "local" && firstUser) syncLinkedLegs(db, firstUser.id);
 
     // Update last sync time
     setHouseholdSetting("synci_last_sync", new Date().toISOString());

@@ -144,6 +144,9 @@
 - Per-debt percentage paid off with progress bar and balance history sparkline
 - Amount paid this month derived from each account's transactions (works without YNAB)
 - Linkable to a budget category so the minimum payment becomes that category's monthly target
+- A payment filed under the linked category lowers the debt on its own date, like a YNAB transfer to a tracking account; editing or deleting the payment moves or removes it, and a payment already entered on the debt by hand is reused
+- Each debt lists its payments, charges and balance adjustments
+- Reconcile by entering the balance the lender shows: the difference is booked as a dated adjustment, and payments dated before it are not booked again
 - Snowball and avalanche payoff strategies with charts
 - AI debt payoff suggestion (shared cache)
 - Closed account sync from YNAB
@@ -156,6 +159,8 @@
 - Two side-by-side charts (stacked on mobile): a compound-growth forecast and "Your progress" - your actual total value over time, one point per manual value save
 - Reconcile value by hand; an "Added now" field logs new money so profit is real (profit = current value minus what you put in, with a percentage). Investments are never treated as spending accounts and never appear in the Accounts tab
 - Monthly contributions included in dashboard month status
+- A contribution filed under the linked category grows the investment and what was put in, on its own date
+- Each investment lists its contributions and value adjustments; a new value is booked as a dated adjustment
 
 ### Subscriptions
 

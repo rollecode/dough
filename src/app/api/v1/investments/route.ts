@@ -1,6 +1,7 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { calculateProjection } from "@/lib/investment-projection";
+import { accountEntries } from "@/lib/linked-payments";
 
 interface InvRow {
   id: string; name: string; balance: number;
@@ -24,6 +25,7 @@ export const GET = apiRoute("read", (request) => {
     expected_return: r.expected_return ?? 7,
     notes: r.notes ?? "",
     ticker: r.ticker ?? "",
+    payments: accountEntries(getDb(), r.id),
   }));
   // The value-over-time snapshots the investments page charts, and the totals it heads with.
   const progress = getDb()
