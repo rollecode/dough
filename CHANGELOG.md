@@ -1,3 +1,7 @@
+### 4.8.6: 2026-10-13
+
+* Add PixelUnion icon
+
 ### 4.8.5: 2026-10-08
 
 * Add monthly targets due by a day

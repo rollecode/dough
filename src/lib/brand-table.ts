@@ -49,6 +49,8 @@ export const BRANDS: Record<string, { color: string; logo: string; svg?: string;
   outsider: { color: "#E5308A", logo: "O", img: "outsider.png" },
   revolut: { color: "#191C1F", logo: "R", img: "revolut.svg" },
   strava: { color: "#FC4C02", logo: "S", img: "strava.svg" },
+  pixelunion: { color: "#002F9A", logo: "P", img: "pixelunion.png" },
+  "pixel union": { color: "#002F9A", logo: "P", img: "pixelunion.png" },
 };
 
 export function getBrandConfig(name: string): { color: string; logo: string; svg?: string; img?: string; known: boolean } {
