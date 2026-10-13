@@ -101,3 +101,10 @@ test("a debt's balance sent with its terms is booked as a dated adjustment", asy
   const adj = db.prepare("SELECT amount FROM transactions WHERE account_id = 'loan' AND payee LIKE 'Reconciliation%' ORDER BY id DESC LIMIT 1").get() as { amount: number };
   assert.equal(adj.amount, Math.round((-500 - before) * 100) / 100);
 });
+
+test("an adjustment imported from YNAB also dates the balance", () => {
+  db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, account_id) VALUES (1, 'ynab_adj', '2031-01-01', 0, 'Manual Balance Adjustment', '', 'loan')").run();
+  const before = balance("loan");
+  createLocalTransaction(1, { account_id: "chk", amount: 30, date: "2030-12-31", payee_name: "Lender", category: "Car loan payment" });
+  assert.equal(balance("loan"), before);
+});

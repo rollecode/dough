@@ -25,7 +25,7 @@ function moveBalance(db: Db, accountId: string, delta: number): void {
 
 function lastAnchorDate(db: Db, accountId: string): string {
   const row = db.prepare(
-    "SELECT MAX(date) AS d FROM transactions WHERE account_id = ? AND (payee LIKE 'Reconciliation%' OR payee LIKE 'Starting Balance%')"
+    "SELECT MAX(date) AS d FROM transactions WHERE account_id = ? AND (payee LIKE 'Reconciliation%' OR payee LIKE 'Manual Balance Adjustment%' OR payee LIKE 'Starting Balance%')"
   ).get(accountId) as { d: string | null };
   return row.d || "";
 }
@@ -90,7 +90,7 @@ export function syncLinkedLeg(db: Db, userId: number, sourceId: string, how: Leg
   const manual = db.prepare(
     "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) " +
       "AND ABS(julianday(date) - julianday(?)) <= ? AND ynab_id NOT LIKE 'link_%' " +
-      "AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE 'Reconciliation%' AND payee NOT LIKE 'Starting Balance%' LIMIT 1"
+      "AND payee NOT LIKE 'Transfer%' AND payee NOT LIKE '%Balance Adjustment%' AND payee NOT LIKE 'Starting Balance%' LIMIT 1"
   ).get(target, amount, src.date, ADOPT_WINDOW_DAYS) as { ynab_id: string } | undefined;
   if (manual) {
     db.prepare("UPDATE transactions SET ynab_id = ?, payee = ? WHERE ynab_id = ?").run(legId, payee, manual.ynab_id);

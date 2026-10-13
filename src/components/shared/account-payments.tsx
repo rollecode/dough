@@ -19,7 +19,7 @@ export function AccountPayments({ payments }: { payments?: AccountPayment[] }) {
   if (!payments || payments.length === 0) return null;
   const fi = locale === "fi";
   const label = (p: AccountPayment) => {
-    if (p.payee.startsWith("Reconciliation")) return fi ? "Saldon korjaus" : "Balance adjustment";
+    if (p.payee.startsWith("Reconciliation") || p.payee.startsWith("Manual Balance Adjustment")) return fi ? "Saldon korjaus" : "Balance adjustment";
     if (p.payee.startsWith("Starting Balance")) return fi ? "Alkusaldo" : "Starting balance";
     if (p.payee.startsWith("Transfer : ")) return `${fi ? "Tililtä" : "From"} ${p.payee.slice("Transfer : ".length)}`;
     return p.payee;
