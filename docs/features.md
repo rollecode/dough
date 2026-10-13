@@ -184,6 +184,7 @@
 - Snapshot history with area chart and forecast line
 - 20-year projection modeling cash, investments, and debts separately
 - Auto-snapshot on every sync
+- The chart always ends at today's live balances, and a debt or investment payment booked late is written back into the saved days from its date on
 
 ### Settings
 

@@ -1,3 +1,7 @@
+### 4.8.8: 2026-10-14
+
+* Fix net worth chart lagging behind the balances
+
 ### 4.8.7: 2026-10-14
 
 * Fix linked payments not lowering debts and investments

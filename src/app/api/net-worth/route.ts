@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { localDateIso } from "@/lib/date-utils";
+import { netWorthHistory } from "@/lib/net-worth-history";
 
 export async function GET() {
   try {
@@ -12,9 +12,7 @@ export async function GET() {
     }
 
     const db = getDb();
-    const snapshots = db
-      .prepare("SELECT date, checking, savings, investments, debts, net_worth FROM net_worth_snapshots ORDER BY date ASC")
-      .all() as any[];
+    const snapshots = netWorthHistory(db);
 
     console.debug("[net-worth] Loaded", snapshots.length, "snapshots for user", user.id);
 
