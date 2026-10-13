@@ -37,6 +37,7 @@ import { ChartContainer } from "@/components/ui/chart-container";
 import { calculateProjection } from "@/lib/investment-projection";
 import { F } from "@/components/ui/f";
 import { BudgetLinkControl } from "@/components/shared/budget-link-control";
+import { AccountPayments, type AccountPayment } from "@/components/shared/account-payments";
 
 interface InvestmentData {
   id: string;
@@ -50,6 +51,7 @@ interface InvestmentData {
   notes: string;
   ticker: string;
   added?: number; // transient: money added this save, entered in the "Added now" field
+  payments?: AccountPayment[];
 }
 
 interface ProgressPoint { date: string; value: number; invested: number }
@@ -638,6 +640,7 @@ export default function InvestmentsPage() {
               })()}
               <InvestmentFields inv={inv} ticker={inv.ticker ? tickerData[inv.ticker.toUpperCase()] : null} saving={saving === inv.id} onChange={(f, v) => updateInvestment(inv.id, f, v)} onTicker={(v) => setInvestments((prev) => prev.map((i) => i.id === inv.id ? { ...i, ticker: v } : i))} onSave={() => saveOverride(inv)} />
               <BudgetLinkControl linkType="investment_account" targetId={inv.id} />
+              <AccountPayments payments={inv.payments} />
             </div>
           ))}
         </Card>
@@ -727,6 +730,8 @@ export default function InvestmentsPage() {
                             <div className="row-detail-edit">
                               <InvestmentFields inv={inv} ticker={td} saving={saving === inv.id} onChange={(f, v) => updateInvestment(inv.id, f, v)} onTicker={(v) => setInvestments((prev) => prev.map((i) => i.id === inv.id ? { ...i, ticker: v } : i))} onSave={() => saveOverride(inv)} />
                               <BudgetLinkControl linkType="investment_account" targetId={inv.id} />
+                              <AccountPayments payments={inv.payments} />
+              <AccountPayments payments={inv.payments} />
                             </div>
                           </div>
                         </td>

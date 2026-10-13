@@ -44,6 +44,7 @@ import { ChartContainer } from "@/components/ui/chart-container";
 import { formatDuration } from "@/lib/date-utils";
 import { F } from "@/components/ui/f";
 import { BudgetLinkControl } from "@/components/shared/budget-link-control";
+import { AccountPayments, type AccountPayment } from "@/components/shared/account-payments";
 import { DebtBreakdown } from "@/components/debts/debt-breakdown";
 
 interface DebtData {
@@ -62,6 +63,7 @@ interface DebtData {
   notes: string;
   isPriority: number;
   history?: { month: string; balance: number }[];
+  payments?: AccountPayment[];
 }
 
 // One debt's actual balance history: a sparkline, or with axes when a row is opened.
@@ -494,6 +496,7 @@ export default function DebtsPage() {
               )}
               <DebtFields debt={debt} saving={saving === debt.id} onChange={(f, v) => updateDebt(debt.id, f, v)} onSave={() => saveOverride(debt)} />
               <BudgetLinkControl linkType="debt_account" targetId={debt.id} />
+              <AccountPayments payments={debt.payments} />
             </div>
           ))}
         </Card>
@@ -569,6 +572,7 @@ export default function DebtsPage() {
                             <div className="row-detail-edit">
                               <DebtFields debt={debt} saving={saving === debt.id} onChange={(f, v) => updateDebt(debt.id, f, v)} onSave={() => saveOverride(debt)} />
                               <BudgetLinkControl linkType="debt_account" targetId={debt.id} />
+                              <AccountPayments payments={debt.payments} />
                             </div>
                           </div>
                         </td>

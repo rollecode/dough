@@ -1,0 +1,59 @@
+/* Module: account-payments - what was booked on a debt or investment */
+
+.account-payments {
+  margin-top: 0.5rem;
+}
+
+.account-payments-summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.account-payments-summary:hover {
+  color: var(--foreground);
+}
+
+.account-payments-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.account-payments-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.375rem 0;
+  font-size: 0.8125rem;
+  border-top: 1px solid var(--border);
+}
+
+.account-payments-date {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.account-payments-payee {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-payments-memo {
+  color: var(--muted-foreground);
+}
+
+.account-payments-amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.account-payments-amount.is-positive {
+  color: var(--positive);
+}

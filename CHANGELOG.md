@@ -1,6 +1,7 @@
 ### 4.8.7: 2026-10-14
 
 * Fix linked payments not lowering debts and investments
+* Show payments under each debt and investment
 
 ### 4.8.6: 2026-10-13
 
