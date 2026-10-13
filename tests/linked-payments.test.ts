@@ -5,8 +5,11 @@ import { createLocalTransaction, updateLocalTransaction, deleteLocalTransaction 
 import { updateAccount } from "@/lib/accounts-write";
 import { updateInvestment } from "@/lib/investments-write";
 import { syncLinkedLegs } from "@/lib/linked-payments";
+import { getHouseholdSetting, setHouseholdSetting } from "@/lib/household";
 
 const db = getDb();
+const firstRunDay = getHouseholdSetting("linked_payments_since");
+setHouseholdSetting("linked_payments_since", "2000-01-01");
 db.prepare("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (1, 'l@example.com', 'x')").run();
 const addAccount = (id: string, name: string, type: string, balance: number) =>
   db.prepare("INSERT INTO ynab_accounts (id, name, type, balance, cleared_balance, on_budget, closed, source) VALUES (?, ?, ?, ?, ?, 0, 0, 'manual')")
@@ -84,4 +87,8 @@ test("unlinking a category keeps the payments already booked on the debt", () =>
   syncLinkedLegs(db, 1);
   assert.equal(balance("loan"), before + 40);
   db.prepare("UPDATE categories SET debt_account_id = 'loan' WHERE name = 'Car loan payment'").run();
+});
+
+test("a household starts booking linked payments from the day it first runs them", () => {
+  assert.match(firstRunDay ?? "", /^\d{4}-\d{2}-\d{2}$/);
 });

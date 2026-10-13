@@ -882,6 +882,10 @@ function initializeDb(db: Database.Database) {
     db.prepare("INSERT OR IGNORE INTO household_settings (key, value) VALUES ('ynab_user_migrated', '1')").run();
   }
 
+  // Linked debt and investment payments are booked from the day a household first runs them, so
+  // imported history is never booked twice. scripts/backfill-linked-payments.ts moves it back.
+  db.prepare("INSERT OR IGNORE INTO household_settings (key, value) VALUES ('linked_payments_since', date('now', 'localtime'))").run();
+
   // One-time seed: copy distinct categories from ynab_categories into local categories
   // table if the local table is empty and the YNAB mirror has data. Idempotent (no-op once seeded).
   try {

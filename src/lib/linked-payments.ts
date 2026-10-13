@@ -16,7 +16,7 @@ export const isLinkedLeg = (id: string) => id.startsWith(LEG_PREFIX);
 
 // Balance and, for an investment that tracks it, the money put in move together.
 function moveBalance(db: Db, accountId: string, delta: number): void {
-  db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(delta, accountId);
+  db.prepare("UPDATE ynab_accounts SET balance = ROUND(balance + ?, 2), updated_at = datetime('now') WHERE id = ?").run(delta, accountId);
   db.prepare(
     "UPDATE investment_overrides SET contributed = ROUND(contributed + ?, 2), updated_at = datetime('now') " +
       "WHERE ynab_account_id = ? AND contributed IS NOT NULL AND ynab_account_id IN (SELECT id FROM ynab_accounts WHERE type = 'otherAsset')"
