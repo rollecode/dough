@@ -1,3 +1,7 @@
+### 4.8.9: 2026-10-18
+
+* Add every debt payment to the debts page
+
 ### 4.8.8: 2026-10-14
 
 * Fix net worth chart lagging behind the balances

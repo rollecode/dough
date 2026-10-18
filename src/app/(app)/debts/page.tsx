@@ -331,6 +331,9 @@ export default function DebtsPage() {
   };
 
   const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
+  const allPayments = debts
+    .flatMap((d) => (d.payments ?? []).map((p) => ({ ...p, id: `${d.id}:${p.id}`, account: d.name })))
+    .sort((a, b) => b.date.localeCompare(a.date));
   const totalMonthly = debts.reduce((s, d) => s + (d.minimumPayment || d.monthlyTarget), 0);
 
   const snowball = calculatePayoff(debts, extraPayment, (a, b) => a.balance - b.balance);
@@ -585,6 +588,13 @@ export default function DebtsPage() {
             </tbody>
           </table>
           </div>
+        </Card>
+      )}
+
+      {/* Every debt's payments in one list, newest first */}
+      {allPayments.length > 0 && (
+        <Card className="metric-card">
+          <AccountPayments payments={allPayments} open />
         </Card>
       )}
 
