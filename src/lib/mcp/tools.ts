@@ -712,6 +712,18 @@ export function buildMcpServer(api: DoughApi): McpServer {
   );
 
   server.registerTool(
+    "dough_daily_report",
+    { description: "The end-of-day report for a day, written by the AI on first ask and kept. Without a date: today from 18:00, yesterday before it.", inputSchema: { date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Date as YYYY-MM-DD"), locale: z.string().optional().describe("Language of the report, e.g. fi or en") } },
+    ({ date, locale }) => reply(api.get("daily-report", { date, locale }))
+  );
+
+  server.registerTool(
+    "dough_regenerate_daily_report",
+    { description: "Write a day's end-of-day report anew, for when that day's bank transactions arrived after it was written. Slow. Requires a write-scoped key.", inputSchema: { date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Date as YYYY-MM-DD"), locale: z.string().optional().describe("Language of the report, e.g. fi or en") } },
+    (args) => reply(api.post("daily-report", args))
+  );
+
+  server.registerTool(
     "dough_profile",
     { description: "Who the key belongs to: display name, budget share and the accounts they have linked as their own.", inputSchema: {} },
     () => reply(api.get("profile"))

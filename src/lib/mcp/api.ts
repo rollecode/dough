@@ -53,6 +53,7 @@ import { POST as budgetUnassignPost } from "@/app/api/v1/budget/unassign/route";
 import { POST as categoriesReorderPost } from "@/app/api/v1/categories/reorder/route";
 import { GET as categoriesSuggestGet } from "@/app/api/v1/categories/suggest/route";
 import { GET as chatGet, POST as chatPost } from "@/app/api/v1/chat/route";
+import { GET as dailyReportGet, POST as dailyReportPost } from "@/app/api/v1/daily-report/route";
 import { GET as dashboardGet } from "@/app/api/v1/dashboard/route";
 import { POST as netWorthSnapshotPost } from "@/app/api/v1/net-worth/snapshot/route";
 import { GET as payeeMatchesGet, POST as payeeMatchesPost } from "@/app/api/v1/payee-matches/route";
@@ -78,6 +79,7 @@ export const GET_ROUTES: Record<string, Handler> = {
   "budget/auto-assign": budgetAutoAssignGet,
   "categories/suggest": categoriesSuggestGet,
   "chat": chatGet,
+  "daily-report": dailyReportGet,
   "dashboard": dashboardGet,
   "debts": debtsGet,
   "income": incomeGet,
@@ -121,6 +123,7 @@ export const POST_ROUTES: Record<string, Handler> = {
   "categories/target": categoriesTargetPost,
   "categories/update": categoriesUpdatePost,
   "chat": chatPost,
+  "daily-report": dailyReportPost,
   "debts/reorder": debtsReorderPost,
   "debts/update": debtsUpdatePost,
   "income/create": incomeCreatePost,

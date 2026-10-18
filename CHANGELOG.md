@@ -2,6 +2,7 @@
 
 * Add every debt payment to the debts page
 * Add a daily report page with regenerate and chat
+* Add the daily report to MCP
 
 ### 4.8.8: 2026-10-14
 
