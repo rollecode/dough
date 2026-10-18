@@ -38,6 +38,7 @@ export const fi = {
   nav: {
     dashboard: "Yhteenveto",
     chat: "AI-neuvoja Dougie",
+    dailyReport: "Päivän raportti",
     transactions: "Tilitapahtumat",
     accounts: "Tilit",
     bills: "Laskut",

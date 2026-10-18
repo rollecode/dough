@@ -1,0 +1,25 @@
+/* Module: daily-report - the end-of-day report page */
+
+.page-subheading {
+  margin: 0.125rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+}
+
+.daily-report-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--foreground);
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.daily-report-text p {
+  margin: 0;
+}
+
+.daily-report-text strong {
+  font-weight: 600;
+  white-space: nowrap;
+}

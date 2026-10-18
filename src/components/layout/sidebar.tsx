@@ -22,6 +22,7 @@ import {
   Eye,
   EyeOff,
   X,
+  NotebookPen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback } from "react";
@@ -33,6 +34,7 @@ const navKeys = [
   { href: "/dashboard", icon: LayoutDashboard, key: "dashboard" },
   { href: "/net-worth", icon: LineChart, key: "netWorth" },
   { href: "/chat", icon: MessageSquare, key: "chat" },
+  { href: "/daily-report", icon: NotebookPen, key: "dailyReport" },
   { href: "/transactions", icon: Receipt, key: "transactions" },
   { href: "/accounts", icon: Landmark, key: "accounts" },
   { href: "/bills", icon: CalendarClock, key: "bills" },

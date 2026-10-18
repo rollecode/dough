@@ -38,6 +38,7 @@ export const en = {
   nav: {
     dashboard: "Dashboard",
     chat: "AI advisor Dougie",
+    dailyReport: "Daily report",
     transactions: "Transactions",
     accounts: "Accounts",
     bills: "Bills",

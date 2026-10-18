@@ -1,7 +1,7 @@
 ### 4.8.9: 2026-10-18
 
 * Add every debt payment to the debts page
-* Add an end-of-day report with regenerate and chat
+* Add a daily report page with regenerate and chat
 
 ### 4.8.8: 2026-10-14
 

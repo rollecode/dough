@@ -11,7 +11,6 @@ import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DailyAllowance } from "@/components/dashboard/daily-allowance";
 import { AiSummary } from "@/components/dashboard/ai-summary";
-import { DailyReport } from "@/components/dashboard/daily-report";
 import { EntryReminder } from "@/components/dashboard/entry-reminder";
 import { PersonalGreeting } from "@/components/dashboard/personal-greeting";
 import { SpendingFlow } from "@/components/dashboard/spending-flow";
@@ -620,7 +619,6 @@ export default function DashboardPage() {
 
       <SpendingFlow />
 
-      <DailyReport />
       <AiSummary />
 
       <DailyAllowance
