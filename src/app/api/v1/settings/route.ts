@@ -7,6 +7,7 @@ import { getHouseholdSettings, setHouseholdSetting } from "@/lib/household";
 // reach every setting, only the ones a person adjusts while looking at the day's number.
 //
 // burn_rate_excluded_payees is the one list: payees the burn rate leaves out, rent for example.
+// daily_report turns the end-of-day report on or off for the household.
 //
 // Display preferences are not here. How many decimals a client shows is that client's business,
 // and a phone changing the web app's formatting would be a surprise, not a feature.
@@ -44,6 +45,7 @@ export const GET = apiRoute("read", () => {
     daily_cap: parseFloat(settings.daily_cap || "0") || 0,
     household_size: parseInt(settings.household_size || "1", 10),
     burn_rate_excluded_payees: excludedPayees(settings.burn_rate_excluded_payees),
+    daily_report: settings.daily_report_disabled !== "1",
   };
 });
 
@@ -79,6 +81,11 @@ export const POST = apiRoute("write", async (request) => {
     if (body[key] === undefined) continue;
     setHouseholdSetting(key, body[key] ? "1" : "0");
     written.push(key);
+  }
+
+  if (body.daily_report !== undefined) {
+    setHouseholdSetting("daily_report_disabled", body.daily_report ? "0" : "1");
+    written.push("daily_report");
   }
 
   if (body.burn_rate_excluded_payees !== undefined) {

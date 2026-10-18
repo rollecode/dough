@@ -10,13 +10,8 @@ import { useEvent } from "@/lib/use-events";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { copyToClipboard } from "@/lib/clipboard";
+import { AMOUNT_KINDS } from "@/lib/amount-kinds";
 import { markdownify } from "@/lib/markdownify";
-
-const AMOUNT_KINDS: Record<string, string> = {
-  "#expense": "chat-amount-negative",
-  "#income": "chat-amount-positive",
-  "#transfer": "chat-amount-transfer",
-};
 
 interface Message {
   id: string;
@@ -39,6 +34,17 @@ export function ChatInterface() {
   const { t } = useLocale();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+
+  // ?ask= arrives from "Chat about this": the message is written out for the person to send.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const ask = url.searchParams.get("ask");
+    if (!ask) return;
+    console.info("[chat] Prefilled from ?ask, length", ask.length);
+    setInput(ask);
+    url.searchParams.delete("ask");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, []);
   const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);

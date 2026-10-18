@@ -79,6 +79,8 @@ export default function SettingsPage() {
   const [ynabSyncHour, setYnabSyncHour] = useState("6");
   const [syncHourSaved, setSyncHourSaved] = useState(false);
   const [aiSummariesDisabled, setAiSummariesDisabled] = useState(false);
+  const [dailyReportOn, setDailyReportOn] = useState(true);
+  const [dailyReportSaved, setDailyReportSaved] = useState(false);
   const [aiSummariesSaved, setAiSummariesSaved] = useState(false);
   const [billsModeSaved, setBillsModeSaved] = useState(false);
   const [thresholds, setThresholds] = useState({ tight: "20", normal: "30", good: "50" });
@@ -199,6 +201,9 @@ export default function SettingsPage() {
           }
           if (householdData.settings?.ynab_sync_hour !== undefined) {
             setYnabSyncHour(String(householdData.settings.ynab_sync_hour));
+          }
+          if (householdData.settings?.daily_report_disabled !== undefined) {
+            setDailyReportOn(householdData.settings.daily_report_disabled !== "1");
           }
           if (householdData.settings?.ai_summaries_disabled !== undefined) {
             setAiSummariesDisabled(householdData.settings.ai_summaries_disabled === "1");
@@ -1507,6 +1512,31 @@ export default function SettingsPage() {
                 {locale === "fi"
                   ? "Piilottaa AI-yhteenvedot ja velkasuosituksen kaikkialta sovelluksessa. Asetus on jaettu kotitalouden kaikille käyttäjille."
                   : "Hides AI summaries and the debt suggestion across the app. Setting is shared with all household users."}
+              </p>
+            </div>
+            <div className="form-field">
+              <Label>{locale === "fi" ? "Päivän raportti" : "Daily report"}</Label>
+              <div className="settings-row">
+                <Switch
+                  checked={dailyReportOn}
+                  onCheckedChange={async (v) => {
+                    setDailyReportOn(v);
+                    await fetch("/api/household", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ daily_report_disabled: v ? "0" : "1" }),
+                    });
+                    console.info("[settings] Daily report", v ? "on" : "off");
+                    setDailyReportSaved(true);
+                    setTimeout(() => setDailyReportSaved(false), 2000);
+                  }}
+                />
+                {dailyReportSaved && <span className="settings-saved">{t.common.saved}</span>}
+              </div>
+              <p className="settings-help">
+                {locale === "fi"
+                  ? "Illalla AI kirjoittaa, miten päivä meni budjettiin nähden. Puhelin muistuttaa siitä, jos ilmoitukset ovat päällä. Asetus on jaettu kotitalouden kaikille käyttäjille."
+                  : "In the evening the AI writes how the day went against the budget. The phone reminds you of it when notifications are on. Setting is shared with all household users."}
               </p>
             </div>
             {([

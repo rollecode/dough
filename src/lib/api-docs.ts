@@ -53,6 +53,20 @@ export const SECTIONS: Section[] = [
       },
       {
         method: "GET",
+        path: "/daily-report",
+        scope: "read",
+        summary:
+          "The end-of-day report: how a day went against its budget, written by the AI on first ask and kept. date= defaults to today from 18:00 and yesterday before it; locale= is en or fi. disabled is true when the household has turned it off.",
+      },
+      {
+        method: "POST",
+        path: "/daily-report",
+        scope: "write",
+        summary:
+          "Writes the report anew, for when that day's transactions arrived after it was written. Body: { date?, locale? }. Answers 502 with { error } when the AI cannot write it.",
+      },
+      {
+        method: "GET",
         path: "/ai-status",
         scope: "read",
         summary:
