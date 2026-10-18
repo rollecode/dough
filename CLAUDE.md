@@ -82,6 +82,13 @@ CRITICAL: Production runs on a remote server. After pushing, deploy by SSH: git 
 - Several deploys in one day share one version: fold them into that day's heading instead of
   bumping again
 
+## Pages
+
+- The dashboard answers "how much can we spend today?" and nothing else may push that down: a new
+  feature gets its own page and sidebar entry, never a card above the day's figures. The daily
+  report lives at `/daily-report` (sidebar, after Dougie), with the same page on iOS as its own
+  section. The AI summary card is the one exception and stays where it is.
+
 ## Database
 
 - ALWAYS back up data/dough.db before potentially destructive or large database operations (migrations, schema changes, bulk deletes)
