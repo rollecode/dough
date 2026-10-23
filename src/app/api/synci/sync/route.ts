@@ -10,6 +10,7 @@ import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee }
 import { categoryByPayeeAmount } from "@/lib/categorize-history";
 import { localDateIso } from "@/lib/date-utils";
 import { syncLinkedLegs } from "@/lib/linked-payments";
+import { pairLegs } from "@/lib/transfer-pairing";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -328,6 +329,7 @@ export async function POST(request: Request) {
           // they read as a transfer everywhere (and stay out of spending/income via isTransfer()).
           db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${bName}`, INTERNAL_TRANSFER_CATEGORY, a.ynab_id);
           db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${aName}`, INTERNAL_TRANSFER_CATEGORY, b.ynab_id);
+          pairLegs(db, a.ynab_id, b.ynab_id);
           paired.add(a.ynab_id); paired.add(b.ynab_id);
           transfersPaired++;
           break;
@@ -350,6 +352,7 @@ export async function POST(request: Request) {
           "SELECT o.ynab_id, o.account_id FROM transactions o " +
             "WHERE o.category = 'Internal transfer' AND ROUND(o.amount, 2) = ROUND(?, 2) AND o.account_id != ? " +
             "AND ABS(julianday(o.date) - julianday(?)) <= 2 " +
+            "AND NOT EXISTS (SELECT 1 FROM transactions q WHERE q.ynab_id = o.transfer_peer) " +
             "AND NOT EXISTS (SELECT 1 FROM transactions z WHERE z.category = 'Internal transfer' AND ROUND(z.amount, 2) = ROUND(?, 2) AND z.account_id != o.account_id AND ABS(julianday(z.date) - julianday(o.date)) <= 2) " +
             "LIMIT 1"
         ).get(-inf.amount, inf.account_id, inf.date, inf.amount) as { ynab_id: string; account_id: string } | undefined;
@@ -360,6 +363,7 @@ export async function POST(request: Request) {
         // Relabel the existing leg too: it can still carry the person payee from before pairing,
         // which reads as a transfer without a counterpart account in the UI.
         db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ? AND payee NOT LIKE 'Transfer%'").run(`Transfer : ${infName}`, out.ynab_id);
+        pairLegs(db, inf.ynab_id, out.ynab_id);
         paired.add(inf.ynab_id);
         transfersPaired++;
       }
@@ -424,11 +428,14 @@ export async function POST(request: Request) {
             if (existing) {
               db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
                 .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
+              pairLegs(db, inf.ynab_id, existing.ynab_id);
               paired.add(existing.ynab_id);
             } else if (!syncedLocalIds.has(counterAcct)) {
+              const legId = `local_${randomUUID()}`;
               db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, 'Synci', ?, 1, 'cleared')")
-                .run(firstUser.id, `local_${randomUUID()}`, inf.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
+                .run(firstUser.id, legId, inf.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
               db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, counterAcct);
+              pairLegs(db, inf.ynab_id, legId);
             }
             db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
               .run(`Transfer : ${counterName}`, INTERNAL_TRANSFER_CATEGORY, inf.ynab_id);
@@ -473,11 +480,14 @@ export async function POST(request: Request) {
             if (existing) {
               db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
                 .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
+              pairLegs(db, out.ynab_id, existing.ynab_id);
               paired.add(existing.ynab_id);
             } else if (!syncedLocalIds.has(counterAcct)) {
+              const legId = `local_${randomUUID()}`;
               db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, 'Synci', ?, 1, 'cleared')")
-                .run(firstUser.id, `local_${randomUUID()}`, out.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
+                .run(firstUser.id, legId, out.date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, counterAcct);
               db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, counterAcct);
+              pairLegs(db, out.ynab_id, legId);
             }
             db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
               .run(`Transfer : ${counterName}`, INTERNAL_TRANSFER_CATEGORY, out.ynab_id);
@@ -501,9 +511,11 @@ export async function POST(request: Request) {
       let relabeled = 0;
       for (const leg of unlabeled) {
         const opposite = db.prepare(
-          "SELECT account_id FROM transactions WHERE category = 'Internal transfer' AND ROUND(amount, 2) = ROUND(?, 2) " +
-            "AND account_id != ? AND ABS(julianday(date) - julianday(?)) <= 2 LIMIT 1"
-        ).get(-leg.amount, leg.account_id, leg.date) as { account_id: string } | undefined;
+          "SELECT o.account_id FROM transactions o WHERE o.category = 'Internal transfer' AND ROUND(o.amount, 2) = ROUND(?, 2) " +
+            "AND o.account_id != ? AND ABS(julianday(o.date) - julianday(?)) <= 2 " +
+            "AND (o.transfer_peer = ? OR NOT EXISTS (SELECT 1 FROM transactions q WHERE q.ynab_id = o.transfer_peer)) " +
+            "ORDER BY o.transfer_peer = ? DESC LIMIT 1"
+        ).get(-leg.amount, leg.account_id, leg.date, leg.ynab_id, leg.ynab_id) as { account_id: string } | undefined;
         if (!opposite) continue;
         const oppName = acctNames.get(opposite.account_id) || "";
         if (!oppName) continue;

@@ -5,19 +5,18 @@ import { eventBus } from "./event-bus";
 import { localDateIso } from "./date-utils";
 import { INTERNAL_TRANSFER_CATEGORY, normTransferPayee, isGenericTransferPayee } from "./transaction-utils";
 import { syncLinkedLeg } from "./linked-payments";
+import { peerLeg, releasePeer, freeTransferLeg, pairLegs, forgetPeers } from "./transfer-pairing";
 
 // Local-mode transaction mutations shared by the internal session-authenticated route and the
 // key-authenticated v1 API. A field left undefined keeps the stored value, so API callers can
 // patch a single field; the edit dialog always sends every field, which preserves its behaviour.
 
-// Ensure an internal transfer's opposite leg exists on the counterpart account exactly once, and
-// that both legs name each other ("Transfer : <account>"). Idempotent: preference order is
-//   1. an existing opposite internal-transfer leg (already paired, e.g. by Synci or a prior save):
-//      reuse it, never duplicate. This is what makes re-saving a complete transfer safe now that
-//      the edit dialog pre-fills and re-sends the counterpart account;
-//   2. an unclassified opposite-amount leg to adopt (the other side arrived uncategorised);
-//   3. otherwise fabricate the leg and apply its balance effect.
-// Shared by updateLocalTransaction and createLocalTransaction so both maintain the pair identically.
+// Give an internal transfer exactly one opposite leg on the counterpart account, paired both ways
+// and labelled "Transfer : <account>". In order of preference:
+//   1. its own paired leg from an earlier save (released first when the counterpart account changed);
+//   2. a free internal-transfer leg there, never one already paired with another transaction;
+//   3. an uncategorised opposite-amount leg to adopt (the other side arrived unclassified);
+//   4. otherwise a new leg with its balance effect.
 function reconcileCounterpartLeg(
   db: ReturnType<typeof getDb>,
   userId: number,
@@ -32,26 +31,43 @@ function reconcileCounterpartLeg(
     (db.prepare("SELECT name FROM ynab_accounts WHERE id = ?").get(id) as { name: string } | undefined)?.name || "";
   const thisName = nameOf(primaryAccount);
   const counterName = nameOf(transferAcct);
-  const pairedLeg = db.prepare(
-    "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND category = 'Internal transfer' AND ynab_id != ? AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
-  ).get(transferAcct, counterSigned, primaryId, date, date) as { ynab_id: string } | undefined;
-  if (pairedLeg) {
-    // Transfer is already complete: just make sure the existing counterpart leg names this account.
-    db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${thisName}`, pairedLeg.ynab_id);
-  } else {
-    const existing = db.prepare(
-      "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND category != 'Internal transfer' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
+
+  let own = peerLeg(db, primaryId);
+  if (own && own.account_id !== transferAcct) {
+    console.info("[local-transactions] Transfer", primaryId, "moved to another account, releasing its old leg");
+    releasePeer(db, primaryId);
+    own = undefined;
+  }
+
+  // A leg Dough made follows the transfer's amount and date; a bank leg keeps what the bank says.
+  if (own && own.ynab_id.startsWith("local_") && (own.amount !== counterSigned || own.date !== date)) {
+    db.prepare("UPDATE transactions SET amount = ?, date = ? WHERE ynab_id = ?").run(counterSigned, date, own.ynab_id);
+    db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned - own.amount, transferAcct);
+  }
+
+  const query = { primaryId, primaryAccount, primaryName: thisName, counterAccount: transferAcct, counterName, amount: counterSigned, date };
+  let legId = own?.ynab_id ?? freeTransferLeg(db, query);
+  if (!legId) {
+    const loose = db.prepare(
+      "SELECT ynab_id FROM transactions WHERE account_id = ? AND ROUND(amount, 2) = ROUND(?, 2) AND COALESCE(category, '') = '' " +
+        "AND transfer_peer = '' AND date BETWEEN date(?, '-2 days') AND date(?, '+2 days') LIMIT 1"
     ).get(transferAcct, counterSigned, date, date) as { ynab_id: string } | undefined;
-    if (existing) {
-      db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?")
-        .run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, existing.ynab_id);
-    } else {
-      db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, '', ?, 1, 'cleared')")
-        .run(userId, `local_${randomUUID()}`, date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, transferAcct);
-      db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, transferAcct);
+    legId = loose?.ynab_id;
+    if (legId) {
+      console.info("[local-transactions] Adopted an uncategorised leg as the counterpart of", primaryId);
     }
   }
+  if (!legId) {
+    legId = `local_${randomUUID()}`;
+    db.prepare("INSERT INTO transactions (user_id, ynab_id, date, amount, payee, category, memo, account_id, approved, cleared) VALUES (?, ?, ?, ?, ?, ?, '', ?, 1, 'cleared')")
+      .run(userId, legId, date, counterSigned, `Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, transferAcct);
+    db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?").run(counterSigned, transferAcct);
+    console.info("[local-transactions] Created the counterpart leg of", primaryId);
+  }
+
+  db.prepare("UPDATE transactions SET payee = ?, category = ? WHERE ynab_id = ?").run(`Transfer : ${thisName}`, INTERNAL_TRANSFER_CATEGORY, legId);
   db.prepare("UPDATE transactions SET payee = ? WHERE ynab_id = ?").run(`Transfer : ${counterName}`, primaryId);
+  pairLegs(db, primaryId, legId);
 }
 
 export interface LocalTransactionUpdate {
@@ -144,6 +160,9 @@ export function updateLocalTransaction(
   if (transferAcct && transferAcct !== newAccount && newCategory === INTERNAL_TRANSFER_CATEGORY) {
     reconcileCounterpartLeg(db, userId, params.transaction_id, newAccount, transferAcct, signed, newDate);
   }
+  if (newCategory !== INTERNAL_TRANSFER_CATEGORY) {
+    releasePeer(db, params.transaction_id);
+  }
   syncLinkedLeg(db, userId, params.transaction_id);
 
   eventBus.emit("data:updated", { source: "transaction-updated", userId });
@@ -220,11 +239,13 @@ export function deleteLocalTransaction(userId: number, transactionId: string): {
   const group = row.split_group || "";
   if (group) {
     const rows = db.prepare("SELECT ynab_id, amount, account_id FROM transactions WHERE split_group = ?").all(group) as { ynab_id: string; amount: number; account_id: string }[];
+    forgetPeers(db, rows.map((r) => r.ynab_id));
     for (const r of rows) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(r.amount, r.account_id);
     db.prepare("DELETE FROM transactions WHERE split_group = ?").run(group);
     for (const r of rows) syncLinkedLeg(db, userId, r.ynab_id);
   } else {
     const prev = db.prepare("SELECT amount, account_id FROM transactions WHERE ynab_id = ?").get(transactionId) as { amount: number; account_id: string } | undefined;
+    forgetPeers(db, [transactionId]);
     db.prepare("DELETE FROM transactions WHERE ynab_id = ?").run(transactionId);
     if (prev) db.prepare("UPDATE ynab_accounts SET balance = balance - ? WHERE id = ?").run(prev.amount, prev.account_id);
     syncLinkedLeg(db, userId, transactionId);

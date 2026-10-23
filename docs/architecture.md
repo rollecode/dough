@@ -43,6 +43,7 @@ src/
     household.ts          # Shared household settings helpers
     matching.ts           # YNAB payee matching engine
     transaction-utils.ts  # Transfer detection helpers
+    transfer-pairing.ts   # One counterpart per transfer leg (transfer_peer)
     date-utils.ts         # Date formatting
     locale-context.tsx    # React context for i18n
     ynab-context.tsx      # React context for YNAB data
@@ -169,7 +170,7 @@ Polls Synci REST API every 30 minutes via systemd timer (see setup.md). Per mapp
 3. Local mode: imports every transaction (income and expense); YNAB mode: income only (YNAB imports the rest from the bank)
 4. Skips anything already added manually (same account, amount and date) so it never duplicates
 5. Auto-categorizes freshly imported expenses with the fast AI path (shared categorizer)
-6. Auto-pairs opposite-sign equal-magnitude transactions on different accounts within 2 days as internal transfers, tagging both legs with an internal-transfer category so they stay out of spending and income
+6. Auto-pairs opposite-sign equal-magnitude transactions on different accounts within 2 days as internal transfers, tagging both legs with an internal-transfer category so they stay out of spending and income. Each pair is recorded on both legs in `transactions.transfer_peer`, and a leg already paired with another transaction is never matched again. Rows from before the column fall back to their `Transfer : <account>` label
 7. Inflows are categorised to Ready to Assign (counted as income, recorded in monthly_matches) only when they match a household income source. Other inflows are imported provisionally and kept only if they pair into an internal transfer; an unmatched, unpaired inflow (such as company money passing through a personal account) is removed so it never inflates balances or income
 8. Updates local account balances; deduplicates re-imports via the synci_processed table
 

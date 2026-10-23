@@ -6,6 +6,7 @@ import { getBudgetMode } from "@/lib/household";
 import { eventBus } from "@/lib/event-bus";
 import { localDateIso } from "@/lib/date-utils";
 import { INTERNAL_TRANSFER_CATEGORY } from "@/lib/transaction-utils";
+import { pairLegs } from "@/lib/transfer-pairing";
 
 // Add an internal transfer between two own accounts: two opposite rows labelled
 // "Transfer : <other account>" with the internal-transfer category, mirroring how Synci stores a
@@ -48,8 +49,11 @@ export async function POST(request: Request) {
     `);
     const move = db.prepare("UPDATE ynab_accounts SET balance = balance + ?, updated_at = datetime('now') WHERE id = ?");
     const run = db.transaction(() => {
-      insert.run(user.id, `local_${randomUUID()}`, date, -amt, `Transfer : ${toName}`, INTERNAL_TRANSFER_CATEGORY, memo, fromId);
-      insert.run(user.id, `local_${randomUUID()}`, date, amt, `Transfer : ${fromName}`, INTERNAL_TRANSFER_CATEGORY, memo, toId);
+      const outId = `local_${randomUUID()}`;
+      const inId = `local_${randomUUID()}`;
+      insert.run(user.id, outId, date, -amt, `Transfer : ${toName}`, INTERNAL_TRANSFER_CATEGORY, memo, fromId);
+      insert.run(user.id, inId, date, amt, `Transfer : ${fromName}`, INTERNAL_TRANSFER_CATEGORY, memo, toId);
+      pairLegs(db, outId, inId);
       move.run(-amt, fromId);
       move.run(amt, toId);
     });

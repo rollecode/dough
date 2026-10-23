@@ -1,3 +1,7 @@
+### 4.8.10: 2026-10-23
+
+* Fix two equal transfers sharing one leg
+
 ### 4.8.9: 2026-10-18
 
 * Add every debt payment to the debts page

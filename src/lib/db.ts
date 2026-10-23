@@ -599,6 +599,11 @@ function initializeDb(db: Database.Database) {
     console.info("[db] Adding budget_excluded column to transactions");
     db.exec("ALTER TABLE transactions ADD COLUMN budget_excluded INTEGER NOT NULL DEFAULT 0");
   }
+  // The ynab_id of an internal transfer leg's counterpart, set on both legs (see transfer-pairing).
+  if (!txCols.some((c) => c.name === "transfer_peer")) {
+    console.info("[db] Adding transfer_peer column to transactions");
+    db.exec("ALTER TABLE transactions ADD COLUMN transfer_peer TEXT NOT NULL DEFAULT ''");
+  }
 
   // Add account independence columns to ynab_accounts (also serves locally-managed accounts)
   const acctCols = db.prepare("PRAGMA table_info(ynab_accounts)").all() as { name: string }[];
