@@ -20,7 +20,7 @@ async function respond(request: Request, regenerate: boolean) {
   } catch (error) {
     console.error("[daily-report] Failed:", error);
     const message = error instanceof Error ? error.message : "Failed to write the report";
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

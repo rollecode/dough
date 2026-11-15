@@ -19,7 +19,7 @@ export const POST = apiRoute("read", async (request) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn("[api/v1/receipt] Reading failed:", message);
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
   const transactions = lines
     .map((line) => ({

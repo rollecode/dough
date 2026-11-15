@@ -13,7 +13,7 @@ async function respond(userId: number, date: string | null, locale: string | nul
     // Why the AI could not write it (not signed in, the month's allowance used up), as receipts do.
     const message = error instanceof Error ? error.message : String(error);
     console.warn("[api/v1/daily-report] Writing failed:", message);
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

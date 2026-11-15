@@ -63,7 +63,7 @@ export const SECTIONS: Section[] = [
         path: "/daily-report",
         scope: "write",
         summary:
-          "Writes the report anew, for when that day's transactions arrived after it was written. Body: { date?, locale? }. Answers 502 with { error } when the AI cannot write it.",
+          "Writes the report anew, for when that day's transactions arrived after it was written. Body: { date?, locale? }. Answers 500 with { error } when the AI cannot write it.",
       },
       {
         method: "GET",
