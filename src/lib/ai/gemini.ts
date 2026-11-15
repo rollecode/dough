@@ -26,7 +26,8 @@ interface GeminiBilling {
 }
 
 // Whose Gemini key a call uses: the household's own, unmetered. In the cloud, a household without
-// one spends the service's key up to the monthly cap. Null when there is no key at all.
+// one spends the service's key up to the monthly cap, and an owner household runs on its Claude
+// login instead. Null when Gemini is not used.
 export function geminiBilling(): GeminiBilling | null {
   const own = getHouseholdSetting("gemini_api_key");
   if (own) {
@@ -38,7 +39,7 @@ export function geminiBilling(): GeminiBilling | null {
     return null;
   }
   if (isOwnerHousehold(household.id)) {
-    return { apiKey: server, capUsd: null };
+    return null;
   }
   const cap = parseFloat(process.env.DOUGH_AI_MONTHLY_CAP_USD || "");
   return { apiKey: server, capUsd: Number.isFinite(cap) ? cap : null };

@@ -1,6 +1,7 @@
 ### 4.8.11: 2026-11-15
 
 * Fix AI errors hidden behind the Cloudflare error page
+* Run all AI on Claude for owner households
 
 ### 4.8.10: 2026-10-23
 

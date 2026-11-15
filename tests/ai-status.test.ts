@@ -30,7 +30,7 @@ test("a failed call turns its provider's services to failing with the reason", a
   delete process.env.CLAUDE_PATH;
 });
 
-test("in the cloud, others are metered on Gemini and Dougie is off; the owner is unlimited", async () => {
+test("in the cloud, others are metered on Gemini and Dougie is off; the owner runs all on Claude, unlimited", async () => {
   const { aiStatus } = await import("@/lib/ai/status");
   const { recordAiSpend } = await import("@/lib/ai/claude-cli");
   const { runWithHousehold } = await import("@/lib/db");
@@ -51,6 +51,7 @@ test("in the cloud, others are metered on Gemini and Dougie is off; the owner is
 
   const mine = runWithHousehold(owner, () => aiStatus());
   assert.ok(mine.services.every((s) => s.state === "ok"));
+  assert.ok(mine.services.every((s) => s.provider === "claude"));
   assert.equal(mine.limitUsedPercent, null);
 
   delete process.env.DOUGH_OWNER_HOUSEHOLDS;
