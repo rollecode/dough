@@ -2,6 +2,7 @@
 
 * Fix AI errors hidden behind the Cloudflare error page
 * Run all AI on Claude for owner households
+* Fix vulnerable Next.js, zod and qs versions
 
 ### 4.8.10: 2026-10-23
 
