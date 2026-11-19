@@ -8,11 +8,9 @@ import { localDateIso } from "./date-utils";
 // balance is its starting balance; editing the balance records a reconciliation transaction so
 // history matches, and a manual account is hard-deleted while a synced one is closed.
 
-// Reads of an account's balances. The cleared_balance column is frozen at the last YNAB sync or
-// reconcile, so the cleared balance is derived: the balance without pending (uncleared) rows.
-export const ACCOUNT_BALANCES_SQL =
-  "ROUND(balance, 2) AS balance, ROUND(balance - COALESCE((SELECT SUM(t.amount) FROM transactions t " +
-  "WHERE t.account_id = ynab_accounts.id AND t.cleared = 'uncleared'), 0), 2) AS cleared_balance";
+// Reads of an account's balances. The bank's balance already includes pending card rows, so
+// cleared_balance is kept only for API clients that decode it and always equals balance.
+export const ACCOUNT_BALANCES_SQL = "ROUND(balance, 2) AS balance, ROUND(balance, 2) AS cleared_balance";
 
 export interface AccountCreate {
   name: string;
