@@ -17,9 +17,9 @@ export function buildLocalFinancialData(database: Database.Database = getDb()) {
 
   const accounts = database
     .prepare(
-      "SELECT id, name, type, balance, COALESCE(cleared_balance, balance) AS clearedBalance FROM ynab_accounts WHERE closed = 0"
+      "SELECT id, name, type, balance FROM ynab_accounts WHERE closed = 0"
     )
-    .all() as { id: string; name: string; type: string; balance: number; clearedBalance: number }[];
+    .all() as { id: string; name: string; type: string; balance: number }[];
   const totalBalance = Math.round(accounts.reduce((s, a) => s + a.balance, 0) * 100) / 100;
 
   // Per-category budgeted / activity / available, from the shared local computation. Activity keeps

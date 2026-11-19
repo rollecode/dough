@@ -1,3 +1,7 @@
+### 4.8.12: 2026-11-19
+
+* Fix stale cleared balance on accounts
+
 ### 4.8.11: 2026-11-15
 
 * Fix AI errors hidden behind the Cloudflare error page

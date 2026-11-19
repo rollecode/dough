@@ -1,6 +1,7 @@
 import { apiRoute } from "@/lib/api-v1";
 import { getDb } from "@/lib/db";
 import { getHouseholdSetting } from "@/lib/household";
+import { ACCOUNT_BALANCES_SQL } from "@/lib/accounts-write";
 
 interface AccountRow {
   id: string;
@@ -32,7 +33,7 @@ export const GET = apiRoute("read", (request, identity) => {
   );
   const rows = db
     .prepare(
-      "SELECT id, name, type, balance, cleared_balance, on_budget, closed FROM ynab_accounts " +
+      `SELECT id, name, type, ${ACCOUNT_BALANCES_SQL}, on_budget, closed FROM ynab_accounts ` +
         (includeClosed ? "" : "WHERE closed = 0 ") +
         "ORDER BY closed, sort_order, name"
     )

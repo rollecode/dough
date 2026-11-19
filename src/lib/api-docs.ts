@@ -112,7 +112,7 @@ export const SECTIONS: Section[] = [
         body: [
           { name: "name", type: "string", required: true, description: "What the account is called." },
           { name: "type", type: "string", description: "checking, savings, otherAsset or otherDebt. Defaults to checking." },
-          { name: "balance", type: "number", description: "Seeds both balance and cleared balance." },
+          { name: "balance", type: "number", description: "Starting balance. cleared_balance in reads is the balance without pending (uncleared) rows." },
           { name: "on_budget", type: "boolean", description: "Defaults to true." },
         ],
       },

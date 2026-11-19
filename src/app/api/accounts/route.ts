@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { createAccount, updateAccount, deleteAccount } from "@/lib/accounts-write";
+import { createAccount, updateAccount, deleteAccount, ACCOUNT_BALANCES_SQL } from "@/lib/accounts-write";
 
 interface AccountRow {
   id: string;
@@ -24,7 +24,7 @@ export async function GET() {
     const db = getDb();
     const accounts = db
       .prepare(
-        "SELECT id, name, type, balance, cleared_balance, on_budget, closed, source, synci_account_id, sort_order " +
+        `SELECT id, name, type, ${ACCOUNT_BALANCES_SQL}, on_budget, closed, source, synci_account_id, sort_order ` +
           "FROM ynab_accounts ORDER BY closed, sort_order, name"
       )
       .all() as AccountRow[];
